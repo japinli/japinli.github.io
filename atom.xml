@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Japin</title>
+  <icon>https://blog.japinli.top/icon.png</icon>
+  
+  <link href="https://blog.japinli.top/atom.xml" rel="self"/>
+  
+  <link href="https://blog.japinli.top/"/>
+  <updated>2021-04-27T05:56:15.982Z</updated>
+  <id>https://blog.japinli.top/</id>
+  
+  <author>
+    <name>Japin Li</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>PostgreSQL 同步逻辑复制 TRUNCATE 表 hang 住</title>
+    <link href="https://blog.japinli.top/2021/04/postgresql-truncate-table-in-synchronous-logical-replication/"/>
+    <id>https://blog.japinli.top/2021/04/postgresql-truncate-table-in-synchronous-logical-replication/</id>
+    <published>2021-04-17T08:09:12.000Z</published>
+    <updated>2021-04-27T05:56:15.982Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;在目前的 PostgreSQL 13 中，如果我们采用同步逻辑复制，那么在同步 TRUNCATE 表时，可能会发生数据库 hang 住的可能。本文便是针对这一问题进行分析。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+    <category term="源码分析" scheme="https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Oracle wm_concat 函数说明</title>
+    <link href="https://blog.japinli.top/2021/03/oracle-wm-concat/"/>
+    <id>https://blog.japinli.top/2021/03/oracle-wm-concat/</id>
+    <published>2021-03-07T07:13:35.000Z</published>
+    <updated>2021-04-16T03:51:06.617Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;Oracle 数据库的 &lt;code&gt;wm_concat&lt;/code&gt; 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。&lt;br&gt;本文主要介绍 &lt;code&gt;wm_concat&lt;/code&gt; 函数的功能以及其在 PostgreSQL 数据库中的替换方法。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+    <category term="Oracle" scheme="https://blog.japinli.top/tags/Oracle/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 更新 configure 引入无关更改</title>
+    <link href="https://blog.japinli.top/2021/02/postgresql-update-configure-file/"/>
+    <id>https://blog.japinli.top/2021/02/postgresql-update-configure-file/</id>
+    <published>2021-02-21T01:07:21.000Z</published>
+    <updated>2021-04-16T03:51:06.649Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：&lt;/p&gt;
+&lt;figure class=&quot;highlight diff&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;24&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;25&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;26&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;27&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;28&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;@@ -1187,6 +1189,15 @@ do&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   | -silent | --silent | --silen | --sile | --sil)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;     silent=yes ;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+  -runstatedir | --runstatedir | --runstatedi | --runstated \&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+  | --runstate | --runstat | --runsta | --runst | --runs \&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+  | --run | --ru | --r)&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+    ac_prev=runstatedir ;;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+  | --run=* | --ru=* | --r=*)&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+    runstatedir=$ac_optarg ;;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;...&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;@@ -14714,7 +14738,7 @@ else&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;     We can&amp;#x27;t simply define LARGE_OFF_T to be 9223372036854775807,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;     since some C++ compilers masquerading as C compilers&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;     incorrectly reject 9223372036854775807.  */&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;deletion&quot;&gt;-#define LARGE_OFF_T (((off_t) 1 &amp;lt;&amp;lt; 62) - 1 + ((off_t) 1 &amp;lt;&amp;lt; 62))&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;addition&quot;&gt;+#define LARGE_OFF_T ((((off_t) 1 &amp;lt;&amp;lt; 31) &amp;lt;&amp;lt; 31) - 1 + (((off_t) 1 &amp;lt;&amp;lt; 31) &amp;lt;&amp;lt; 31))&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;               &amp;amp;&amp;amp; LARGE_OFF_T % 2147483647 == 1)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;              ? 1 : -1];&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;...&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+
+&lt;p&gt;这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL auto_explain 插件内存泄露</title>
+    <link href="https://blog.japinli.top/2021/02/postgresql-auto-explain-memory-leak/"/>
+    <id>https://blog.japinli.top/2021/02/postgresql-auto-explain-memory-leak/</id>
+    <published>2021-02-03T11:48:39.000Z</published>
+    <updated>2021-04-16T03:51:06.617Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;最近看到 PostgreSQL 邮件列表中有人说 auto_explain 插件在特定情况下会导致 OOM 问题，经过一番分析发现原来是由于内存上下文的问题导致的。目前该泄露已经修复，并合并到代码库中。&lt;/p&gt;
+&lt;img src=&quot;/2021/02/postgresql-auto-explain-memory-leak/fix_memory_leak_in_auto_explain.png&quot; class=&quot;&quot;&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+    <category term="源码分析" scheme="https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 空闲会话超时</title>
+    <link href="https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/"/>
+    <id>https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/</id>
+    <published>2021-01-23T14:50:11.000Z</published>
+    <updated>2021-04-16T03:51:06.625Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;经过约八个月的努力，终于完成了 PostgreSQL 空闲会话超时断开的功能，该功能将在版本 14 中发布。这是我第一次向 PostgreSQL 提供功能，虽然之前也有向社区提供过补丁，但是这次整个功能（相对比较简单）被接受还是比较高兴的，感谢社区各位大佬的帮助和反馈。&lt;/p&gt;
+&lt;img src=&quot;/2021/01/postgresql-idle-session-timeout/idle_session_timeout-commit-message.png&quot; class=&quot;&quot;&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 逻辑复制</title>
+    <link href="https://blog.japinli.top/2020/12/postgresql-logical-replication/"/>
+    <id>https://blog.japinli.top/2020/12/postgresql-logical-replication/</id>
+    <published>2020-12-13T09:37:55.000Z</published>
+    <updated>2021-04-16T03:51:06.629Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;PostgreSQL 数据库在 9.0 中引入了物理复制，之前的文章中也有介绍。物理复制将主库中所有的更改都通过 WAL 日志流式地传输到备库中，备库通过重放 WAL 日志来实现同步。但是，物理复制也有其自身的局限性。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;不能执行有选择性的复制，或者说不支持复制部分数据库对象；&lt;/li&gt;
+&lt;li&gt;不能在不同的数据大版本之间进行复制，例如，pg10 -&amp;gt; pg12 是无法通过物理复制来实现同步的；&lt;/li&gt;
+&lt;li&gt;不能在不同平台之间进行复制，例如，Linux 和 Windows 之间不能使用物理复制来实现同步；&lt;/li&gt;
+&lt;li&gt;备库无法提供写入操作。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;PostgreSQL 在版本 10 中引入了逻辑复制，它用于解决上述物理复制的局限性，同时业务复制开辟了一个新的方向。逻辑复制使用发布和订阅模式，一个或多个订阅者可以订阅一个发布者上的一个或多个发布。订阅者最初会从发布者那里收到复制的数据库对象的副本，并在同一对象上实时进行后续更改。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>再谈 PostgreSQL 行级安全策略</title>
+    <link href="https://blog.japinli.top/2020/11/postgresql-row-level-security-v2/"/>
+    <id>https://blog.japinli.top/2020/11/postgresql-row-level-security-v2/</id>
+    <published>2020-11-21T05:32:49.000Z</published>
+    <updated>2021-04-16T03:51:06.642Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;在 &lt;a href=&quot;/2019/07/postgresql-row-level-security-policy/&quot; title=&quot;PostgreSQL 行级安全策略的使用&quot;&gt;PostgreSQL 行级安全策略的使用&lt;/a&gt;一文中，我简要介绍了如何使用行级安全策略，最近因为工作需要对其又有了新的认识，故在此记录一下。本文主要介绍行级安全策略中用户权限和策略表达式（&lt;code&gt;USING&lt;/code&gt; 和 &lt;code&gt;CHECK&lt;/code&gt;）。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL palloc0 函数优化</title>
+    <link href="https://blog.japinli.top/2020/10/postgresql-palloc0/"/>
+    <id>https://blog.japinli.top/2020/10/postgresql-palloc0/</id>
+    <published>2020-10-02T14:45:16.000Z</published>
+    <updated>2021-04-16T03:51:06.641Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;最近在查看 PostgreSQL 数据库中内存分配相关的代码时，我发现 &lt;code&gt;palloc()&lt;/code&gt; 和 &lt;code&gt;palloc0()&lt;/code&gt; 函数存在大量的冗余代码。本着减少冗余代码的想法，我将修改后的代码提交到社区，得到的反馈是这样修改会影响整体效率。本文简要分析一下这是如何影响效率的。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+    <category term="源码分析" scheme="https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Go 语言 http 响应头设置</title>
+    <link href="https://blog.japinli.top/2020/09/go-http-response-writer/"/>
+    <id>https://blog.japinli.top/2020/09/go-http-response-writer/</id>
+    <published>2020-09-14T13:21:49.000Z</published>
+    <updated>2021-04-16T03:51:06.597Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;Go 语言的 &lt;code&gt;net/http&lt;/code&gt; 包为我们提供了一个 HTTP 客户端和服务器的实现，通过它我们可以快速的搭建一个 HTTP 服务器，本文记录一下在编写 HTTP 服务器时关于设置 HTTP 响应头遇到的一个小问题。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="编程" scheme="https://blog.japinli.top/categories/%E7%BC%96%E7%A8%8B/"/>
+    
+    
+    <category term="Go" scheme="https://blog.japinli.top/tags/Go/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 优化 setitimer 系统调用</title>
+    <link href="https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/"/>
+    <id>https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/</id>
+    <published>2020-08-31T14:46:59.000Z</published>
+    <updated>2021-04-16T03:51:06.641Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;当我们在使用 PostgreSQL 数据库并启用 &lt;code&gt;statement_timeout&lt;/code&gt; 时，可以看到 &lt;code&gt;setitimer()&lt;/code&gt; 函数的调用次数明显偏多。本文分析了 &lt;a href=&quot;https://www.postgresql.org/message-id/CA%2BhUKG%2Bo6pbuHBJSGnud%3DTadsuXySWA7CCcPgCt2QE9F6_4iHQ%40mail.gmail.com&quot;&gt;Thomas Munro 给出的关于 &lt;code&gt;setitimer()&lt;/code&gt; 函数的优化&lt;/a&gt;。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+    <category term="源码分析" scheme="https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Hexo NexT (v8.x) 主题添加近期文章</title>
+    <link href="https://blog.japinli.top/2020/08/next-8-0-0-recent-posts/"/>
+    <id>https://blog.japinli.top/2020/08/next-8-0-0-recent-posts/</id>
+    <published>2020-08-28T23:04:18.000Z</published>
+    <updated>2021-04-16T03:51:06.616Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;最近将博客由 NexT-v5.x 迁移到 NexT-v8.x 版本，这其中有很多东西已将发生变化了。本文简要介绍一下如何在新版中加入近期文章的功能。NexT-v8.x 版本将模版文件由原来的 &lt;code&gt;swig&lt;/code&gt; 变更为 &lt;code&gt;njk&lt;/code&gt; 后缀，因此，之前的近期文章的功能不再适用，我们需要稍作修改。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="博客" scheme="https://blog.japinli.top/categories/%E5%8D%9A%E5%AE%A2/"/>
+    
+    
+    <category term="hexo" scheme="https://blog.japinli.top/tags/hexo/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 13 - backtrace 功能预览</title>
+    <link href="https://blog.japinli.top/2020/08/postgresql-backtrace/"/>
+    <id>https://blog.japinli.top/2020/08/postgresql-backtrace/</id>
+    <published>2020-08-15T12:30:43.000Z</published>
+    <updated>2021-04-16T03:51:06.619Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。&lt;/p&gt;
+&lt;img src=&quot;/2020/08/postgresql-backtrace/backtrace.png&quot; class=&quot;&quot; title=&quot;Backtrace 提交记录&quot;&gt;
+
+&lt;p&gt;本文将对该功能进行简要介绍。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 共享表</title>
+    <link href="https://blog.japinli.top/2020/08/postgresql-shared-relations/"/>
+    <id>https://blog.japinli.top/2020/08/postgresql-shared-relations/</id>
+    <published>2020-08-08T07:15:41.000Z</published>
+    <updated>2021-04-16T03:51:06.643Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;PostgreSQL 数据库中提供的某些系统表是 Cluster 级别共享的，他们在数据库内部被称为 &lt;code&gt;shared_relation&lt;/code&gt;，本文就介绍一下 PostgreSQL 是如何创建共享表的。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+    <category term="源码分析" scheme="https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>MacOS 上创建 U 盘启动器</title>
+    <link href="https://blog.japinli.top/2020/07/create-u-bootloader-on-macos/"/>
+    <id>https://blog.japinli.top/2020/07/create-u-bootloader-on-macos/</id>
+    <published>2020-07-26T09:04:51.000Z</published>
+    <updated>2021-04-16T03:51:06.591Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="杂项" scheme="https://blog.japinli.top/categories/%E6%9D%82%E9%A1%B9/"/>
+    
+    
+    <category term="MacOS" scheme="https://blog.japinli.top/tags/MacOS/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>小米路由器刷 Breed 和 Padavan 固件</title>
+    <link href="https://blog.japinli.top/2020/07/miwifi-breed-padavan/"/>
+    <id>https://blog.japinli.top/2020/07/miwifi-breed-padavan/</id>
+    <published>2020-07-12T06:06:41.000Z</published>
+    <updated>2021-04-16T03:51:06.615Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;本文主要记录一下小米路由器 3G 刷 breed 和 padavan 的过程。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://openwrt.org/docs/techref/bootloader/breed&quot;&gt;Breed&lt;/a&gt; 是嵌入式设备的引导和恢复环境的简称。&lt;/li&gt;
+&lt;li&gt;Padavan 是由俄罗斯人基于华硕源码开发的针对 mtk 芯片的固件。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我将整个过程分为分为 5 个步骤，更新 ROM、开启 SSH、备份路由器、刷 breed、刷 padavan。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="杂项" scheme="https://blog.japinli.top/categories/%E6%9D%82%E9%A1%B9/"/>
+    
+    
+    <category term="R3G" scheme="https://blog.japinli.top/tags/R3G/"/>
+    
+    <category term="breed" scheme="https://blog.japinli.top/tags/breed/"/>
+    
+    <category term="padavan" scheme="https://blog.japinli.top/tags/padavan/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 修改配置参数</title>
+    <link href="https://blog.japinli.top/2020/06/postgresql-alter-system/"/>
+    <id>https://blog.japinli.top/2020/06/postgresql-alter-system/</id>
+    <published>2020-06-09T13:12:39.000Z</published>
+    <updated>2021-04-16T03:51:06.617Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;今天在使用 &lt;code&gt;ALTER SYSTEM&lt;/code&gt; 来修改 PostgreSQL 参数时遇到无法启动数据库的问题。如下所示：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;postgres&amp;#x3D;# ALTER SYSTEM SET shared_preload_libraries TO &amp;#39;pg_buffercache,passwordcheck&amp;#39;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;ALTER SYSTEM&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;postgres&amp;#x3D;# \q&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;$ pg_ctl restart&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;waiting for server to shut down.... done&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;server stopped&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;waiting for server to start....postgres: could not access directory &amp;quot;&amp;#x2F;Users&amp;#x2F;japinli&amp;#x2F;Codes&amp;#x2F;postgresql&amp;#x2F;pg&amp;#x2F;data&amp;quot;: No such file or directory&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Run initdb or pg_basebackup to initialize a PostgreSQL data directory.&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; stopped waiting&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;pg_ctl: could not start server&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Examine the log output.&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+
+&lt;p&gt;你是否也遇到了这样的问题呢？其实这都是由于我们先入为主的思想导致的，&lt;code&gt;ALTER SYSTEM&lt;/code&gt; 支持以逗号分割的列表，而这类参数的修改不需要使用引号。因此，正确的使用方式如下：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ALTER SYSTEM SET shared_preload_libraries TO pg_buffercache, passwordcheck;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 数据库系统标识符</title>
+    <link href="https://blog.japinli.top/2020/06/postgresql-system-identifier/"/>
+    <id>https://blog.japinli.top/2020/06/postgresql-system-identifier/</id>
+    <published>2020-06-07T10:07:36.000Z</published>
+    <updated>2021-04-16T03:51:06.648Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;我们都知道 PostgreSQL 针对每个数据库集群实例，都会有一个唯一的标识符 - __system identifier__。那么这个标识符是如何生成的呢？本文将对其进行简要的分析。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 编辑查询缓冲区</title>
+    <link href="https://blog.japinli.top/2020/05/postgresql-edit-query-buffer/"/>
+    <id>https://blog.japinli.top/2020/05/postgresql-edit-query-buffer/</id>
+    <published>2020-05-19T14:28:59.000Z</published>
+    <updated>2021-04-16T03:51:06.624Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;我们经常需要在 psql 中修改查询语句，例如，我们编辑了几行查询语句，然后需要修改之前的内容，我之前额做法就是 Ctrl-C 然后在重新输入。其实，我们可以不必这么复杂。我们可以使用 &lt;code&gt;\e&lt;/code&gt;</summary>
+        
+      
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Go 语言软件包下载</title>
+    <link href="https://blog.japinli.top/2020/05/download-go-package/"/>
+    <id>https://blog.japinli.top/2020/05/download-go-package/</id>
+    <published>2020-05-18T13:46:28.000Z</published>
+    <updated>2021-04-16T03:51:06.594Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;作为一个刚入门的 Go 小白来说，下载第三方包就成为了第一道坎 :( 。本文简要介绍一下如何下载 Go 软件包，尤其是 Google 系列的包。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="编程" scheme="https://blog.japinli.top/categories/%E7%BC%96%E7%A8%8B/"/>
+    
+    
+    <category term="Go" scheme="https://blog.japinli.top/tags/Go/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Seafile 与 OnlyOffice 在线预览 Office 文档</title>
+    <link href="https://blog.japinli.top/2020/05/seafile-with-onlyoffice/"/>
+    <id>https://blog.japinli.top/2020/05/seafile-with-onlyoffice/</id>
+    <published>2020-05-16T02:42:38.000Z</published>
+    <updated>2021-04-16T03:51:06.650Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;最近，在公司采用 Seafile 搭建了一个文件服务器，并结合 OnlyOffice 实现在线预览功能。本文简要记录一下这个过程中所遇到的问题。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="杂项" scheme="https://blog.japinli.top/categories/%E6%9D%82%E9%A1%B9/"/>
+    
+    
+    <category term="Seafile" scheme="https://blog.japinli.top/tags/Seafile/"/>
+    
+  </entry>
+  
+</feed>
