@@ -130,11 +130,6 @@
     <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
 
   </li>
-        <li class="menu-item menu-item-hots">
-
-    <a href="/hots/" rel="section"><i class="fa fa-signal fa-fw"></i>热榜</a>
-
-  </li>
         <li class="menu-item menu-item-tags">
 
     <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">30</span></a>
@@ -147,7 +142,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">72</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">75</span></a>
 
   </li>
         <li class="menu-item menu-item-reading">
@@ -246,7 +241,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">72</span>
+          <span class="site-state-item-count">75</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -285,6 +280,21 @@
 	</div>
 	<ul class="links-of-blogroll-list recent-posts-list">
 	        <li class="my-links-of-blogroll-item">
+		    <a href="/2021/05/postgresql-security/" title="PostgreSQL 安全性配置概要" target="">
+		    PostgreSQL 安全性配置概要
+		    </a>
+		</li>
+	        <li class="my-links-of-blogroll-item">
+		    <a href="/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/" title="PostgreSQL 类型转换时无效的类型输入" target="">
+		    PostgreSQL 类型转换时无效的类型输入
+		    </a>
+		</li>
+	        <li class="my-links-of-blogroll-item">
+		    <a href="/2021/05/go-in-action/" title="Go 语言实战" target="">
+		    Go 语言实战
+		    </a>
+		</li>
+	        <li class="my-links-of-blogroll-item">
 		    <a href="/2021/04/postgresql-truncate-table-in-synchronous-logical-replication/" title="PostgreSQL 同步逻辑复制 TRUNCATE 表 hang 住" target="">
 		    PostgreSQL 同步逻辑复制 TRUNCATE 表 hang 住
 		    </a>
@@ -292,21 +302,6 @@
 	        <li class="my-links-of-blogroll-item">
 		    <a href="/2021/03/oracle-wm-concat/" title="Oracle wm_concat 函数说明" target="">
 		    Oracle wm_concat 函数说明
-		    </a>
-		</li>
-	        <li class="my-links-of-blogroll-item">
-		    <a href="/2021/02/postgresql-update-configure-file/" title="PostgreSQL 更新 configure 引入无关更改" target="">
-		    PostgreSQL 更新 configure 引入无关更改
-		    </a>
-		</li>
-	        <li class="my-links-of-blogroll-item">
-		    <a href="/2021/02/postgresql-auto-explain-memory-leak/" title="PostgreSQL auto_explain 插件内存泄露" target="">
-		    PostgreSQL auto_explain 插件内存泄露
-		    </a>
-		</li>
-	        <li class="my-links-of-blogroll-item">
-		    <a href="/2021/01/postgresql-idle-session-timeout/" title="PostgreSQL 空闲会话超时" target="">
-		    PostgreSQL 空闲会话超时
 		    </a>
 		</li>
 	</ul>
@@ -336,6 +331,296 @@
       
 
       
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2018/10/editing-binary-files-in-emacs/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.jpg">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+
+    
+    
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2018/10/editing-binary-files-in-emacs/" class="post-title-link" itemprop="url">Emacs 编辑二进制文件</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2021-04-16 11:51:06" itemprop="dateModified" datetime="2021-04-16T11:51:06+08:00">2021-04-16</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>692</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>二进制文件是以二进制格式存储的文件，它是计算机可读的，人类不直接阅读二进制文件。所有的可执行程序都以二进制文件存储。那我们该如何编辑二进制文件呢？在我使用的 Emacs 编辑器中提供了一个 hexl-mode 的主模式来编辑二进制文件。本文记录了 Emacs 中编辑二进制文件的基本操作。</p>
+<img src="/2018/10/editing-binary-files-in-emacs/Editing_Binary_File.png" class="" title="Editing Binary File">
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2018/10/editing-binary-files-in-emacs/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2018/09/introduction-cstore-fdw-columnar-store/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.jpg">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+
+    
+    
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2018/09/introduction-cstore-fdw-columnar-store/" class="post-title-link" itemprop="url">列存数据库 cstore_fdw 入门</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2021-04-16 11:51:06" itemprop="dateModified" datetime="2021-04-16T11:51:06+08:00">2021-04-16</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>Cstore_fdw 是 Citus Data 开发的一款开放源码的 PostgreSQL 列存扩展插件。列存储在数据批量导入的分析场景能够提供更好的性能。Cstore_fdw 通过只读取磁盘上相关的列数据来提升性能，同时，由于每列的数据来自同一个域，因此更利于数据压缩，cstore_fdw 提供 6~10 倍的数据压缩能力，从而减小了对磁盘存储的需求。</p>
+<p>Cstore_fdw 采用 Optimized Row Columnar (ORC) 格式作为其数据的物理存储格式。ORC 优化了 Facebook 的 RCFile 存储格式，并具有以下优点：</p>
+<ul>
+<li>压缩 (Compression) - 大约减少了 2~4 倍的内存和磁盘存储空间。易于扩展以支持不同的编码。</li>
+<li>列投影 (Column Projections) - 仅仅读取与该查询有关的数据列，提高了 I/O 效率。</li>
+<li>跳跃索引 (Skip Indexes) - 为每个行组 (Row Groups) 存储其最大值和最小值，并利用他们来跳过不相关的数据行。</li>
+</ul>
+<p>除此之外，cstore_fdw 使用了 PostgreSQL 的数据类型和 fdw API 编程接口，这样做的好处有以下几点：</p>
+<ul>
+<li>支持 40+ 的 PostgreSQL 数据类型，用户也可以创建并使用新的类型。</li>
+<li>统计信息收集，PostgreSQL 使用这些统计信息来评估不同的查询计划并选择最优查询计划的来执行。</li>
+<li>配置简单，用户只需要创建外部表并导入数据，之后就可以使用 SQL 进行查询。</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2018/09/introduction-cstore-fdw-columnar-store/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2018/09/configure-dns-on-ubuntu/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.jpg">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+
+    
+    
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2018/09/configure-dns-on-ubuntu/" class="post-title-link" itemprop="url">Ubuntu 系统 DNS 服务器配置</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2021-04-16 11:51:06" itemprop="dateModified" datetime="2021-04-16T11:51:06+08:00">2021-04-16</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>907</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
+<img src="/2018/09/configure-dns-on-ubuntu/Domain_name_space.png" class="" title="Domain name space">
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2018/09/configure-dns-on-ubuntu/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -379,27 +664,6 @@
         </span>
     </span>
 
-  
-    <span id="/2018/09/ping-permission-denied/" class="post-meta-item leancloud_visitors" data-flag-title="Ping 权限拒绝" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine：</span>
-    
-    <a title="valine" href="/2018/09/ping-permission-denied/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2018/09/ping-permission-denied/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
   
     <span class="post-meta-item" title="本文字数">
       <span class="post-meta-item-icon">
@@ -497,27 +761,6 @@
         </span>
     </span>
 
-  
-    <span id="/2018/08/hello-world/" class="post-meta-item leancloud_visitors" data-flag-title="Hello World" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine：</span>
-    
-    <a title="valine" href="/2018/08/hello-world/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2018/08/hello-world/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
   
     <span class="post-meta-item" title="本文字数">
       <span class="post-meta-item-icon">
@@ -627,13 +870,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">310k</span>
+    <span title="站点总字数">317k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">4:42</span>
+    <span title="站点阅读时长">4:48</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
@@ -676,17 +919,6 @@
   
 
   
-<script>
-NexT.utils.loadComments('#valine-comments', () => {
-  NexT.utils.getScript('//cdn.jsdelivr.net/npm/valine@1.4.14/dist/Valine.min.js', () => {
-    new Valine(Object.assign({
-      el  : '#valine-comments',
-      path: "/page/8/",
-    }, {"enable":true,"appId":"rwarexb07A58sdb9Xp5RyQRw-gzGzoHsz","appKey":"zPiGgSOJ5I1qJMAVXWBgRWe6","placeholder":"Just go go","avatar":"mm","meta":["nick","mail","link"],"pageSize":10,"lang":"zh-CN","visitor":true,"comment_count":true,"recordIP":false,"serverURLs":null,"enableQQ":false,"requiredFields":[]}
-    ));
-  }, window.Valine);
-});
-</script>
 
 </body>
 </html>

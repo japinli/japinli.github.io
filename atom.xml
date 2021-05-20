@@ -6,7 +6,7 @@
   <link href="https://blog.japinli.top/atom.xml" rel="self"/>
   
   <link href="https://blog.japinli.top/"/>
-  <updated>2021-04-27T06:02:03.106Z</updated>
+  <updated>2021-05-20T07:11:25.697Z</updated>
   <id>https://blog.japinli.top/</id>
   
   <author>
@@ -15,6 +15,67 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>PostgreSQL 安全性配置概要</title>
+    <link href="https://blog.japinli.top/2021/05/postgresql-security/"/>
+    <id>https://blog.japinli.top/2021/05/postgresql-security/</id>
+    <published>2021-05-20T06:47:46.000Z</published>
+    <updated>2021-05-20T07:11:25.697Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;本文从网络、数据库实例、数据库、schema 和表对象几个层面对 PostgreSQL 数据库的安全性配置进行了简要的回顾。&lt;/p&gt;
+&lt;img src=&quot;/2021/05/postgresql-security/pg_security.png&quot; class=&quot;&quot;&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>PostgreSQL 类型转换时无效的类型输入</title>
+    <link href="https://blog.japinli.top/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/"/>
+    <id>https://blog.japinli.top/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/</id>
+    <published>2021-05-12T10:35:21.000Z</published>
+    <updated>2021-05-13T03:21:31.784Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;最近在做 Oracle 迁移的时候发现一个类型错误，如下所示：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ERROR:  invalid input syntax for type numeric: &amp;quot;null&amp;quot;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+
+&lt;p&gt;这个问题其实很简单，就是原始数据里面包含 &lt;code&gt;&amp;#39;null&amp;#39;&lt;/code&gt; 的字符串导致的。解决这个问题的办法就是将数据中为 &lt;code&gt;&amp;#39;null&amp;#39;&lt;/code&gt; 的异常数据转换为正常数据。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Go 语言实战</title>
+    <link href="https://blog.japinli.top/2021/05/go-in-action/"/>
+    <id>https://blog.japinli.top/2021/05/go-in-action/</id>
+    <published>2021-05-07T14:56:32.000Z</published>
+    <updated>2021-05-07T09:57:29.560Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;最近由于需要从事 Go 语言相关的工作，为此花了约一个星期的时间将《Go 语言实战》这本书过了一遍，对 Go 语言有了一个基本的认识。这本书短小精悍，全书 200 多页，详细介绍了 Go 语言的数组、切片的底层原理，Go 语言的类型系统、并发、通道以及测试。当然部分内容也没有深入的讲解，如映射，其底层的实现介绍的不是很充分。《Go 语言实战》这本书适合有一定语言编程经验的读者。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="编程" scheme="https://blog.japinli.top/categories/%E7%BC%96%E7%A8%8B/"/>
+    
+    
+    <category term="Go" scheme="https://blog.japinli.top/tags/Go/"/>
+    
+  </entry>
   
   <entry>
     <title>PostgreSQL 同步逻辑复制 TRUNCATE 表 hang 住</title>
@@ -376,69 +437,6 @@
     
     
     <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>PostgreSQL 编辑查询缓冲区</title>
-    <link href="https://blog.japinli.top/2020/05/postgresql-edit-query-buffer/"/>
-    <id>https://blog.japinli.top/2020/05/postgresql-edit-query-buffer/</id>
-    <published>2020-05-19T14:28:59.000Z</published>
-    <updated>2021-04-16T03:51:06.624Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;p&gt;我们经常需要在 psql 中修改查询语句，例如，我们编辑了几行查询语句，然后需要修改之前的内容，我之前额做法就是 Ctrl-C 然后在重新输入。其实，我们可以不必这么复杂。我们可以使用 &lt;code&gt;\e&lt;/code&gt;</summary>
-        
-      
-    
-    
-    
-    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
-    
-    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Go 语言软件包下载</title>
-    <link href="https://blog.japinli.top/2020/05/download-go-package/"/>
-    <id>https://blog.japinli.top/2020/05/download-go-package/</id>
-    <published>2020-05-18T13:46:28.000Z</published>
-    <updated>2021-04-16T03:51:06.594Z</updated>
-    
-    
-    <summary type="html">&lt;p&gt;作为一个刚入门的 Go 小白来说，下载第三方包就成为了第一道坎 :( 。本文简要介绍一下如何下载 Go 软件包，尤其是 Google 系列的包。&lt;/p&gt;</summary>
-    
-    
-    
-    <category term="编程" scheme="https://blog.japinli.top/categories/%E7%BC%96%E7%A8%8B/"/>
-    
-    
-    <category term="Go" scheme="https://blog.japinli.top/tags/Go/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Seafile 与 OnlyOffice 在线预览 Office 文档</title>
-    <link href="https://blog.japinli.top/2020/05/seafile-with-onlyoffice/"/>
-    <id>https://blog.japinli.top/2020/05/seafile-with-onlyoffice/</id>
-    <published>2020-05-16T02:42:38.000Z</published>
-    <updated>2021-04-16T03:51:06.650Z</updated>
-    
-    
-    <summary type="html">&lt;p&gt;最近，在公司采用 Seafile 搭建了一个文件服务器，并结合 OnlyOffice 实现在线预览功能。本文简要记录一下这个过程中所遇到的问题。&lt;/p&gt;</summary>
-    
-    
-    
-    <category term="杂项" scheme="https://blog.japinli.top/categories/%E6%9D%82%E9%A1%B9/"/>
-    
-    
-    <category term="Seafile" scheme="https://blog.japinli.top/tags/Seafile/"/>
     
   </entry>
   
