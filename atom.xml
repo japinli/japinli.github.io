@@ -6,7 +6,7 @@
   <link href="https://blog.japinli.top/atom.xml" rel="self"/>
   
   <link href="https://blog.japinli.top/"/>
-  <updated>2021-05-20T07:11:25.697Z</updated>
+  <updated>2021-05-22T00:17:44.992Z</updated>
   <id>https://blog.japinli.top/</id>
   
   <author>
@@ -15,6 +15,34 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</title>
+    <link href="https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/"/>
+    <id>https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/</id>
+    <published>2021-05-21T08:29:27.000Z</published>
+    <updated>2021-05-22T00:17:44.992Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;本文简要记录一下如何将 Oracle 数据库中的 &lt;code&gt;sys_connect_by_path()&lt;/code&gt; 函数迁移到 PostgreSQL 数据库中。&lt;/p&gt;
+&lt;p&gt;函数 &lt;code&gt;sys_connect_by_path()&lt;/code&gt; 通常是与</summary>
+        
+      
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="Oracle" scheme="https://blog.japinli.top/tags/Oracle/"/>
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+  </entry>
   
   <entry>
     <title>PostgreSQL 安全性配置概要</title>
@@ -113,9 +141,9 @@
     <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     
-    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
-    
     <category term="Oracle" scheme="https://blog.japinli.top/tags/Oracle/"/>
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
     
   </entry>
   
@@ -411,25 +439,6 @@
 
 &lt;p&gt;你是否也遇到了这样的问题呢？其实这都是由于我们先入为主的思想导致的，&lt;code&gt;ALTER SYSTEM&lt;/code&gt; 支持以逗号分割的列表，而这类参数的修改不需要使用引号。因此，正确的使用方式如下：&lt;/p&gt;
 &lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ALTER SYSTEM SET shared_preload_libraries TO pg_buffercache, passwordcheck;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;</summary>
-    
-    
-    
-    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
-    
-    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>PostgreSQL 数据库系统标识符</title>
-    <link href="https://blog.japinli.top/2020/06/postgresql-system-identifier/"/>
-    <id>https://blog.japinli.top/2020/06/postgresql-system-identifier/</id>
-    <published>2020-06-07T10:07:36.000Z</published>
-    <updated>2021-04-16T03:51:06.648Z</updated>
-    
-    
-    <summary type="html">&lt;p&gt;我们都知道 PostgreSQL 针对每个数据库集群实例，都会有一个唯一的标识符 - __system identifier__。那么这个标识符是如何生成的呢？本文将对其进行简要的分析。&lt;/p&gt;</summary>
     
     
     

@@ -22,21 +22,22 @@
     var CONFIG = {"hostname":"blog.japinli.top","root":"/","scheme":"Gemini","version":"8.0.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":false,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}};
   </script>
 
-  <meta name="description" content="无论何时，PostgreSQL 总是在集群的数据目录 pg_wal 下面维护一个 Write Ahead Log 日志记录。该日志记录了数据文件的所有变化。当数据库系统发生崩溃时，数据库系统可以通过重放最新检查点之后的 WAL 日志条目来恢复数据库的一致性。在 PostgreSQL 中，我们通过将文件系统级的备份与 WAL 日志的备份相结合可以实现三种策略的数据库备份。当需要进行数据库恢复时，我们">
+  <meta name="description" content="本文简要记录一下如何将 Oracle 数据库中的 sys_connect_by_path() 函数迁移到 PostgreSQL 数据库中。 函数 sys_connect_by_path() 通常是与 Oracle 中的 connect by 子句一起使用的，而 connect by 子句转换到 PostgreSQL 中时通常是使用 WITH RECUSIVE 来实现。 最小示例为了演示，本文提供了">
 <meta property="og:type" content="article">
-<meta property="og:title" content="PostgreSQL 持续归档">
-<meta property="og:url" content="https://blog.japinli.top/2018/10/postgresql-continuous-archiving/index.html">
+<meta property="og:title" content="Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库">
+<meta property="og:url" content="https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/index.html">
 <meta property="og:site_name" content="Japin">
-<meta property="og:description" content="无论何时，PostgreSQL 总是在集群的数据目录 pg_wal 下面维护一个 Write Ahead Log 日志记录。该日志记录了数据文件的所有变化。当数据库系统发生崩溃时，数据库系统可以通过重放最新检查点之后的 WAL 日志条目来恢复数据库的一致性。在 PostgreSQL 中，我们通过将文件系统级的备份与 WAL 日志的备份相结合可以实现三种策略的数据库备份。当需要进行数据库恢复时，我们">
+<meta property="og:description" content="本文简要记录一下如何将 Oracle 数据库中的 sys_connect_by_path() 函数迁移到 PostgreSQL 数据库中。 函数 sys_connect_by_path() 通常是与 Oracle 中的 connect by 子句一起使用的，而 connect by 子句转换到 PostgreSQL 中时通常是使用 WITH RECUSIVE 来实现。 最小示例为了演示，本文提供了">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2018-10-24T12:25:24.000Z">
-<meta property="article:modified_time" content="2021-04-16T03:51:06.622Z">
+<meta property="article:published_time" content="2021-05-21T08:29:27.000Z">
+<meta property="article:modified_time" content="2021-05-22T00:17:44.992Z">
 <meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="Oracle">
 <meta property="article:tag" content="PostgreSQL">
 <meta name="twitter:card" content="summary">
 
 
-<link rel="canonical" href="https://blog.japinli.top/2018/10/postgresql-continuous-archiving/">
+<link rel="canonical" href="https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/">
 
 
 <script class="page-configurations">
@@ -49,7 +50,7 @@
   };
 </script>
 
-  <title>PostgreSQL 持续归档 | Japin</title>
+  <title>Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库 | Japin</title>
   
 
 
@@ -230,7 +231,7 @@
 
       <!--noindex-->
       <section class="post-toc-wrap sidebar-panel">
-          <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#WAL-%E6%97%A5%E5%BF%97%E5%BD%92%E6%A1%A3"><span class="nav-number">1.</span> <span class="nav-text">WAL 日志归档</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">2.</span> <span class="nav-text">参考</span></a></li></ol></div>
+          <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E5%B0%8F%E7%A4%BA%E4%BE%8B"><span class="nav-number">1.</span> <span class="nav-text">最小示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Oracle-sys-connect-by-path-%E7%A4%BA%E4%BE%8B"><span class="nav-number">2.</span> <span class="nav-text">Oracle sys_connect_by_path 示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PostgreSQL-%E8%BF%81%E7%A7%BB-sys-connect-by-path"><span class="nav-number">3.</span> <span class="nav-text">PostgreSQL 迁移 sys_connect_by_path</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
       </section>
       <!--/noindex-->
 
@@ -341,7 +342,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2018/10/postgresql-continuous-archiving/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.jpg">
@@ -357,7 +358,7 @@
     
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          PostgreSQL 持续归档
+          Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库
         </h1>
 
         <div class="post-meta-container">
@@ -367,7 +368,7 @@
           <i class="far fa-calendar-check"></i>
         </span>
         <span class="post-meta-item-text">更新于</span>
-        <time title="修改时间：2021-04-16 11:51:06" itemprop="dateModified" datetime="2021-04-16T11:51:06+08:00">2021-04-16</time>
+        <time title="修改时间：2021-05-22 08:17:44" itemprop="dateModified" datetime="2021-05-22T08:17:44+08:00">2021-05-22</time>
       </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -385,14 +386,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>3.4k</span>
+      <span>2k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>3 分钟</span>
+      <span>2 分钟</span>
     </span>
 </div>
 
@@ -403,37 +404,27 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <p>无论何时，PostgreSQL 总是在集群的数据目录 pg_wal 下面维护一个 <em>Write Ahead Log</em> 日志记录。该日志记录了数据文件的所有变化。当数据库系统发生崩溃时，数据库系统可以通过重放最新检查点之后的 WAL 日志条目来恢复数据库的一致性。在 PostgreSQL 中，我们通过将文件系统级的备份与 WAL 日志的备份相结合可以实现三种策略的数据库备份。当需要进行数据库恢复时，我们先恢复文件系统的备份，随后通过重放备份的 WAL 日志使得数据库进入到当前状态。尽管该方法过于复杂，但是它拥有以下好处：</p>
-<ul>
-<li>我们不需要完全一致的文件系统备份作为起点。备份中的任何内部不一致都将通过日志重放进行更正 (这与崩溃恢复期间发生的情况没有显着差异)。因此，我们不需要文件系统快照功能，只需要 tar 或类似的归档工具。</li>
-<li>没有必要一直重放 WAL 条目到最后。我们可以在任何时候停止重放并拥有当时数据库的一致快照。因此，该技术支持时间点恢复 (Point-in-Time Recovery, PITR)。为此，我们可以将数据库还原到自从进行基本备份以后的任何状态。</li>
-<li>如果我们持续地将一系列 WAL 日志文件提供给另一台已加载相同基本备份文件的计算机，此时，我们就拥有了一个热备系统：在任何时候我们都可以启动这台机器，它将拥有与原数据库几乎一致的状态。</li>
-</ul>
-<p>与普通文件系统备份技术一样，该方法只能支持恢复整个数据库集群，而不能用于恢复其子集。同时，它也需要更多的归档空间：基本的文件系统备份可能很庞大，繁忙的系统将生成许多必须归档的 WAL 流量。尽管如此，在多数情况下，它仍然是需要高可靠性的首选备份技术。</p>
-<p>我们需要一系列连续归档 WAL 日志文件，这些文件至少可以延伸到备份的开始时间，从而确保连续归档 (许多数据库供应商也称为“在线备份”) 成功恢复。</p>
-<a id="more"></a>
+        <p>本文简要记录一下如何将 Oracle 数据库中的 <code>sys_connect_by_path()</code> 函数迁移到 PostgreSQL 数据库中。</p>
+<p>函数 <code>sys_connect_by_path()</code> 通常是与 Oracle 中的 <code>connect by</code> 子句一起使用的，而 <code>connect by</code> 子句转换到 PostgreSQL 中时通常是使用 <code>WITH RECUSIVE</code> 来实现。</p>
+<h2 id="最小示例"><a href="#最小示例" class="headerlink" title="最小示例"></a>最小示例</h2><p>为了演示，本文提供了一个最小可执行示例。Oracle 中的示例表如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(<span class="keyword">id</span> <span class="built_in">int</span>, pid <span class="built_in">int</span>, <span class="keyword">path</span> <span class="built_in">varchar</span>(<span class="number">100</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="number">0</span>, <span class="string">&#x27;home&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="number">1</span>, <span class="string">&#x27;ubuntu&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">3</span>, <span class="number">2</span>, <span class="string">&#x27;codes&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">4</span>, <span class="number">1</span>, <span class="string">&#x27;centos&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">5</span>, <span class="number">4</span>, <span class="string">&#x27;videos&#x27;</span>);</span><br></pre></td></tr></table></figure>
 
-<h2 id="WAL-日志归档"><a href="#WAL-日志归档" class="headerlink" title="WAL 日志归档"></a>WAL 日志归档</h2><p>从抽象的意义上说，PostgreSQL 数据库系统会产生无限长的 WAL 日志记录序列。PostgreSQL 数据库该序列划分 WAL 段文件，通常每个段文件为 16MB (在构建 PostgreSQL 时可以更改段大小)。段文件的数字名称反映了它们在抽象 WAL 序列中的位置。当不使用 WAL 归档时，PostgreSQL 通常只需要创建几个段文件，然后通过将不再需要的段文件重命名为更高的段号来“回收”它们。</p>
-<p>当使用 WAL 日志归档时，我们需要在每个段文件填充后捕获它们的内容，并在段文件被回收再利用之前将该数据保存在其他某处。PostgreSQL 允许管理员指定要执行的 shell 命令，以将已完成的段文件复制到需要的位置。该命令可以简单的 cp 命令，也可以是复杂的 shell 脚步，一切都取决于用户。</p>
-<p>我们需要设置三个选项以便启用 WAL 日志归档： wal_level，archive_mode 和 archive_command。</p>
-<p><strong>wal_level__ - 必须为 replica 或者更高的级别。<br>__archive_mode</strong> - 设置为 on。<br>__archive_command__ - 通常为归档命令，其中 <code>%p</code> 被替换为要归档的文件的路径名，<code>%f</code> 被替换为要归档的文件的文件名。如果需要在命令中嵌入实际的 <code>％</code> 字符，请使用 <code>%%</code>。</p>
-<p>接下来我们尝试配置 WAL 日志归档，首先进行相关的准备工作，编译 PostgreSQL 10.4，初始化数据库，建立归档日志存储路径 (本例旨在使用 WAL 日志归档，因此就在本地建立目录来存储备份的 WAL 日志，通常的做法时备份到其他主机)，</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">$ pwd</span><br><span class="line">&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4</span><br><span class="line">$ ls</span><br><span class="line">drwxr-xr-x  2 postgres postgres 4096 Oct 24 13:36 bin</span><br><span class="line">drwx------ 19 postgres postgres 4096 Oct 24 13:49 data</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 include</span><br><span class="line">drwxr-xr-x  4 postgres postgres 4096 Oct 24 13:36 lib</span><br><span class="line">-rw-rw-r--  1 postgres postgres  177 Oct 24 13:39 pg-env.sh</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 share</span><br><span class="line">$ cat pg-env.sh</span><br><span class="line">export PGHOME&#x3D;&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4</span><br><span class="line">export PGDATA&#x3D;&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;data</span><br><span class="line">export PATH&#x3D;$PGHOME&#x2F;bin:$PATH</span><br><span class="line">export LD_LIBRARY_PATH&#x3D;$PGHOME&#x2F;lib:$LD_LIBRARY_PATH</span><br><span class="line">$ mkdir wals            # 建立 WAL 日志备份目录</span><br><span class="line">$ . pg-env.sh           # 初始化环境变量</span><br><span class="line">$ initdb -D data        # 初始化数据库集群</span><br></pre></td></tr></table></figure>
+<p>由于 PostgreSQL 与 Oracle 数据类型有所不同，这里需要对表结构进行简单的修改，如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(<span class="keyword">id</span> <span class="built_in">int</span>, pid <span class="built_in">int</span>, <span class="keyword">path</span> <span class="built_in">text</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="number">0</span>, <span class="string">&#x27;home&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="number">1</span>, <span class="string">&#x27;ubuntu&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">3</span>, <span class="number">2</span>, <span class="string">&#x27;codes&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">4</span>, <span class="number">1</span>, <span class="string">&#x27;centos&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">5</span>, <span class="number">4</span>, <span class="string">&#x27;videos&#x27;</span>);</span><br></pre></td></tr></table></figure>
 
-<p>接着修改 data/postgresql.conf 文件中的 wal_level，archive_mode 和 archive_command 参数。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wal_level &#x3D; replica</span><br><span class="line">archive_mode &#x3D; on</span><br><span class="line">archive_command &#x3D; &#39;test ! -f &#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;wals&#x2F;%f &amp;&amp; cp %p &#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;wals&#x2F;%f&#39;</span><br></pre></td></tr></table></figure>
+<h2 id="Oracle-sys-connect-by-path-示例"><a href="#Oracle-sys-connect-by-path-示例" class="headerlink" title="Oracle sys_connect_by_path 示例"></a>Oracle sys_connect_by_path 示例</h2><p>函数 <code>sys_connect_by_path</code> 仅在分层查询中有效。它返回从根到节点的列值的路径，对于 <code>CONNECT BY</code> 条件返回的每一行，列值用指定分隔符进行分隔。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  <span class="keyword">id</span>,</span><br><span class="line">  pid,</span><br><span class="line">  <span class="keyword">path</span>,</span><br><span class="line">  sys_connect_by_path(<span class="keyword">path</span>, <span class="string">&#x27;/&#x27;</span>) <span class="keyword">AS</span> full_path</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  tbl t</span><br><span class="line"><span class="keyword">START</span> <span class="keyword">WITH</span></span><br><span class="line">  t.pid = <span class="number">0</span></span><br><span class="line"><span class="keyword">CONNECT</span> <span class="keyword">BY</span></span><br><span class="line">  <span class="keyword">PRIOR</span> t.id = t.pid;</span><br><span class="line"> ID | PID |  PATH  |     FULL_PATH</span><br><span class="line"><span class="comment">----+-----+--------+---------------------</span></span><br><span class="line"> 1  |  0  | home   | /home</span><br><span class="line"> 2  |  1  | ubuntu | /home/ubuntu</span><br><span class="line"> 3  |  2  | codes  | /home/ubuntu/codes</span><br><span class="line"> 4  |  1  | centos | /home/centos</span><br><span class="line"> 5  |  4  | videos | /home/centos/videos</span><br></pre></td></tr></table></figure>
 
-<p>按照上述操作进行，我们目前已经配置好了 WAL 日志归档，接下来我们运行数据库并创建一个基本备份 (即文件系统级备份) 并保存在当前目录。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ pg_ctl -D data -l logfile start</span><br><span class="line">$ psql -c &quot;SELECT pg_start_backup(&#39;label&#39;);&quot; postgres</span><br><span class="line">$ tar -C data -czvf pg_basebackup_backup.tar.gz .</span><br><span class="line">$ psql -c &quot;SELECT pg_stop_backup();&quot; postgres</span><br></pre></td></tr></table></figure>
+<h2 id="PostgreSQL-迁移-sys-connect-by-path"><a href="#PostgreSQL-迁移-sys-connect-by-path" class="headerlink" title="PostgreSQL 迁移 sys_connect_by_path"></a>PostgreSQL 迁移 sys_connect_by_path</h2><p>下面我们使用递归 CTE 来实现 Oracle 中的 <code>sys_connect_by_path</code> 函数的功能。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">WITH</span> <span class="keyword">RECURSIVE</span> cte <span class="keyword">AS</span> (</span><br><span class="line">  <span class="keyword">SELECT</span></span><br><span class="line">    <span class="keyword">id</span>,</span><br><span class="line">    pid,</span><br><span class="line">    <span class="keyword">path</span>,</span><br><span class="line">    <span class="string">&#x27;/&#x27;</span> || <span class="keyword">path</span> <span class="keyword">AS</span> full_path</span><br><span class="line">  <span class="keyword">FROM</span></span><br><span class="line">    tbl</span><br><span class="line">  <span class="keyword">WHERE</span></span><br><span class="line">    pid = <span class="number">0</span>   <span class="comment">-- START WITH</span></span><br><span class="line">  <span class="keyword">UNION</span> <span class="keyword">ALL</span></span><br><span class="line">  <span class="keyword">SELECT</span></span><br><span class="line">    t.id,</span><br><span class="line">    t.pid,</span><br><span class="line">    t.path,</span><br><span class="line">    cte.full_path || <span class="string">&#x27;/&#x27;</span> || t.path <span class="keyword">AS</span> full_path</span><br><span class="line">  <span class="keyword">FROM</span></span><br><span class="line">    tbl t <span class="keyword">JOIN</span> cte</span><br><span class="line">      <span class="keyword">ON</span> cte.id = t.pid <span class="comment">-- CONNECT BY</span></span><br><span class="line">)</span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> cte;</span><br><span class="line"> id | pid |  path  |      full_path</span><br><span class="line"><span class="comment">----+-----+--------+---------------------</span></span><br><span class="line">  1 |   0 | home   | /home</span><br><span class="line">  2 |   1 | ubuntu | /home/ubuntu</span><br><span class="line">  4 |   1 | centos | /home/centos</span><br><span class="line">  3 |   2 | codes  | /home/ubuntu/codes</span><br><span class="line">  5 |   4 | videos | /home/centos/videos</span><br><span class="line">(5 rows)</span><br></pre></td></tr></table></figure>
 
-<p>此时，我们创建好了数据库集群的基本备份，之后我们便可以通过该基本备份并结合 WAL 日志备份进行恢复。紧接着，我们对数据库做一些修改，并停止数据库然后删除 data 目录。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">$ psql postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# create table test (id int, name varchar(10));</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres&#x3D;# insert into test values (1, &#39;postgres&#39;);</span><br><span class="line">INSERT 0 1</span><br><span class="line">postgres&#x3D;# select * from test ;</span><br><span class="line"> id |   name</span><br><span class="line"> ----+----------</span><br><span class="line">   1 | postgres</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# \q</span><br><span class="line">$ pg_ctl -D data -l logfile stop</span><br><span class="line">$ rm -rf data</span><br></pre></td></tr></table></figure>
+<p>这里需要注意，我们需要在开始的时候在需要连接的字段前加上分隔符，这样才能与 Oracle 保持一致。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://docs.oracle.com/cd/B19306_01/server.102/b14200/functions164.htm">https://docs.oracle.com/cd/B19306_01/server.102/b14200/functions164.htm</a></p>
+<div class="just-for-fun">
+笑林广记 - 应先备酒
 
-<p>下面将演示如何使用基础备份及 WAL 日志备份恢复数据库。</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> initdb -D data1                    <span class="comment"># 重新初始化一个数据库集群</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar -C data1 -xvf pg_basebackup_backup.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> cat &lt;&lt;END &gt; data1/recovery.conf    <span class="comment"># 创建恢复脚步</span></span></span><br><span class="line">restore_command = &#x27;cp /home/postgres/postgresql-10.4/wals/%f %p&#x27;</span><br><span class="line">END</span><br><span class="line"><span class="meta">$</span><span class="bash"> pg_ctl -D data1 -l logfile start   <span class="comment"># 恢复</span></span></span><br></pre></td></tr></table></figure>
-
-<p>在恢复完成之后，PostgreSQL 将把 recovery.conf 文件重命名为 recovery.done。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/10/static/continuous-archiving.html">https://www.postgresql.org/docs/10/static/continuous-archiving.html</a></p>
+<p>妻好吃酒，屡索夫不与，叱之曰：“开门七件事：柴、米、油、盐、酱、醋、茶，何曾见个酒字？”<br>妻曰：“酒是不曾开门就要用的，须是隔夜先买，如何放得在开门里面？”</p>
+</div>
 
     </div>
 
@@ -444,7 +435,7 @@
   <div class="popular-posts-header">相关文章</div>
   <ul class="popular-posts">
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+      <div class="popular-posts-title"><a href="/2021/03/oracle-wm-concat/" rel="bookmark">Oracle wm_concat 函数说明</a></div>
     </li>
     <li class="popular-posts-item">
       <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
@@ -453,10 +444,10 @@
       <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2021/03/oracle-wm-concat/" rel="bookmark">Oracle wm_concat 函数说明</a></div>
+      <div class="popular-posts-title"><a href="/2020/06/postgresql-alter-system/" rel="bookmark">PostgreSQL 修改配置参数</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2020/06/postgresql-alter-system/" rel="bookmark">PostgreSQL 修改配置参数</a></div>
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
     </li>
   </ul>
 
@@ -471,7 +462,7 @@
   </li>
   <li class="post-copyright-link">
       <strong>本文链接：</strong>
-      <a href="https://blog.japinli.top/2018/10/postgresql-continuous-archiving/" title="PostgreSQL 持续归档">https://blog.japinli.top/2018/10/postgresql-continuous-archiving/</a>
+      <a href="https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" title="Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库">https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -480,6 +471,7 @@
 </div>
 
           <div class="post-tags">
+              <a href="/tags/Oracle/" rel="tag"><i class="fa fa-tag"></i> Oracle</a>
               <a href="/tags/PostgreSQL/" rel="tag"><i class="fa fa-tag"></i> PostgreSQL</a>
           </div>
 
@@ -487,14 +479,11 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/2018/10/editing-binary-files-in-emacs/" rel="prev" title="Emacs 编辑二进制文件">
-                  <i class="fa fa-chevron-left"></i> Emacs 编辑二进制文件
+                <a href="/2021/05/postgresql-security/" rel="prev" title="PostgreSQL 安全性配置概要">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 安全性配置概要
                 </a>
             </div>
             <div class="post-nav-item">
-                <a href="/2018/10/cstore-fdw-implementation/" rel="next" title="列存数据库 cstore_fdw 的实现">
-                  列存数据库 cstore_fdw 的实现 <i class="fa fa-chevron-right"></i>
-                </a>
             </div>
           </div>
     </footer>

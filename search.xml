@@ -462,6 +462,39 @@
       </tags>
   </entry>
   <entry>
+    <title>Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</title>
+    <url>/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/</url>
+    <content><![CDATA[<p>本文简要记录一下如何将 Oracle 数据库中的 <code>sys_connect_by_path()</code> 函数迁移到 PostgreSQL 数据库中。</p>
+<p>函数 <code>sys_connect_by_path()</code> 通常是与 Oracle 中的 <code>connect by</code> 子句一起使用的，而 <code>connect by</code> 子句转换到 PostgreSQL 中时通常是使用 <code>WITH RECUSIVE</code> 来实现。</p>
+<h2 id="最小示例"><a href="#最小示例" class="headerlink" title="最小示例"></a>最小示例</h2><p>为了演示，本文提供了一个最小可执行示例。Oracle 中的示例表如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(<span class="keyword">id</span> <span class="built_in">int</span>, pid <span class="built_in">int</span>, <span class="keyword">path</span> <span class="built_in">varchar</span>(<span class="number">100</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="number">0</span>, <span class="string">&#x27;home&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="number">1</span>, <span class="string">&#x27;ubuntu&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">3</span>, <span class="number">2</span>, <span class="string">&#x27;codes&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">4</span>, <span class="number">1</span>, <span class="string">&#x27;centos&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">5</span>, <span class="number">4</span>, <span class="string">&#x27;videos&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>由于 PostgreSQL 与 Oracle 数据类型有所不同，这里需要对表结构进行简单的修改，如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(<span class="keyword">id</span> <span class="built_in">int</span>, pid <span class="built_in">int</span>, <span class="keyword">path</span> <span class="built_in">text</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="number">0</span>, <span class="string">&#x27;home&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="number">1</span>, <span class="string">&#x27;ubuntu&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">3</span>, <span class="number">2</span>, <span class="string">&#x27;codes&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">4</span>, <span class="number">1</span>, <span class="string">&#x27;centos&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">5</span>, <span class="number">4</span>, <span class="string">&#x27;videos&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="Oracle-sys-connect-by-path-示例"><a href="#Oracle-sys-connect-by-path-示例" class="headerlink" title="Oracle sys_connect_by_path 示例"></a>Oracle sys_connect_by_path 示例</h2><p>函数 <code>sys_connect_by_path</code> 仅在分层查询中有效。它返回从根到节点的列值的路径，对于 <code>CONNECT BY</code> 条件返回的每一行，列值用指定分隔符进行分隔。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  <span class="keyword">id</span>,</span><br><span class="line">  pid,</span><br><span class="line">  <span class="keyword">path</span>,</span><br><span class="line">  sys_connect_by_path(<span class="keyword">path</span>, <span class="string">&#x27;/&#x27;</span>) <span class="keyword">AS</span> full_path</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  tbl t</span><br><span class="line"><span class="keyword">START</span> <span class="keyword">WITH</span></span><br><span class="line">  t.pid = <span class="number">0</span></span><br><span class="line"><span class="keyword">CONNECT</span> <span class="keyword">BY</span></span><br><span class="line">  <span class="keyword">PRIOR</span> t.id = t.pid;</span><br><span class="line"> ID | PID |  PATH  |     FULL_PATH</span><br><span class="line"><span class="comment">----+-----+--------+---------------------</span></span><br><span class="line"> 1  |  0  | home   | /home</span><br><span class="line"> 2  |  1  | ubuntu | /home/ubuntu</span><br><span class="line"> 3  |  2  | codes  | /home/ubuntu/codes</span><br><span class="line"> 4  |  1  | centos | /home/centos</span><br><span class="line"> 5  |  4  | videos | /home/centos/videos</span><br></pre></td></tr></table></figure>
+
+<h2 id="PostgreSQL-迁移-sys-connect-by-path"><a href="#PostgreSQL-迁移-sys-connect-by-path" class="headerlink" title="PostgreSQL 迁移 sys_connect_by_path"></a>PostgreSQL 迁移 sys_connect_by_path</h2><p>下面我们使用递归 CTE 来实现 Oracle 中的 <code>sys_connect_by_path</code> 函数的功能。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">WITH</span> <span class="keyword">RECURSIVE</span> cte <span class="keyword">AS</span> (</span><br><span class="line">  <span class="keyword">SELECT</span></span><br><span class="line">    <span class="keyword">id</span>,</span><br><span class="line">    pid,</span><br><span class="line">    <span class="keyword">path</span>,</span><br><span class="line">    <span class="string">&#x27;/&#x27;</span> || <span class="keyword">path</span> <span class="keyword">AS</span> full_path</span><br><span class="line">  <span class="keyword">FROM</span></span><br><span class="line">    tbl</span><br><span class="line">  <span class="keyword">WHERE</span></span><br><span class="line">    pid = <span class="number">0</span>   <span class="comment">-- START WITH</span></span><br><span class="line">  <span class="keyword">UNION</span> <span class="keyword">ALL</span></span><br><span class="line">  <span class="keyword">SELECT</span></span><br><span class="line">    t.id,</span><br><span class="line">    t.pid,</span><br><span class="line">    t.path,</span><br><span class="line">    cte.full_path || <span class="string">&#x27;/&#x27;</span> || t.path <span class="keyword">AS</span> full_path</span><br><span class="line">  <span class="keyword">FROM</span></span><br><span class="line">    tbl t <span class="keyword">JOIN</span> cte</span><br><span class="line">      <span class="keyword">ON</span> cte.id = t.pid <span class="comment">-- CONNECT BY</span></span><br><span class="line">)</span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> cte;</span><br><span class="line"> id | pid |  path  |      full_path</span><br><span class="line"><span class="comment">----+-----+--------+---------------------</span></span><br><span class="line">  1 |   0 | home   | /home</span><br><span class="line">  2 |   1 | ubuntu | /home/ubuntu</span><br><span class="line">  4 |   1 | centos | /home/centos</span><br><span class="line">  3 |   2 | codes  | /home/ubuntu/codes</span><br><span class="line">  5 |   4 | videos | /home/centos/videos</span><br><span class="line">(5 rows)</span><br></pre></td></tr></table></figure>
+
+<p>这里需要注意，我们需要在开始的时候在需要连接的字段前加上分隔符，这样才能与 Oracle 保持一致。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://docs.oracle.com/cd/B19306_01/server.102/b14200/functions164.htm">https://docs.oracle.com/cd/B19306_01/server.102/b14200/functions164.htm</a></p>
+<div class="just-for-fun">
+笑林广记 - 应先备酒
+
+<p>妻好吃酒，屡索夫不与，叱之曰：“开门七件事：柴、米、油、盐、酱、醋、茶，何曾见个酒字？”<br>妻曰：“酒是不曾开门就要用的，须是隔夜先买，如何放得在开门里面？”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Oracle</tag>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>重拾 ARP 协议</title>
     <url>/2019/09/arp-protocol/</url>
     <content><![CDATA[<p>ARP (Address Resolution Protoco)，中文地址解析协议，用来将网络层的 IP 地址转换为数据链路层的物理地址，该协议属于 TCP/IP 协议簇。当一台主机把以太网数据帧发送到位于同一局域网上的另一台主机时，是根据 48 bit 的以太网地址来确定目的接口的。设备驱动程序从不检查 IP 数据报中的目的 IP 地址。而地址解析为这两种不同的地址形式提供映射: 32 bit 的 IP 地址和数据链路层使用的任何类型的地址。<a href="https://tools.ietf.org/rfc/rfc826.txt">RFC 826</a> 给出了 ARP 协议的规范。ARP 协议为 IP 地址到对应的硬件物理地址提供了动态映射，通常情况下用户或系统管理员不用担心。</p>
@@ -520,32 +553,6 @@
       </tags>
   </entry>
   <entry>
-    <title>MacOS 上创建 U 盘启动器</title>
-    <url>/2020/07/create-u-bootloader-on-macos/</url>
-    <content><![CDATA[<p>本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。</p>
-<a id="more"></a>
-
-<p>我们在官网现在的镜像大都是以 iso 结尾的文件，例如，本文中使用的 ubuntu-16.04-server-amd64.iso 镜像，在 Linux 平台，我们可以直接使用 dd 将这个镜像写到 U 盘上即可作为启动盘，但是在 MacOS 平台上，则需要将 iso 文件转换为 dmg 格式。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> hdiutil convert -format UDRW ubuntu-16.04-server-amd64.iso -o ubuntu-16.04-server-amd64.img</span></span><br><span class="line">Reading Master Boot Record (MBR : 0)…</span><br><span class="line">Reading Ubuntu-Server 18.04.4 LTS arm64  (Apple_ISO : 1)…</span><br><span class="line">Reading  (Type CD : 2)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Reading  (Type EF : 3)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Elapsed Time:  2.094s</span><br><span class="line">Speed: 454.9Mbytes/sec</span><br><span class="line">Savings: 0.0%</span><br><span class="line">created: /Users/japin/Downloads/ubuntu-18.04.4-server-arm64.img.dmg</span><br></pre></td></tr></table></figure>
-
-<p>从上面的命令我们可以看到，文件将自动加上 dmg 后缀。上面的命令将 ubuntu-16.04-server-amd64.iso 镜像转换为 UDRW 格式并存储到 ubuntu-16.04-server-amd64.img.dmg 文件中。</p>
-<p>接下来我们通过 diskutil 命令查看当前 U 盘的位置。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil list</span></span><br><span class="line">/dev/disk0 (internal, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      GUID_partition_scheme                        *251.0 GB   disk0</span><br><span class="line">   1:                        EFI EFI                     314.6 MB   disk0s1</span><br><span class="line">   2:                 Apple_APFS Container disk1         250.7 GB   disk0s2</span><br><span class="line"></span><br><span class="line">/dev/disk1 (synthesized):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      APFS Container Scheme -                      +250.7 GB   disk1</span><br><span class="line">                                 Physical Store disk0s2</span><br><span class="line">   1:                APFS Volume Macintosh HD            11.1 GB    disk1s1</span><br><span class="line">   2:                APFS Volume Macintosh HD - Data     76.8 GB    disk1s2</span><br><span class="line">   3:                APFS Volume Preboot                 81.3 MB    disk1s3</span><br><span class="line">   4:                APFS Volume Recovery                528.1 MB   disk1s4</span><br><span class="line">   5:                APFS Volume VM                      3.2 GB     disk1s5</span><br><span class="line"></span><br><span class="line">/dev/disk2 (external, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:     Apple_partition_scheme                        *8.1 GB     disk2</span><br><span class="line">   1:        Apple_partition_map                         4.1 KB     disk2s1</span><br><span class="line">   2:                  Apple_HFS                         2.5 MB     disk2s2</span><br></pre></td></tr></table></figure>
-
-<p>可以看到，我们的 U 盘对应的是 <code>/dev/disk2</code>，使用下面的命令卸载 U 盘。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil unmountDisk /dev/disk2</span></span><br><span class="line">Unmount of all volumes on disk2 was successful</span><br></pre></td></tr></table></figure>
-
-<p>最后，使用 dd 命令将其写入到 U 盘中，这里需要注意我们的 U 盘设备名应使用 <code>/dev/rdisk2</code>，即在 <code>/dev/disk2</code> 的磁盘名前面加上 <code>r</code> 字母。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo dd <span class="keyword">if</span>=ubuntu-18.04.4-server-arm64.img.dmg of=/dev/rdisk2 bs=1m</span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>MacOS</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Ubuntu 系统 DNS 服务器配置</title>
     <url>/2018/09/configure-dns-on-ubuntu/</url>
     <content><![CDATA[<p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
@@ -569,6 +576,32 @@
       </categories>
       <tags>
         <tag>DNS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MacOS 上创建 U 盘启动器</title>
+    <url>/2020/07/create-u-bootloader-on-macos/</url>
+    <content><![CDATA[<p>本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。</p>
+<a id="more"></a>
+
+<p>我们在官网现在的镜像大都是以 iso 结尾的文件，例如，本文中使用的 ubuntu-16.04-server-amd64.iso 镜像，在 Linux 平台，我们可以直接使用 dd 将这个镜像写到 U 盘上即可作为启动盘，但是在 MacOS 平台上，则需要将 iso 文件转换为 dmg 格式。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> hdiutil convert -format UDRW ubuntu-16.04-server-amd64.iso -o ubuntu-16.04-server-amd64.img</span></span><br><span class="line">Reading Master Boot Record (MBR : 0)…</span><br><span class="line">Reading Ubuntu-Server 18.04.4 LTS arm64  (Apple_ISO : 1)…</span><br><span class="line">Reading  (Type CD : 2)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Reading  (Type EF : 3)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Elapsed Time:  2.094s</span><br><span class="line">Speed: 454.9Mbytes/sec</span><br><span class="line">Savings: 0.0%</span><br><span class="line">created: /Users/japin/Downloads/ubuntu-18.04.4-server-arm64.img.dmg</span><br></pre></td></tr></table></figure>
+
+<p>从上面的命令我们可以看到，文件将自动加上 dmg 后缀。上面的命令将 ubuntu-16.04-server-amd64.iso 镜像转换为 UDRW 格式并存储到 ubuntu-16.04-server-amd64.img.dmg 文件中。</p>
+<p>接下来我们通过 diskutil 命令查看当前 U 盘的位置。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil list</span></span><br><span class="line">/dev/disk0 (internal, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      GUID_partition_scheme                        *251.0 GB   disk0</span><br><span class="line">   1:                        EFI EFI                     314.6 MB   disk0s1</span><br><span class="line">   2:                 Apple_APFS Container disk1         250.7 GB   disk0s2</span><br><span class="line"></span><br><span class="line">/dev/disk1 (synthesized):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      APFS Container Scheme -                      +250.7 GB   disk1</span><br><span class="line">                                 Physical Store disk0s2</span><br><span class="line">   1:                APFS Volume Macintosh HD            11.1 GB    disk1s1</span><br><span class="line">   2:                APFS Volume Macintosh HD - Data     76.8 GB    disk1s2</span><br><span class="line">   3:                APFS Volume Preboot                 81.3 MB    disk1s3</span><br><span class="line">   4:                APFS Volume Recovery                528.1 MB   disk1s4</span><br><span class="line">   5:                APFS Volume VM                      3.2 GB     disk1s5</span><br><span class="line"></span><br><span class="line">/dev/disk2 (external, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:     Apple_partition_scheme                        *8.1 GB     disk2</span><br><span class="line">   1:        Apple_partition_map                         4.1 KB     disk2s1</span><br><span class="line">   2:                  Apple_HFS                         2.5 MB     disk2s2</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，我们的 U 盘对应的是 <code>/dev/disk2</code>，使用下面的命令卸载 U 盘。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil unmountDisk /dev/disk2</span></span><br><span class="line">Unmount of all volumes on disk2 was successful</span><br></pre></td></tr></table></figure>
+
+<p>最后，使用 dd 命令将其写入到 U 盘中，这里需要注意我们的 U 盘设备名应使用 <code>/dev/rdisk2</code>，即在 <code>/dev/disk2</code> 的磁盘名前面加上 <code>r</code> 字母。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo dd <span class="keyword">if</span>=ubuntu-18.04.4-server-arm64.img.dmg of=/dev/rdisk2 bs=1m</span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>MacOS</tag>
       </tags>
   </entry>
   <entry>
@@ -1260,30 +1293,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Hello World</title>
-    <url>/2018/08/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/deployment.html">Deployment</a></p>
-]]></content>
-      <categories>
-        <category>博客</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Go 语言实战</title>
     <url>/2021/05/go-in-action/</url>
     <content><![CDATA[<p>最近由于需要从事 Go 语言相关的工作，为此花了约一个星期的时间将《Go 语言实战》这本书过了一遍，对 Go 语言有了一个基本的认识。这本书短小精悍，全书 200 多页，详细介绍了 Go 语言的数组、切片的底层原理，Go 语言的类型系统、并发、通道以及测试。当然部分内容也没有深入的讲解，如映射，其底层的实现介绍的不是很充分。《Go 语言实战》这本书适合有一定语言编程经验的读者。</p>
@@ -1317,6 +1326,45 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>Go</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/2018/08/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/deployment.html">Deployment</a></p>
+]]></content>
+      <categories>
+        <category>博客</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何学习 Emacs</title>
+    <url>/2019/03/how-to-learn-emacs/</url>
+    <content><![CDATA[<img src="/2019/03/how-to-learn-emacs/How-to-Learn-Emacs-v2-Large.png" class="" title="How to Learn Emacs">
+
+
+<p><a href="http://sachachua.com/blog/2013/05/how-to-learn-emacs-a-hand-drawn-one-pager-for-beginners/">上图</a>来自于 <a href="http://sachachua.com/blog/">Sacha Chua</a> 的博客。她的博客记录许多关于学习 Emacs 的资源。</p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Emacs</tag>
       </tags>
   </entry>
   <entry>
@@ -1361,53 +1409,6 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>Eclipse</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>如何学习 Emacs</title>
-    <url>/2019/03/how-to-learn-emacs/</url>
-    <content><![CDATA[<img src="/2019/03/how-to-learn-emacs/How-to-Learn-Emacs-v2-Large.png" class="" title="How to Learn Emacs">
-
-
-<p><a href="http://sachachua.com/blog/2013/05/how-to-learn-emacs-a-hand-drawn-one-pager-for-beginners/">上图</a>来自于 <a href="http://sachachua.com/blog/">Sacha Chua</a> 的博客。她的博客记录许多关于学习 Emacs 的资源。</p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Emacs</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>LaTeX 页码设置</title>
-    <url>/2019/03/latex-page-numbering/</url>
-    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
-<a id="more"></a>
-
-<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
-<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
-<ul>
-<li><strong>empty</strong> - 没有页眉和页脚</li>
-<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
-<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
-<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
-</ul>
-<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
-<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
-<ul>
-<li><strong>arabic</strong> - 阿拉伯数字</li>
-<li><strong>roman</strong> - 小写的罗马数字</li>
-<li><strong>Roman</strong> - 大写的罗马数字</li>
-<li><strong>alph</strong> - 小写的字符形式</li>
-<li><strong>Alph</strong> - 大写的字符形式</li>
-</ul>
-<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight latex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;article&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;fontspec, xunicode, xlextra&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;xeCJK&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">title</span><span class="string">&#123;\LaTeX 页码设置&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">author</span><span class="string">&#123;Japinli&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">maketitle</span></span></span><br><span class="line"><span class="tag">\<span class="name">thispagestyle</span><span class="string">&#123;empty&#125;</span></span> <span class="comment">% 当前页不显示页码</span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">pagestyle</span><span class="string">&#123;headings&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;Roman&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section*</span><span class="string">&#123;前言&#125;</span></span></span><br><span class="line">学习如何在<span class="tag">\<span class="name">LaTeX</span></span> 中设置页码。</span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">tableofcontents</span></span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;arabic&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">LaTeX</span></span> 中包含五种页码风格，分别是<span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>，</span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>和<span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格说明&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>代表小写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>代表大写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格设置&#125;</span></span></span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用<span class="tag">\<span class="name">emph</span><span class="string">&#123;\textbackslash pagenumbering\&#123;sytle\&#125;</span></span>&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -1487,56 +1488,35 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Oracle wm_concat 函数说明</title>
-    <url>/2021/03/oracle-wm-concat/</url>
-    <content><![CDATA[<p>Oracle 数据库的 <code>wm_concat</code> 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。<br>本文主要介绍 <code>wm_concat</code> 函数的功能以及其在 PostgreSQL 数据库中的替换方法。</p>
+    <title>LaTeX 页码设置</title>
+    <url>/2019/03/latex-page-numbering/</url>
+    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
 <a id="more"></a>
 
-<h2 id="测试用例"><a href="#测试用例" class="headerlink" title="测试用例"></a>测试用例</h2><p>本文将使用下面的测试用例来测试 <code>wm_concat</code> 函数以及其替代方法。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (col1 <span class="built_in">int</span>, col2 <span class="built_in">VARCHAR</span>(<span class="number">20</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Hello&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;world&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;this&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;is&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;a&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;test&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;wm_concat test&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<h2 id="Oracle"><a href="#Oracle" class="headerlink" title="Oracle"></a>Oracle</h2><p>在 Oracle 数据库中 <code>wm_concat</code> 没有相关的文档记录的，其输出如下所示。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">SQL&gt; SELECT col1, wm_concat(col2) FROM tbl GROUP BY (col1);</span><br><span class="line"></span><br><span class="line">      COL1 WM_CONCAT(COL2)</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         1 Hello,test,a,is,this,world</span><br><span class="line">         2 wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>由于 <code>wm_concat</code> 没有相关的文档记录，因此不建议使用该函数。其次，在 Oracle 12c 中 <code>wm_concat</code> 已经被移除了。更好的写法是通过 <code>listagg</code> 函数对其进行替换。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">SQL&gt; SELECT col1, listagg(col2, &#x27;,&#x27;) WITHIN GROUP (ORDER BY col2) AS agg FROM tbl GROUP BY col1;</span><br><span class="line"></span><br><span class="line">      COL1 AGG</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         1 Hello,test,a,is,this,world</span><br><span class="line">         2 wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<h2 id="PostgreSQL"><a href="#PostgreSQL" class="headerlink" title="PostgreSQL"></a>PostgreSQL</h2><p>当我们将其迁移到 PostgreSQL 时，我们可以使用 <code>string_agg</code> 函数来替换 Oracle 中的 <code>wm_concat</code> 和 <code>listagg</code> 函数。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# SELECT col1, string_agg(col2, &#39;,&#39;) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">    1 | Hello,world,this,is,a,test</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres# SELECT col1, string_agg(col2, &#39;,&#39; ORDER BY col2) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    1 | a,Hello,is,test,this,world</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
-
-<p>默认情况下，<code>wm_concat</code> 函数是根据其聚合的列进行排序的，但是其排序的结果和 PostgreSQL 中不太一样，目前尚不清楚具体原因。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="http://psoug.org/definition/WM_CONCAT.htm">http://psoug.org/definition/WM_CONCAT.htm</a><br>[1] <a href="https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631">https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631</a></p>
+<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
+<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
+<ul>
+<li><strong>empty</strong> - 没有页眉和页脚</li>
+<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
+<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
+<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
+</ul>
+<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
+<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
+<ul>
+<li><strong>arabic</strong> - 阿拉伯数字</li>
+<li><strong>roman</strong> - 小写的罗马数字</li>
+<li><strong>Roman</strong> - 大写的罗马数字</li>
+<li><strong>alph</strong> - 小写的字符形式</li>
+<li><strong>Alph</strong> - 大写的字符形式</li>
+</ul>
+<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight latex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;article&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;fontspec, xunicode, xlextra&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;xeCJK&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">title</span><span class="string">&#123;\LaTeX 页码设置&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">author</span><span class="string">&#123;Japinli&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">maketitle</span></span></span><br><span class="line"><span class="tag">\<span class="name">thispagestyle</span><span class="string">&#123;empty&#125;</span></span> <span class="comment">% 当前页不显示页码</span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">pagestyle</span><span class="string">&#123;headings&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;Roman&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section*</span><span class="string">&#123;前言&#125;</span></span></span><br><span class="line">学习如何在<span class="tag">\<span class="name">LaTeX</span></span> 中设置页码。</span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">tableofcontents</span></span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;arabic&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">LaTeX</span></span> 中包含五种页码风格，分别是<span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>，</span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>和<span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格说明&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>代表小写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>代表大写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格设置&#125;</span></span></span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用<span class="tag">\<span class="name">emph</span><span class="string">&#123;\textbackslash pagenumbering\&#123;sytle\&#125;</span></span>&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
-        <category>数据库</category>
+        <category>排版</category>
       </categories>
       <tags>
-        <tag>PostgreSQL</tag>
-        <tag>Oracle</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Hexo NexT (v8.x) 主题添加近期文章</title>
-    <url>/2020/08/next-8-0-0-recent-posts/</url>
-    <content><![CDATA[<p>最近将博客由 NexT-v5.x 迁移到 NexT-v8.x 版本，这其中有很多东西已将发生变化了。本文简要介绍一下如何在新版中加入近期文章的功能。NexT-v8.x 版本将模版文件由原来的 <code>swig</code> 变更为 <code>njk</code> 后缀，因此，之前的近期文章的功能不再适用，我们需要稍作修改。</p>
-<a id="more"></a>
-
-<h2 id="创建自定义文件"><a href="#创建自定义文件" class="headerlink" title="创建自定义文件"></a>创建自定义文件</h2><p>NexT-v8.x 支持自定义 <code>njk</code> 文件，从而避免修改 NexT 的源码，见参考链接 [<a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">2</a>]。我们在站点的 <code>source</code> 目录下创建 <code>_data/sidebar.njk</code> 文件，并加入如下内容：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;!-- recent posts --&gt;</span><br><span class="line">&#123;%- if theme.recent_posts %&#125;</span><br><span class="line">    &lt;div class&#x3D;&quot;links-of-blogroll motion-element &#123;&#123; &quot;links-of-blogroll-&quot; + theme.recent_posts_layout &#125;&#125;&quot;&gt;</span><br><span class="line">        &lt;div class&#x3D;&quot;links-of-blogroll-title recent-posts-title&quot;&gt;</span><br><span class="line">	    &lt;i class&#x3D;&quot;fa fa-history &#123;&#123; theme.recent_posts_icon | lower &#125;&#125;&quot; aria-hidden&#x3D;&quot;true&quot;&gt;&lt;&#x2F;i&gt;</span><br><span class="line">            &#123;&#123; theme.recent_posts_title &#125;&#125;</span><br><span class="line">	&lt;&#x2F;div&gt;</span><br><span class="line">	&lt;ul class&#x3D;&quot;links-of-blogroll-list recent-posts-list&quot;&gt;</span><br><span class="line">	    &#123;%- set posts &#x3D; site.posts.sort(&#39;-date&#39;).toArray() %&#125;</span><br><span class="line">	    &#123;%- for post in posts.slice(&#39;0&#39;, &#39;5&#39;) %&#125;</span><br><span class="line">	        &lt;li class&#x3D;&quot;my-links-of-blogroll-item&quot;&gt;</span><br><span class="line">		    &lt;a href&#x3D;&quot;&#123;&#123; url_for(post.path) &#125;&#125;&quot; title&#x3D;&quot;&#123;&#123; post.title &#125;&#125;&quot; target&#x3D;&quot;&quot;&gt;</span><br><span class="line">		    &#123;&#123; post.title &#125;&#125;</span><br><span class="line">		    &lt;&#x2F;a&gt;</span><br><span class="line">		&lt;&#x2F;li&gt;</span><br><span class="line">	    &#123;%- endfor %&#125;</span><br><span class="line">	&lt;&#x2F;ul&gt;</span><br><span class="line">    &lt;&#x2F;div&gt;</span><br><span class="line">&#123;%- endif %&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="修改主题配置文件"><a href="#修改主题配置文件" class="headerlink" title="修改主题配置文件"></a>修改主题配置文件</h2><p>接着我们在站点目录下的主题配置文件（_config.next.yml）中加入如下内容开启近期文章功能。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">recent_posts: true</span><br><span class="line">recent_posts_title: 近期文章</span><br><span class="line">recent_posts_layout: block</span><br></pre></td></tr></table></figure>
-
-<p>接着重启服务，我们便可以看到如下所示的近期文章板块。</p>
-<img src="/2020/08/next-8-0-0-recent-posts/recent-posts.jpg" class="">
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://theme-next.js.org/next-8-0-0-rc-1-released/">https://theme-next.js.org/next-8-0-0-rc-1-released/</a><br>[2] <a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb</a><br>[3] <a href="https://hasaik.com/posts/ab21860c.html">https://hasaik.com/posts/ab21860c.html</a></p>
-]]></content>
-      <categories>
-        <category>博客</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
+        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -1588,6 +1568,59 @@ table th:nth-of-type(2) {
         <tag>R3G</tag>
         <tag>breed</tag>
         <tag>padavan</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hexo NexT (v8.x) 主题添加近期文章</title>
+    <url>/2020/08/next-8-0-0-recent-posts/</url>
+    <content><![CDATA[<p>最近将博客由 NexT-v5.x 迁移到 NexT-v8.x 版本，这其中有很多东西已将发生变化了。本文简要介绍一下如何在新版中加入近期文章的功能。NexT-v8.x 版本将模版文件由原来的 <code>swig</code> 变更为 <code>njk</code> 后缀，因此，之前的近期文章的功能不再适用，我们需要稍作修改。</p>
+<a id="more"></a>
+
+<h2 id="创建自定义文件"><a href="#创建自定义文件" class="headerlink" title="创建自定义文件"></a>创建自定义文件</h2><p>NexT-v8.x 支持自定义 <code>njk</code> 文件，从而避免修改 NexT 的源码，见参考链接 [<a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">2</a>]。我们在站点的 <code>source</code> 目录下创建 <code>_data/sidebar.njk</code> 文件，并加入如下内容：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;!-- recent posts --&gt;</span><br><span class="line">&#123;%- if theme.recent_posts %&#125;</span><br><span class="line">    &lt;div class&#x3D;&quot;links-of-blogroll motion-element &#123;&#123; &quot;links-of-blogroll-&quot; + theme.recent_posts_layout &#125;&#125;&quot;&gt;</span><br><span class="line">        &lt;div class&#x3D;&quot;links-of-blogroll-title recent-posts-title&quot;&gt;</span><br><span class="line">	    &lt;i class&#x3D;&quot;fa fa-history &#123;&#123; theme.recent_posts_icon | lower &#125;&#125;&quot; aria-hidden&#x3D;&quot;true&quot;&gt;&lt;&#x2F;i&gt;</span><br><span class="line">            &#123;&#123; theme.recent_posts_title &#125;&#125;</span><br><span class="line">	&lt;&#x2F;div&gt;</span><br><span class="line">	&lt;ul class&#x3D;&quot;links-of-blogroll-list recent-posts-list&quot;&gt;</span><br><span class="line">	    &#123;%- set posts &#x3D; site.posts.sort(&#39;-date&#39;).toArray() %&#125;</span><br><span class="line">	    &#123;%- for post in posts.slice(&#39;0&#39;, &#39;5&#39;) %&#125;</span><br><span class="line">	        &lt;li class&#x3D;&quot;my-links-of-blogroll-item&quot;&gt;</span><br><span class="line">		    &lt;a href&#x3D;&quot;&#123;&#123; url_for(post.path) &#125;&#125;&quot; title&#x3D;&quot;&#123;&#123; post.title &#125;&#125;&quot; target&#x3D;&quot;&quot;&gt;</span><br><span class="line">		    &#123;&#123; post.title &#125;&#125;</span><br><span class="line">		    &lt;&#x2F;a&gt;</span><br><span class="line">		&lt;&#x2F;li&gt;</span><br><span class="line">	    &#123;%- endfor %&#125;</span><br><span class="line">	&lt;&#x2F;ul&gt;</span><br><span class="line">    &lt;&#x2F;div&gt;</span><br><span class="line">&#123;%- endif %&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="修改主题配置文件"><a href="#修改主题配置文件" class="headerlink" title="修改主题配置文件"></a>修改主题配置文件</h2><p>接着我们在站点目录下的主题配置文件（_config.next.yml）中加入如下内容开启近期文章功能。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">recent_posts: true</span><br><span class="line">recent_posts_title: 近期文章</span><br><span class="line">recent_posts_layout: block</span><br></pre></td></tr></table></figure>
+
+<p>接着重启服务，我们便可以看到如下所示的近期文章板块。</p>
+<img src="/2020/08/next-8-0-0-recent-posts/recent-posts.jpg" class="">
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://theme-next.js.org/next-8-0-0-rc-1-released/">https://theme-next.js.org/next-8-0-0-rc-1-released/</a><br>[2] <a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb</a><br>[3] <a href="https://hasaik.com/posts/ab21860c.html">https://hasaik.com/posts/ab21860c.html</a></p>
+]]></content>
+      <categories>
+        <category>博客</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Oracle wm_concat 函数说明</title>
+    <url>/2021/03/oracle-wm-concat/</url>
+    <content><![CDATA[<p>Oracle 数据库的 <code>wm_concat</code> 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。<br>本文主要介绍 <code>wm_concat</code> 函数的功能以及其在 PostgreSQL 数据库中的替换方法。</p>
+<a id="more"></a>
+
+<h2 id="测试用例"><a href="#测试用例" class="headerlink" title="测试用例"></a>测试用例</h2><p>本文将使用下面的测试用例来测试 <code>wm_concat</code> 函数以及其替代方法。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (col1 <span class="built_in">int</span>, col2 <span class="built_in">VARCHAR</span>(<span class="number">20</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Hello&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;world&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;this&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;is&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;a&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;test&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;wm_concat test&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="Oracle"><a href="#Oracle" class="headerlink" title="Oracle"></a>Oracle</h2><p>在 Oracle 数据库中 <code>wm_concat</code> 没有相关的文档记录的，其输出如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">SQL&gt; SELECT col1, wm_concat(col2) FROM tbl GROUP BY (col1);</span><br><span class="line"></span><br><span class="line">      COL1 WM_CONCAT(COL2)</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         1 Hello,test,a,is,this,world</span><br><span class="line">         2 wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>由于 <code>wm_concat</code> 没有相关的文档记录，因此不建议使用该函数。其次，在 Oracle 12c 中 <code>wm_concat</code> 已经被移除了。更好的写法是通过 <code>listagg</code> 函数对其进行替换。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">SQL&gt; SELECT col1, listagg(col2, &#x27;,&#x27;) WITHIN GROUP (ORDER BY col2) AS agg FROM tbl GROUP BY col1;</span><br><span class="line"></span><br><span class="line">      COL1 AGG</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         1 Hello,test,a,is,this,world</span><br><span class="line">         2 wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="PostgreSQL"><a href="#PostgreSQL" class="headerlink" title="PostgreSQL"></a>PostgreSQL</h2><p>当我们将其迁移到 PostgreSQL 时，我们可以使用 <code>string_agg</code> 函数来替换 Oracle 中的 <code>wm_concat</code> 和 <code>listagg</code> 函数。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# SELECT col1, string_agg(col2, &#39;,&#39;) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">    1 | Hello,world,this,is,a,test</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres# SELECT col1, string_agg(col2, &#39;,&#39; ORDER BY col2) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    1 | a,Hello,is,test,this,world</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下，<code>wm_concat</code> 函数是根据其聚合的列进行排序的，但是其排序的结果和 PostgreSQL 中不太一样，目前尚不清楚具体原因。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="http://psoug.org/definition/WM_CONCAT.htm">http://psoug.org/definition/WM_CONCAT.htm</a><br>[1] <a href="https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631">https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Oracle</tag>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -1991,6 +2024,25 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 编辑查询缓冲区</title>
+    <url>/2020/05/postgresql-edit-query-buffer/</url>
+    <content><![CDATA[<p>我们经常需要在 psql 中修改查询语句，例如，我们编辑了几行查询语句，然后需要修改之前的内容，我之前额做法就是 Ctrl-C 然后在重新输入。其实，我们可以不必这么复杂。我们可以使用 <code>\e</code> 命令来编辑查询缓冲区。如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# SELECT * FROM</span><br><span class="line">postgres-# pg_calss</span><br><span class="line">postgres-# WHERE relname &#x3D; &#39;pg_class&#39;</span><br><span class="line">postgres-#</span><br></pre></td></tr></table></figure>
+
+<p>此时，我们发现 <code>pg_calss</code> 拼写错了，那么我们可以通过 <code>\e</code> 对其进行修改。如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres-# WHERE relname &#x3D; &#39;pg_class&#39;</span><br><span class="line">postgres-# \e</span><br><span class="line">  1 SELECT * FROM</span><br><span class="line">  2 pg_class</span><br><span class="line">  3 WHERE relname &#x3D; &#39;pg_class&#39;</span><br></pre></td></tr></table></figure>
+
+<p><code>\e</code> 命令将会创建一个临时文件，然后我们便可以通过编辑文件的方式对其进行修改了，当保存之后，psql 将会把文件内容存放到查询缓冲区中。</p>
+<p><code>\e [ filename ] [ line_number ]</code> 命令还可以接文件和行号，文件指定了我们想要编辑的文件，行号则表明文件打开时光标所处的位置。注意，如果仅跟一个数字，该命令将其视为行号，例如 <code>\e 3</code> 表示编辑查询缓冲区，并将光标移动到第三行。</p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 数据库大小监控</title>
     <url>/2019/09/postgresql-database-size-monitor/</url>
     <content><![CDATA[<p>最近在客户那边了解到一个需求，想要监控 PostgreSQL 数据库每天的大小变化。其实这个功能挺简单的，PostgreSQL 可以通过函数 <code>pg_database_size()</code> 来获取数据库的大小，而客户需要做的就是每天去执行一下，并与上次的结果进行比较就可以得到了。当然，手动执行的效率不是很高，因此，我利用业余时间整理了一下，将这个需求通过 PostgreSQL 插件的形式提供出来。本文主要介绍一下如何实现这个功能。</p>
@@ -2043,25 +2095,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 编辑查询缓冲区</title>
-    <url>/2020/05/postgresql-edit-query-buffer/</url>
-    <content><![CDATA[<p>我们经常需要在 psql 中修改查询语句，例如，我们编辑了几行查询语句，然后需要修改之前的内容，我之前额做法就是 Ctrl-C 然后在重新输入。其实，我们可以不必这么复杂。我们可以使用 <code>\e</code> 命令来编辑查询缓冲区。如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# SELECT * FROM</span><br><span class="line">postgres-# pg_calss</span><br><span class="line">postgres-# WHERE relname &#x3D; &#39;pg_class&#39;</span><br><span class="line">postgres-#</span><br></pre></td></tr></table></figure>
-
-<p>此时，我们发现 <code>pg_calss</code> 拼写错了，那么我们可以通过 <code>\e</code> 对其进行修改。如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres-# WHERE relname &#x3D; &#39;pg_class&#39;</span><br><span class="line">postgres-# \e</span><br><span class="line">  1 SELECT * FROM</span><br><span class="line">  2 pg_class</span><br><span class="line">  3 WHERE relname &#x3D; &#39;pg_class&#39;</span><br></pre></td></tr></table></figure>
-
-<p><code>\e</code> 命令将会创建一个临时文件，然后我们便可以通过编辑文件的方式对其进行修改了，当保存之后，psql 将会把文件内容存放到查询缓冲区中。</p>
-<p><code>\e [ filename ] [ line_number ]</code> 命令还可以接文件和行号，文件指定了我们想要编辑的文件，行号则表明文件打开时光标所处的位置。注意，如果仅跟一个数字，该命令将其视为行号，例如 <code>\e 3</code> 表示编辑查询缓冲区，并将光标移动到第三行。</p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -2398,6 +2431,296 @@ table th:nth-of-type(2) {
 
 <p>有悍妻者，颇知书。其夫谋纳妾，乃曰：“于传有之，齐人有一妻一妾。”<br>妻曰：“若尔，则我更纳一夫。”<br>其夫曰：“传有之乎？”<br>妻答曰：“河南程氏两夫。”<br>夫大笑，无以难。<br>又一妻，悍而狡，夫每言及纳妾，辄曰：“尔家贫，安所得金买妾耶？若有金，唯命。”<br>夫乃从人称贷得金，告其妻曰：“金在，请纳妾。”<br>妻遂持其金纳袖中，拜曰：“我今情愿做小罢，这金便可买我。”<br>夫无以难。</p>
 </div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 安全性配置概要</title>
+    <url>/2021/05/postgresql-security/</url>
+    <content><![CDATA[<p>本文从网络、数据库实例、数据库、schema 和表对象几个层面对 PostgreSQL 数据库的安全性配置进行了简要的回顾。</p>
+<img src="/2021/05/postgresql-security/pg_security.png" class="">
+
+<a id="more"></a>
+
+<h2 id="网络安全性"><a href="#网络安全性" class="headerlink" title="网络安全性"></a>网络安全性</h2><h3 id="监听地址"><a href="#监听地址" class="headerlink" title="监听地址"></a>监听地址</h3><ul>
+<li>unix socket<br>通常 unix socket 方式要比 localhost 的性能要好。</li>
+<li>TCP/IP<br><code>listen_addresses</code>和 <code>port</code> 两个参数。<br><code>listen_addresses</code> 可以有多个 IP 地址，使用逗号分割。<ul>
+<li>localhost</li>
+<li>ip address</li>
+</ul>
+</li>
+</ul>
+<h3 id="pg-hba"><a href="#pg-hba" class="headerlink" title="pg_hba"></a>pg_hba</h3><p>pg_hba 用于告知 PostgreSQL 如何认证用户的连接。格式如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">local      DATABASE USER         METHOD [OPTIONS]</span><br><span class="line">host       DATABASE USER ADDRESS METHOD [OPTIONS]</span><br><span class="line">hostssl    DATABASE USER ADDRESS METHOD [OPTIONS]</span><br><span class="line">hostnossl  DATABASE USER ADDRESS METHOD [OPTIONS]</span><br></pre></td></tr></table></figure>
+
+<p>第一条规则匹配后续，后续规则将不予判断。</p>
+<ul>
+<li><p>rules</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>local</td>
+<td>用来配置本地 unix 套接字。</td>
+</tr>
+<tr>
+<td>host</td>
+<td>用于配置 SSL 和非 SSL 连接。</td>
+</tr>
+<tr>
+<td>hostssl</td>
+<td>仅用于配置 SSL 连接。必须编译有 SSL，并且 <code>ssl = on</code>，此外还需要配置以下参数 <code>ssl_cert_file</code> 和 <code>ssl_key_file</code>。</td>
+</tr>
+<tr>
+<td>hostnossl</td>
+<td>配置非 SSL 连接。</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>methods</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>trust</td>
+<td>允许不提供密码的认证，PostgreSQL 数据库中需要有对应的用户。</td>
+</tr>
+<tr>
+<td>reject</td>
+<td>拒绝连接。</td>
+</tr>
+<tr>
+<td>md5/password</td>
+<td>通过口令进行连接。md5 意味着口令在传输时被加密；password 以明文的形式发送（不建议这种方案）。</td>
+</tr>
+<tr>
+<td>GSS/SSPI</td>
+<td>GSSAPI 或 SSPI 认证，针对 TCP/IP 连接。</td>
+</tr>
+<tr>
+<td>ident</td>
+<td>通过联系客户端上的 Ident 服务器获得客户端的操作系统用户名，并且检查它是否匹配被请求的数据库用户名。</td>
+</tr>
+<tr>
+<td>peer</td>
+<td>只对本地连接有用。</td>
+</tr>
+<tr>
+<td>pam</td>
+<td>使用可插拔认证模块（PAM），对于使用非 PostgreSQL 自带的认证方式非常有用。</td>
+</tr>
+<tr>
+<td>ldap</td>
+<td>使用轻量级目录访问协议（LDAP）进行认证。</td>
+</tr>
+<tr>
+<td>radius</td>
+<td>远程认证拨入用户服务（RADIUS）。</td>
+</tr>
+<tr>
+<td>cert</td>
+<td>使用 SSL 客户端证书来执行认证，只用使用 SSL 才能使用它。</td>
+</tr>
+</tbody></table>
+<p><strong>备注：</strong></p>
+<ol>
+<li>SSPI (Security Support Provider Interface) 是微软 Windows 操作系统中用于执行各种安全相关操作（如身份认证）的一个 Win32 API。</li>
+<li>RADIUS 是一种用于在需要认证其链接的网络访问服务器（NAS）和共享认证服务器之间进行认证、授权和记帐信息的文档协议。RADIUS 服务器负责接收用户的连接请求、认证用户，然后返回客户机所有必要的配置信息以将服务发送到用户。</li>
+</ol>
+</li>
+</ul>
+<h2 id="实例级安全"><a href="#实例级安全" class="headerlink" title="实例级安全"></a>实例级安全</h2><h3 id="CREATE-USER-ROLE"><a href="#CREATE-USER-ROLE" class="headerlink" title="CREATE USER/ROLE"></a>CREATE USER/ROLE</h3><p><code>CREATE USER</code> 和 <code>CREATE ROLE</code> 的区别仅仅是 <code>CREATE USER</code> 默认具有 <code>LOGIN</code> 权限，而 <code>CREATE ROLE</code> 默认为 <code>NOLOGIN</code> 权限，即通过 <code>CREATE ROLE</code> 创建的用户如果没有指定 <code>LOGIN</code>，那么是无法用于登录数据库的。</p>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SUPERUSER/NOSUPERUSER</td>
+<td>是否为超级用户。</td>
+</tr>
+<tr>
+<td>CREATEDB/NOCREATEDB</td>
+<td>是否可以创建数据库。</td>
+</tr>
+<tr>
+<td>CREATEROLE/NOCREATEROLE</td>
+<td>是否可以创建角色/用户。</td>
+</tr>
+<tr>
+<td>INHERIT/NOINHERIT</td>
+<td>是否可以被继承。</td>
+</tr>
+<tr>
+<td>LOGIN/NOLOGIN</td>
+<td>是否可以登录数据库。</td>
+</tr>
+<tr>
+<td>REPLICATION/NOREPLICATION</td>
+<td>是否用于流复制。</td>
+</tr>
+<tr>
+<td>BYPASSRLS/NOBYPASSRLS</td>
+<td>是否可以绕过行级安全策略。</td>
+</tr>
+<tr>
+<td>CONNECTIOIN LIMIT</td>
+<td>用户最大连接数量。在设置 CONNECTIONS LIMIT 时，可以指定其值大于 <code>max_connections</code>。</td>
+</tr>
+<tr>
+<td>ENCRYPTED/UNENCRYPTED PASSWORD</td>
+<td>是否加密密码。UNENCRYPTED PASSWORD 在测试的时候可能很有用。</td>
+</tr>
+<tr>
+<td>VALID UNTIL</td>
+<td>设置用户有效期。</td>
+</tr>
+</tbody></table>
+<h3 id="ALTER-USER-ROLE"><a href="#ALTER-USER-ROLE" class="headerlink" title="ALTER USER/ROLE"></a>ALTER USER/ROLE</h3><ul>
+<li>OPTIONS<br>修改 <code>CREATE USER/ROLE</code> 时指定的选项。</li>
+<li>PARAMETERS<br>设置参数。<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">ALTE ROLE &#123; role_specification | ALL &#125;</span><br><span class="line">  [ IN DATABASE database_name ]</span><br><span class="line">  <span class="keyword">SET</span> configuration_parameter &#123; <span class="keyword">TO</span> | = &#125; &#123; <span class="keyword">value</span> | <span class="keyword">DEFAULT</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">ROLE</span> &#123; role_specification | <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> <span class="keyword">DATABASE</span> database_name ]</span><br><span class="line">  <span class="keyword">SET</span> configuration_parameter <span class="keyword">FROM</span> <span class="keyword">CURRENT</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">ROLE</span> &#123; role_specification | <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> <span class="keyword">DATABASE</span> database_name ]</span><br><span class="line">  <span class="keyword">RESET</span> configuration_parameter</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">ROLE</span> &#123; role_specification | <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> <span class="keyword">DATABASE</span> database_name ] <span class="keyword">RESET</span> <span class="keyword">ALL</span></span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="数据库级安全"><a href="#数据库级安全" class="headerlink" title="数据库级安全"></a>数据库级安全</h2><h3 id="CREATE"><a href="#CREATE" class="headerlink" title="CREATE"></a>CREATE</h3><p>允许用户在数据库中创建 <code>schema</code>，注意，授权了数据库的 <code>CREATE </code>权限仅仅表示用户可以在数据库中创建 <code>schema</code>，而其他对象则不能创建，例如，表、视图、函数等。</p>
+<h3 id="CONNECT"><a href="#CONNECT" class="headerlink" title="CONNECT"></a>CONNECT</h3><p>允许某个用户连接到数据库。</p>
+<h3 id="默认权限"><a href="#默认权限" class="headerlink" title="默认权限"></a>默认权限</h3><p>如果没有指定，那么默认的权限来自 <code>public</code>。注意 <code>public</code> 不是一个角色。<br>通常建议在其他数据库创建之前就从 postgres 数据库中收回权限是。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">REVOCK ALL ON DATABASE dbname FROM public;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Schema-级安全"><a href="#Schema-级安全" class="headerlink" title="Schema 级安全"></a>Schema 级安全</h2><p>默认情况下，<code>public</code> 被允许使用 <code>public</code> 模式。</p>
+<p>当我们在数据库上只有 <code>CONNECT</code> 权限时，我们可以在 <code>public</code> 模式下建表。</p>
+<h3 id="权限"><a href="#权限" class="headerlink" title="权限"></a>权限</h3><table>
+<thead>
+<tr>
+<th>权限</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CREATE</td>
+<td>用户可以在该模式下创建对象，对对象进行修改。例如，ALTER TABLE。</td>
+</tr>
+<tr>
+<td>USAGE</td>
+<td>用户可以进入该模式，但是能否使用该模式下的对象，还有下层的权限进行控制，例如对表的增、删、查、改等。</td>
+</tr>
+</tbody></table>
+<h3 id="语法"><a href="#语法" class="headerlink" title="语法"></a>语法</h3><figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> &#123; &#123; <span class="keyword">SELECT</span> | <span class="keyword">UPDATE</span> &#125; [, ...] | <span class="keyword">ALL</span> [ <span class="keyword">PRIVILEGES</span> ] &#125;</span><br><span class="line">    <span class="keyword">ON</span> <span class="keyword">LARGE</span> <span class="keyword">OBJECT</span> loid [, ...]</span><br><span class="line">    <span class="keyword">TO</span> role_specification [, ...] [ <span class="keyword">WITH</span> <span class="keyword">GRANT</span> <span class="keyword">OPTION</span> ]</span><br><span class="line">    [ GRANTED <span class="keyword">BY</span> role_specification ]</span><br></pre></td></tr></table></figure>
+
+<h2 id="表级安全"><a href="#表级安全" class="headerlink" title="表级安全"></a>表级安全</h2><h3 id="表权限"><a href="#表权限" class="headerlink" title="表权限"></a>表权限</h3><table>
+<thead>
+<tr>
+<th>权限</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SELECT</td>
+<td>允许用户读取表的内容。</td>
+</tr>
+<tr>
+<td>INSERT</td>
+<td>允许用户向表中插入数据，注意如果是带有 RETURNING 子句的还需要 SELECT 权限。</td>
+</tr>
+<tr>
+<td>UPDATE</td>
+<td>允许用户对表进行更新。</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td>允许用户删除表中的行记录。</td>
+</tr>
+<tr>
+<td>TRUNCATE</td>
+<td>允许用户对表执行 TRUNCATE 命令。TRUNCATE 和 DELETE 是两种独立的权限，这是因为 TRUNCATE 会锁表，而 DELETE 语句则不会。</td>
+</tr>
+<tr>
+<td>REFERENCES</td>
+<td>允许用户创建外键，必须在引用和被引用列上都有这一特权，否则无法创建。</td>
+</tr>
+<tr>
+<td>TRIGGER</td>
+<td>允许用户在该表上创建触发器。</td>
+</tr>
+</tbody></table>
+<h3 id="列级安全"><a href="#列级安全" class="headerlink" title="列级安全"></a>列级安全</h3><p>限制用户对不同列的访问。显示授权：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> <span class="keyword">SELECT</span> (<span class="keyword">id</span>) <span class="keyword">ON</span> t_useful <span class="keyword">TO</span> paul;</span><br></pre></td></tr></table></figure>
+
+<h2 id="行级安全策略"><a href="#行级安全策略" class="headerlink" title="行级安全策略"></a>行级安全策略</h2><p>限制不同用户对不同数据行的查看权限。</p>
+<h3 id="启用-禁用"><a href="#启用-禁用" class="headerlink" title="启用/禁用"></a>启用/禁用</h3><p>默认情况下，表的所有者不受行级安全策略的限制，我们可以通过 <code>FORCE ROW LEVEL SECURITY</code> 来明确表明所有者也需要验证行级安全策略。相关命令如下：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">ENABLE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">DISABLE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">FORCE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">NO</span> <span class="keyword">FORCE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注意：</strong> 超级用户始终不受行级安全策略限制。</p>
+<h3 id="策略"><a href="#策略" class="headerlink" title="策略"></a>策略</h3><p>多个策略之间使用 <code>OR</code> 进行连接。</p>
+<ul>
+<li>创建<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">POLICY</span> <span class="keyword">name</span> <span class="keyword">ON</span> table_name</span><br><span class="line">    [ <span class="keyword">AS</span> &#123; PERMISSIVE | RESTRICTIVE &#125; ]</span><br><span class="line">    [ <span class="keyword">FOR</span> &#123; <span class="keyword">ALL</span> | <span class="keyword">SELECT</span> | <span class="keyword">INSERT</span> | <span class="keyword">UPDATE</span> | <span class="keyword">DELETE</span> &#125; ]</span><br><span class="line">    [ <span class="keyword">TO</span> &#123; role_name | <span class="keyword">PUBLIC</span> | CURRENT_ROLE | <span class="keyword">CURRENT_USER</span> | <span class="keyword">SESSION_USER</span> &#125; [, ...] ]</span><br><span class="line">    [ <span class="keyword">USING</span> ( using_expression ) ]</span><br><span class="line">    [ <span class="keyword">WITH</span> <span class="keyword">CHECK</span> ( check_expression ) ]</span><br></pre></td></tr></table></figure>
+<ul>
+<li>USING<br>过滤已经存在的行记录，与 <code>SELECT</code> 和 <code>UPDATE</code> 子句相关。</li>
+<li>CHECK<br>过滤将要被创建的新行，与 <code>INSERT</code> 和 <code>UPDATE</code> 子句相关。</li>
+</ul>
+</li>
+<li>删除<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">DROP</span> <span class="keyword">POLICY</span> [ <span class="keyword">IF</span> <span class="keyword">EXISTS</span> ] <span class="keyword">name</span> <span class="keyword">ON</span> table_name [ <span class="keyword">CASCADE</span> | RESTRICT ]</span><br></pre></td></tr></table></figure></li>
+<li>修改<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">POLICY</span> <span class="keyword">name</span> <span class="keyword">ON</span> table_name <span class="keyword">RENAME</span> <span class="keyword">TO</span> new_name</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">POLICY</span> <span class="keyword">name</span> <span class="keyword">ON</span> table_name</span><br><span class="line">    [ <span class="keyword">TO</span> &#123; role_name | <span class="keyword">PUBLIC</span> | CURRENT_ROLE | <span class="keyword">CURRENT_USER</span> | <span class="keyword">SESSION_USER</span> &#125; [, ...] ]</span><br><span class="line">    [ <span class="keyword">USING</span> ( using_expression ) ]</span><br><span class="line">    [ <span class="keyword">WITH</span> <span class="keyword">CHECK</span> ( check_expression ) ]</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="检查权限"><a href="#检查权限" class="headerlink" title="检查权限"></a>检查权限</h2><p>主要是针对数据库对象。PostgreSQL 目前还没有提供很好的权限查询功能。</p>
+<h3 id="psql"><a href="#psql" class="headerlink" title="psql"></a>psql</h3><p>在 psql 中我们可以通过 <code>\z</code> 命令来查看表、视图和序列的权限，同 <code>\dp </code>命令。</p>
+<h3 id="aclexplode"><a href="#aclexplode" class="headerlink" title="aclexplode"></a>aclexplode</h3><p>通过 aclexplode() 函数来查看，例如：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> aclexplode(<span class="string">&#x27;&#123;joe=arwdDxt/postgres&#125;&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>标识</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a</td>
+<td>追加，用于 INSERT 子句。</td>
+</tr>
+<tr>
+<td>r</td>
+<td>读取，用于 SELECT 子句。</td>
+</tr>
+<tr>
+<td>w</td>
+<td>写入，用于 UPDATE 子句。</td>
+</tr>
+<tr>
+<td>d</td>
+<td>删除，用于 DELETE 子句。</td>
+</tr>
+<tr>
+<td>D</td>
+<td>用于 TRUNCATE 子句。</td>
+</tr>
+<tr>
+<td>x</td>
+<td>用于引用。</td>
+</tr>
+<tr>
+<td>t</td>
+<td>用于触发器。</td>
+</tr>
+</tbody></table>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 《由浅入深PostgreSQL》</p>
 ]]></content>
       <categories>
         <category>数据库</category>
@@ -4472,296 +4795,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 安全性配置概要</title>
-    <url>/2021/05/postgresql-security/</url>
-    <content><![CDATA[<p>本文从网络、数据库实例、数据库、schema 和表对象几个层面对 PostgreSQL 数据库的安全性配置进行了简要的回顾。</p>
-<img src="/2021/05/postgresql-security/pg_security.png" class="">
-
-<a id="more"></a>
-
-<h2 id="网络安全性"><a href="#网络安全性" class="headerlink" title="网络安全性"></a>网络安全性</h2><h3 id="监听地址"><a href="#监听地址" class="headerlink" title="监听地址"></a>监听地址</h3><ul>
-<li>unix socket<br>通常 unix socket 方式要比 localhost 的性能要好。</li>
-<li>TCP/IP<br><code>listen_addresses</code>和 <code>port</code> 两个参数。<br><code>listen_addresses</code> 可以有多个 IP 地址，使用逗号分割。<ul>
-<li>localhost</li>
-<li>ip address</li>
-</ul>
-</li>
-</ul>
-<h3 id="pg-hba"><a href="#pg-hba" class="headerlink" title="pg_hba"></a>pg_hba</h3><p>pg_hba 用于告知 PostgreSQL 如何认证用户的连接。格式如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">local      DATABASE USER         METHOD [OPTIONS]</span><br><span class="line">host       DATABASE USER ADDRESS METHOD [OPTIONS]</span><br><span class="line">hostssl    DATABASE USER ADDRESS METHOD [OPTIONS]</span><br><span class="line">hostnossl  DATABASE USER ADDRESS METHOD [OPTIONS]</span><br></pre></td></tr></table></figure>
-
-<p>第一条规则匹配后续，后续规则将不予判断。</p>
-<ul>
-<li><p>rules</p>
-<table>
-<thead>
-<tr>
-<th>方法</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>local</td>
-<td>用来配置本地 unix 套接字。</td>
-</tr>
-<tr>
-<td>host</td>
-<td>用于配置 SSL 和非 SSL 连接。</td>
-</tr>
-<tr>
-<td>hostssl</td>
-<td>仅用于配置 SSL 连接。必须编译有 SSL，并且 <code>ssl = on</code>，此外还需要配置以下参数 <code>ssl_cert_file</code> 和 <code>ssl_key_file</code>。</td>
-</tr>
-<tr>
-<td>hostnossl</td>
-<td>配置非 SSL 连接。</td>
-</tr>
-</tbody></table>
-</li>
-<li><p>methods</p>
-<table>
-<thead>
-<tr>
-<th>方法</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>trust</td>
-<td>允许不提供密码的认证，PostgreSQL 数据库中需要有对应的用户。</td>
-</tr>
-<tr>
-<td>reject</td>
-<td>拒绝连接。</td>
-</tr>
-<tr>
-<td>md5/password</td>
-<td>通过口令进行连接。md5 意味着口令在传输时被加密；password 以明文的形式发送（不建议这种方案）。</td>
-</tr>
-<tr>
-<td>GSS/SSPI</td>
-<td>GSSAPI 或 SSPI 认证，针对 TCP/IP 连接。</td>
-</tr>
-<tr>
-<td>ident</td>
-<td>通过联系客户端上的 Ident 服务器获得客户端的操作系统用户名，并且检查它是否匹配被请求的数据库用户名。</td>
-</tr>
-<tr>
-<td>peer</td>
-<td>只对本地连接有用。</td>
-</tr>
-<tr>
-<td>pam</td>
-<td>使用可插拔认证模块（PAM），对于使用非 PostgreSQL 自带的认证方式非常有用。</td>
-</tr>
-<tr>
-<td>ldap</td>
-<td>使用轻量级目录访问协议（LDAP）进行认证。</td>
-</tr>
-<tr>
-<td>radius</td>
-<td>远程认证拨入用户服务（RADIUS）。</td>
-</tr>
-<tr>
-<td>cert</td>
-<td>使用 SSL 客户端证书来执行认证，只用使用 SSL 才能使用它。</td>
-</tr>
-</tbody></table>
-<p><strong>备注：</strong></p>
-<ol>
-<li>SSPI (Security Support Provider Interface) 是微软 Windows 操作系统中用于执行各种安全相关操作（如身份认证）的一个 Win32 API。</li>
-<li>RADIUS 是一种用于在需要认证其链接的网络访问服务器（NAS）和共享认证服务器之间进行认证、授权和记帐信息的文档协议。RADIUS 服务器负责接收用户的连接请求、认证用户，然后返回客户机所有必要的配置信息以将服务发送到用户。</li>
-</ol>
-</li>
-</ul>
-<h2 id="实例级安全"><a href="#实例级安全" class="headerlink" title="实例级安全"></a>实例级安全</h2><h3 id="CREATE-USER-ROLE"><a href="#CREATE-USER-ROLE" class="headerlink" title="CREATE USER/ROLE"></a>CREATE USER/ROLE</h3><p><code>CREATE USER</code> 和 <code>CREATE ROLE</code> 的区别仅仅是 <code>CREATE USER</code> 默认具有 <code>LOGIN</code> 权限，而 <code>CREATE ROLE</code> 默认为 <code>NOLOGIN</code> 权限，即通过 <code>CREATE ROLE</code> 创建的用户如果没有指定 <code>LOGIN</code>，那么是无法用于登录数据库的。</p>
-<table>
-<thead>
-<tr>
-<th>选项</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>SUPERUSER/NOSUPERUSER</td>
-<td>是否为超级用户。</td>
-</tr>
-<tr>
-<td>CREATEDB/NOCREATEDB</td>
-<td>是否可以创建数据库。</td>
-</tr>
-<tr>
-<td>CREATEROLE/NOCREATEROLE</td>
-<td>是否可以创建角色/用户。</td>
-</tr>
-<tr>
-<td>INHERIT/NOINHERIT</td>
-<td>是否可以被继承。</td>
-</tr>
-<tr>
-<td>LOGIN/NOLOGIN</td>
-<td>是否可以登录数据库。</td>
-</tr>
-<tr>
-<td>REPLICATION/NOREPLICATION</td>
-<td>是否用于流复制。</td>
-</tr>
-<tr>
-<td>BYPASSRLS/NOBYPASSRLS</td>
-<td>是否可以绕过行级安全策略。</td>
-</tr>
-<tr>
-<td>CONNECTIOIN LIMIT</td>
-<td>用户最大连接数量。在设置 CONNECTIONS LIMIT 时，可以指定其值大于 <code>max_connections</code>。</td>
-</tr>
-<tr>
-<td>ENCRYPTED/UNENCRYPTED PASSWORD</td>
-<td>是否加密密码。UNENCRYPTED PASSWORD 在测试的时候可能很有用。</td>
-</tr>
-<tr>
-<td>VALID UNTIL</td>
-<td>设置用户有效期。</td>
-</tr>
-</tbody></table>
-<h3 id="ALTER-USER-ROLE"><a href="#ALTER-USER-ROLE" class="headerlink" title="ALTER USER/ROLE"></a>ALTER USER/ROLE</h3><ul>
-<li>OPTIONS<br>修改 <code>CREATE USER/ROLE</code> 时指定的选项。</li>
-<li>PARAMETERS<br>设置参数。<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">ALTE ROLE &#123; role_specification | ALL &#125;</span><br><span class="line">  [ IN DATABASE database_name ]</span><br><span class="line">  <span class="keyword">SET</span> configuration_parameter &#123; <span class="keyword">TO</span> | = &#125; &#123; <span class="keyword">value</span> | <span class="keyword">DEFAULT</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">ROLE</span> &#123; role_specification | <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> <span class="keyword">DATABASE</span> database_name ]</span><br><span class="line">  <span class="keyword">SET</span> configuration_parameter <span class="keyword">FROM</span> <span class="keyword">CURRENT</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">ROLE</span> &#123; role_specification | <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> <span class="keyword">DATABASE</span> database_name ]</span><br><span class="line">  <span class="keyword">RESET</span> configuration_parameter</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">ROLE</span> &#123; role_specification | <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> <span class="keyword">DATABASE</span> database_name ] <span class="keyword">RESET</span> <span class="keyword">ALL</span></span><br></pre></td></tr></table></figure>
-
-</li>
-</ul>
-<h2 id="数据库级安全"><a href="#数据库级安全" class="headerlink" title="数据库级安全"></a>数据库级安全</h2><h3 id="CREATE"><a href="#CREATE" class="headerlink" title="CREATE"></a>CREATE</h3><p>允许用户在数据库中创建 <code>schema</code>，注意，授权了数据库的 <code>CREATE </code>权限仅仅表示用户可以在数据库中创建 <code>schema</code>，而其他对象则不能创建，例如，表、视图、函数等。</p>
-<h3 id="CONNECT"><a href="#CONNECT" class="headerlink" title="CONNECT"></a>CONNECT</h3><p>允许某个用户连接到数据库。</p>
-<h3 id="默认权限"><a href="#默认权限" class="headerlink" title="默认权限"></a>默认权限</h3><p>如果没有指定，那么默认的权限来自 <code>public</code>。注意 <code>public</code> 不是一个角色。<br>通常建议在其他数据库创建之前就从 postgres 数据库中收回权限是。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">REVOCK ALL ON DATABASE dbname FROM public;</span><br></pre></td></tr></table></figure>
-
-<h2 id="Schema-级安全"><a href="#Schema-级安全" class="headerlink" title="Schema 级安全"></a>Schema 级安全</h2><p>默认情况下，<code>public</code> 被允许使用 <code>public</code> 模式。</p>
-<p>当我们在数据库上只有 <code>CONNECT</code> 权限时，我们可以在 <code>public</code> 模式下建表。</p>
-<h3 id="权限"><a href="#权限" class="headerlink" title="权限"></a>权限</h3><table>
-<thead>
-<tr>
-<th>权限</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>CREATE</td>
-<td>用户可以在该模式下创建对象，对对象进行修改。例如，ALTER TABLE。</td>
-</tr>
-<tr>
-<td>USAGE</td>
-<td>用户可以进入该模式，但是能否使用该模式下的对象，还有下层的权限进行控制，例如对表的增、删、查、改等。</td>
-</tr>
-</tbody></table>
-<h3 id="语法"><a href="#语法" class="headerlink" title="语法"></a>语法</h3><figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> &#123; &#123; <span class="keyword">SELECT</span> | <span class="keyword">UPDATE</span> &#125; [, ...] | <span class="keyword">ALL</span> [ <span class="keyword">PRIVILEGES</span> ] &#125;</span><br><span class="line">    <span class="keyword">ON</span> <span class="keyword">LARGE</span> <span class="keyword">OBJECT</span> loid [, ...]</span><br><span class="line">    <span class="keyword">TO</span> role_specification [, ...] [ <span class="keyword">WITH</span> <span class="keyword">GRANT</span> <span class="keyword">OPTION</span> ]</span><br><span class="line">    [ GRANTED <span class="keyword">BY</span> role_specification ]</span><br></pre></td></tr></table></figure>
-
-<h2 id="表级安全"><a href="#表级安全" class="headerlink" title="表级安全"></a>表级安全</h2><h3 id="表权限"><a href="#表权限" class="headerlink" title="表权限"></a>表权限</h3><table>
-<thead>
-<tr>
-<th>权限</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>SELECT</td>
-<td>允许用户读取表的内容。</td>
-</tr>
-<tr>
-<td>INSERT</td>
-<td>允许用户向表中插入数据，注意如果是带有 RETURNING 子句的还需要 SELECT 权限。</td>
-</tr>
-<tr>
-<td>UPDATE</td>
-<td>允许用户对表进行更新。</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td>允许用户删除表中的行记录。</td>
-</tr>
-<tr>
-<td>TRUNCATE</td>
-<td>允许用户对表执行 TRUNCATE 命令。TRUNCATE 和 DELETE 是两种独立的权限，这是因为 TRUNCATE 会锁表，而 DELETE 语句则不会。</td>
-</tr>
-<tr>
-<td>REFERENCES</td>
-<td>允许用户创建外键，必须在引用和被引用列上都有这一特权，否则无法创建。</td>
-</tr>
-<tr>
-<td>TRIGGER</td>
-<td>允许用户在该表上创建触发器。</td>
-</tr>
-</tbody></table>
-<h3 id="列级安全"><a href="#列级安全" class="headerlink" title="列级安全"></a>列级安全</h3><p>限制用户对不同列的访问。显示授权：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> <span class="keyword">SELECT</span> (<span class="keyword">id</span>) <span class="keyword">ON</span> t_useful <span class="keyword">TO</span> paul;</span><br></pre></td></tr></table></figure>
-
-<h2 id="行级安全策略"><a href="#行级安全策略" class="headerlink" title="行级安全策略"></a>行级安全策略</h2><p>限制不同用户对不同数据行的查看权限。</p>
-<h3 id="启用-禁用"><a href="#启用-禁用" class="headerlink" title="启用/禁用"></a>启用/禁用</h3><p>默认情况下，表的所有者不受行级安全策略的限制，我们可以通过 <code>FORCE ROW LEVEL SECURITY</code> 来明确表明所有者也需要验证行级安全策略。相关命令如下：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">ENABLE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">DISABLE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">FORCE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">NO</span> <span class="keyword">FORCE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br></pre></td></tr></table></figure>
-
-<p><strong>注意：</strong> 超级用户始终不受行级安全策略限制。</p>
-<h3 id="策略"><a href="#策略" class="headerlink" title="策略"></a>策略</h3><p>多个策略之间使用 <code>OR</code> 进行连接。</p>
-<ul>
-<li>创建<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">POLICY</span> <span class="keyword">name</span> <span class="keyword">ON</span> table_name</span><br><span class="line">    [ <span class="keyword">AS</span> &#123; PERMISSIVE | RESTRICTIVE &#125; ]</span><br><span class="line">    [ <span class="keyword">FOR</span> &#123; <span class="keyword">ALL</span> | <span class="keyword">SELECT</span> | <span class="keyword">INSERT</span> | <span class="keyword">UPDATE</span> | <span class="keyword">DELETE</span> &#125; ]</span><br><span class="line">    [ <span class="keyword">TO</span> &#123; role_name | <span class="keyword">PUBLIC</span> | CURRENT_ROLE | <span class="keyword">CURRENT_USER</span> | <span class="keyword">SESSION_USER</span> &#125; [, ...] ]</span><br><span class="line">    [ <span class="keyword">USING</span> ( using_expression ) ]</span><br><span class="line">    [ <span class="keyword">WITH</span> <span class="keyword">CHECK</span> ( check_expression ) ]</span><br></pre></td></tr></table></figure>
-<ul>
-<li>USING<br>过滤已经存在的行记录，与 <code>SELECT</code> 和 <code>UPDATE</code> 子句相关。</li>
-<li>CHECK<br>过滤将要被创建的新行，与 <code>INSERT</code> 和 <code>UPDATE</code> 子句相关。</li>
-</ul>
-</li>
-<li>删除<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">DROP</span> <span class="keyword">POLICY</span> [ <span class="keyword">IF</span> <span class="keyword">EXISTS</span> ] <span class="keyword">name</span> <span class="keyword">ON</span> table_name [ <span class="keyword">CASCADE</span> | RESTRICT ]</span><br></pre></td></tr></table></figure></li>
-<li>修改<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">POLICY</span> <span class="keyword">name</span> <span class="keyword">ON</span> table_name <span class="keyword">RENAME</span> <span class="keyword">TO</span> new_name</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">POLICY</span> <span class="keyword">name</span> <span class="keyword">ON</span> table_name</span><br><span class="line">    [ <span class="keyword">TO</span> &#123; role_name | <span class="keyword">PUBLIC</span> | CURRENT_ROLE | <span class="keyword">CURRENT_USER</span> | <span class="keyword">SESSION_USER</span> &#125; [, ...] ]</span><br><span class="line">    [ <span class="keyword">USING</span> ( using_expression ) ]</span><br><span class="line">    [ <span class="keyword">WITH</span> <span class="keyword">CHECK</span> ( check_expression ) ]</span><br></pre></td></tr></table></figure>
-
-</li>
-</ul>
-<h2 id="检查权限"><a href="#检查权限" class="headerlink" title="检查权限"></a>检查权限</h2><p>主要是针对数据库对象。PostgreSQL 目前还没有提供很好的权限查询功能。</p>
-<h3 id="psql"><a href="#psql" class="headerlink" title="psql"></a>psql</h3><p>在 psql 中我们可以通过 <code>\z</code> 命令来查看表、视图和序列的权限，同 <code>\dp </code>命令。</p>
-<h3 id="aclexplode"><a href="#aclexplode" class="headerlink" title="aclexplode"></a>aclexplode</h3><p>通过 aclexplode() 函数来查看，例如：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> aclexplode(<span class="string">&#x27;&#123;joe=arwdDxt/postgres&#125;&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<table>
-<thead>
-<tr>
-<th>标识</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>a</td>
-<td>追加，用于 INSERT 子句。</td>
-</tr>
-<tr>
-<td>r</td>
-<td>读取，用于 SELECT 子句。</td>
-</tr>
-<tr>
-<td>w</td>
-<td>写入，用于 UPDATE 子句。</td>
-</tr>
-<tr>
-<td>d</td>
-<td>删除，用于 DELETE 子句。</td>
-</tr>
-<tr>
-<td>D</td>
-<td>用于 TRUNCATE 子句。</td>
-</tr>
-<tr>
-<td>x</td>
-<td>用于引用。</td>
-</tr>
-<tr>
-<td>t</td>
-<td>用于触发器。</td>
-</tr>
-</tbody></table>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 《由浅入深PostgreSQL》</p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
       </tags>
   </entry>
 </search>
