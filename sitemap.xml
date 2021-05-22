@@ -114,13 +114,6 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2020/05/seafile-with-onlyoffice/</loc>
-    
-    <lastmod>2021-04-16</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>https://blog.japinli.top/2019/07/semctl-failed-invalid-argument/</loc>
     
     <lastmod>2021-04-16</lastmod>
@@ -129,6 +122,13 @@
   
   <url>
     <loc>https://blog.japinli.top/2019/04/show-LaTeX-command-definition/</loc>
+    
+    <lastmod>2021-04-16</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://blog.japinli.top/2020/05/seafile-with-onlyoffice/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -303,14 +303,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/11/postgresql-cluster-index/</loc>
+    <loc>https://blog.japinli.top/2019/03/postgresql-common-table-expressions/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/03/postgresql-common-table-expressions/</loc>
+    <loc>https://blog.japinli.top/2019/11/postgresql-cluster-index/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -394,14 +394,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2020/09/go-http-response-writer/</loc>
+    <loc>https://blog.japinli.top/2018/08/hello-world/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2018/08/hello-world/</loc>
+    <loc>https://blog.japinli.top/2020/09/go-http-response-writer/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -548,14 +548,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/11/C-functions/</loc>
+    <loc>https://blog.japinli.top/2019/06/C-lexical-elements/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/06/C-lexical-elements/</loc>
+    <loc>https://blog.japinli.top/2019/11/C-functions/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -606,13 +606,6 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/Solaris/</loc>
-    <lastmod>2021-05-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://blog.japinli.top/tags/Oracle/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
@@ -621,6 +614,13 @@
   
   <url>
     <loc>https://blog.japinli.top/tags/PostgreSQL/</loc>
+    <lastmod>2021-05-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://blog.japinli.top/tags/Solaris/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -648,6 +648,13 @@
   </url>
   
   <url>
+    <loc>https://blog.japinli.top/tags/LaTeX/</loc>
+    <lastmod>2021-05-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://blog.japinli.top/tags/cstore-fdw/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
@@ -656,13 +663,6 @@
   
   <url>
     <loc>https://blog.japinli.top/tags/%E5%88%97%E5%AD%98/</loc>
-    <lastmod>2021-05-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://blog.japinli.top/tags/LaTeX/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -732,14 +732,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</loc>
+    <loc>https://blog.japinli.top/tags/CTE/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/CTE/</loc>
+    <loc>https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -767,14 +767,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/Seafile/</loc>
+    <loc>https://blog.japinli.top/tags/Greenplum/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/Greenplum/</loc>
+    <loc>https://blog.japinli.top/tags/Seafile/</loc>
     <lastmod>2021-05-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>

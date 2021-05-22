@@ -1,146 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>C 函数</title>
-    <url>/2019/11/C-functions/</url>
-    <content><![CDATA[<p>C 语言提供了子程序，它可以将我们的程序分割成不同的部分。为了编写函数，我们至少给出函数的定义。通常，我们还需要给出函数的声明；但是，函数的声明不是必须的，如果不给出函数声明，那么编译器将给出一个匹配该函数的隐式声明，而且我们将得到编译时警告。</p>
-<p>每个程序都至少需要一个名为 <code>main</code> 的函数，这是程序执行的入口函数。本文主要分为以下几部分：</p>
-<ul>
-<li>函数声明</li>
-<li>函数定义</li>
-<li>函数调用</li>
-<li>函数参数</li>
-<li>变长参数列表</li>
-<li>函数指针调用</li>
-<li><code>main</code> 函数</li>
-<li>递归函数</li>
-<li>静态函数</li>
-<li>嵌套函数</li>
-</ul>
-<a id="more"></a>
-
-<h2 id="函数声明"><a href="#函数声明" class="headerlink" title="函数声明"></a>函数声明</h2><p>我们编写函数声明时需要指定函数名称、参数列表以及函数返回类型。函数声明以分号结尾，其形式如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type function-name(parameter-list);</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li><code>return-type</code> 表明了函数返回值的数据类型。通过给定 <code>void</code> 的返回类型，我们可以声明函数不返回任何值。</li>
-<li><code>function-name</code> 可以是任何有效的标识符（见<a href="/2019/06/C-lexical-elements/" title="标示符">标示符</a>）。</li>
-<li><code>parameter-list</code> 由零个或多个参数组成，通过逗号隔开。参数由数据类型和可选的参数名组成。我们可以声明变长的参数，或者无参数（<code>void</code>）。如果不给定参数列表，那么就意味着该函数没有参数，但是最好显示的使用 <code>void</code> 给出。</li>
-</ul>
-<p>例如，下面是一个包含两个参数的函数声明：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span>, <span class="keyword">double</span>)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>如果我们需要包含参数名称，我们可以在参数类型后给出，例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foot</span><span class="params">(<span class="keyword">int</span> x, <span class="keyword">double</span> y)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>参数名同样可以为任何标识符，如果我们包含多个参数，那么在同一个声明中参数名不能重复。函数声明中的参数名称可以不必与函数定义时的参数名称一致。</p>
-<p>我们应当在第一次使用函数之前声明该函数。我们可以将其放在头文件中，随后我们便可以在任何 C 源文件中通过 <code>#include</code> 指令来包含函数声明，从而使用该函数。</p>
-<h2 id="函数定义"><a href="#函数定义" class="headerlink" title="函数定义"></a>函数定义</h2><p>函数定义给出了函数实际执行的操作。函数定义包含函数名称、返回类型、参数列表（数据类型和参数名）以及函数主体。函数主体由一系列包含在大括号内的语句组成；实际上它就是一个块语句（见 <a href="/2019/10/C-statements/" title="块语句">块语句</a>）。下面是函数定义的通用形式：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type</span><br><span class="line">function-name(parameter-list)</span><br><span class="line">&#123;</span><br><span class="line">    function-body</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li><p><code>return-type</code> 和 <code>function-name</code> 与函数声明中的相同（见函数声明）。</p>
-</li>
-<li><p><code>parameter-list</code> 与函数声明中的参数列表相同（见函数声明），但是，在函数定义时我们必须显示的给出参数名。</p>
-</li>
-</ul>
-<p>例如，下面的函数定义包含两个整型参数并且返回它们的和作为返回值：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(<span class="keyword">int</span> x, <span class="keyword">int</span> y)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>为了兼容最初的 C 语言设计，我们还可以在参数列表的右括号后指定函数参数的类型，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(x, y)</span><br><span class="line">    <span class="keyword">int</span> x, <span class="keyword">int</span> y;</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>但是，我们强烈建议不要采用这种编码格式；它可能导致类型转换的细微问题，以及其他问题。</p>
-<h2 id="函数调用"><a href="#函数调用" class="headerlink" title="函数调用"></a>函数调用</h2><p>我们可以通过函数名称以及提供该函数必要的参数来调用函数，其一般形式如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">function-name(parameters)</span><br></pre></td></tr></table></figure>
-
-<p>函数调用可以是独立的语句，也可被用作子表达式。例如，下面是一个独立的函数调用示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">foo(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
-
-<p>在上述的示例中，函数 <code>foo</code> 的参数为 <code>5</code>。</p>
-<p>下面是用作子表达式的函数调用的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = square(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
-<p>假设函数 <code>square</code> 将其参数平方，则上面的示例将值 <code>25</code> 赋值给 <code>a</code>。</p>
-<p>如果一个函数接受多个参数，我们需要使用逗号将其分隔开。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = quux(<span class="number">5</span>, <span class="number">10</span>);</span><br></pre></td></tr></table></figure>
-
-<h2 id="函数参数"><a href="#函数参数" class="headerlink" title="函数参数"></a>函数参数</h2><p>函数参数可以是任何表达式 – 字面值、变量存储的值、内存地址或者通过组合这些值而构建的更复杂的表达式。</p>
-<p>在函数体内，参数是传递给函数的值的本地副本；您不能通过更改本地副本来更改传入的值。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">23</span>;</span><br><span class="line">foo(x);</span><br><span class="line">...</span><br><span class="line"><span class="comment">/* 定义函数 foo */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    a = <span class="number">2</span> * a;</span><br><span class="line">    <span class="keyword">return</span> a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在上面的示例总，即使传递给函数 <code>foo</code> 得到参数被修改了，传递给函数的变量 <code>x</code> 也不会发生改变。如果希望使用该函数来更改 <code>x</code> 的原始值，则必须将函数调用合并到赋值语句中：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">x = foo(x);</span><br></pre></td></tr></table></figure>
-
-<p>如果传递给函数的值是内存地址（即指针），则可以访问（并更改）存储在该内存地址的数据。这样可以达到与其他语言中的按引用传递相似的效果，但是效果不一样：内存地址只是一个值，就像其他任何值一样，并且本身不能更改。传递指针和传递整数之间的区别在于您可以使用函数中的值进行何种操作。</p>
-<p>下面是使用指针参数的函数调用示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    *x = *x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> a = <span class="number">15</span>;</span><br><span class="line">foo(&amp;a);</span><br></pre></td></tr></table></figure>
-
-<p>该函数的形式参数是 <code>int</code> 类型的指针，我们通过向其传递 <code>int</code> 类型变量的地址来调用该函数。通过在函数体内对指针进行解引用操作，我们可以获取内存地址中的值并对其进行修改。上述示例将修改变量 <code>a</code> 的值为 <code>57</code>。</p>
-<p>即使您不想改变存储在地址中的值，如果变量类型很大并且您需要节省内存空间或限制参数复制对性能的影响，则传递变量的地址而不是变量本身可能会很有用。例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">foo</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">int</span> x;</span><br><span class="line">    <span class="keyword">float</span> y;</span><br><span class="line">    <span class="keyword">double</span> z;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">const</span> struct foo *a)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>在这种情况下，除非您在内存地址非常大的计算机上工作，否则传递结构体的指针要比传递结构实例花费更少的内存。</p>
-<p>任何类型的数组总是以指针的形式进行传递：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a[])</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
-
-<p>在上述示例中，使用参数 <code>a</code> 调用函数 <code>foo</code> 不会将整个数组复制到 <code>foo</code> 函数的新局部参数中；而是将 <code>x</code> 作为指针传递给 <code>foo</code> 函数的第一个参数。但是要小心：在函数内，您不能使用 <code>sizeof</code> 来确定数组 <code>x</code> 的大小，而 <code>sizeof</code> 却告诉您指针 <code>x</code> 的大小。实际上，以上代码等效于：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *a)</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
-
-<p>在参数声明中明确指定数组的长度无济于事。如果您确实需要按值传递数组，则可以将其包装在结构中，尽管这样做几乎没有用（传递 <code>const</code> 限定的指针通常足以表明调用者不应该修改数组）。</p>
-<h2 id="变长参数列表"><a href="#变长参数列表" class="headerlink" title="变长参数列表"></a>变长参数列表</h2><p>我们可以编写一个带有可变数量参数的函数。这些称为可变函数（_variadic functions_）。为此，该函数至少需要具有一个已知数据类型的参数，但是其余参数是可选的，并且在数量和数据类型上都可以不同。</p>
-<p>您可以像平常一样列出初始参数，但之后再使用省略号：<code>...</code>。下面是一个示例函数原型：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">add_multiple_values</span><span class="params">(<span class="keyword">int</span> number, ...)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>要使用函数定义中的可变参数，我们需要使用库头文件 <code>&lt;stdarg.h&gt;</code> 中定义的宏，因此必须使用 <code>#include</code> 包含该文件。有关这些宏的详细说明，请参见 GNU C 库手册中有关可变参数功能的部分。</p>
-<p>下面是一个可变参数函数的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_multiple_values (<span class="keyword">int</span> number, ...)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter, total = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 声明 &#x27;va_list&#x27; 类型变量 */</span></span><br><span class="line">    va_list parameters;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 调用 &#x27;va_start&#x27; 函数 */</span></span><br><span class="line">    va_start(parameters, number);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; number; counter++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/* 获取可选参数的值 */</span></span><br><span class="line">        total += va_arg(parameters, <span class="keyword">int</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 结束 &#x27;parameters&#x27; 变量的使用，释放资源 */</span></span><br><span class="line">    va_end(parameters);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> total;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>要使用可选参数，您需要一种方法来知道有多少个参数。这可能会有所不同，因此无法进行硬编码，但是如果您不知道有多少个可选参数，则可能很难知道何时停止使用 <code>va_arg</code> 函数。在上面的示例中，函数 <code>add_multiple_values</code> 的第一个参数 <code>number</code> 是实际传递的可选参数的数量。因此，我们可以这样调用函数：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">sum = add_multiple_values(<span class="number">3</span>, <span class="number">12</span>, <span class="number">34</span>, <span class="number">190</span>);</span><br></pre></td></tr></table></figure>
-
-<p>第一个参数指示跟随多少个可选参数。另外，请注意，您实际上并不需要使用 <code>va_end</code> 功能。实际上，对于GCC 而言，它什么也没做。但是，您可能要包括它以最大程度地与其他编译器兼容。</p>
-<h2 id="函数指针调用"><a href="#函数指针调用" class="headerlink" title="函数指针调用"></a>函数指针调用</h2><p>我们也可以调用由指针标识的函数。间接操作符 <code>*</code> 在执行此操作时是可选的。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;foo %d!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d bar!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">message</span><span class="params">(<span class="keyword">void</span> (*func)(<span class="keyword">int</span>), <span class="keyword">int</span> times)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> j;</span><br><span class="line">    <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; times; ++j)</span><br><span class="line">        func(j);  <span class="comment">/* 与 (*func) (j); 作用相同 */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">example</span><span class="params">(<span class="keyword">int</span> want_foo)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">int</span>) = &amp;bar; <span class="comment">/* 运算符 &amp; 是可选的 */</span></span><br><span class="line">    <span class="keyword">if</span> (want_foo)</span><br><span class="line">        pf = foo;</span><br><span class="line">    message (pf, <span class="number">5</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="main-函数"><a href="#main-函数" class="headerlink" title="main 函数"></a><code>main</code> 函数</h2><p>每个程序都至少需要一个名为 <code>main</code> 的函数。这是程序开始执行的地方。我们不需要为 <code>main</code> 函数提供声明或原型，我们只需要定义它即可。</p>
-<p><code>main</code> 函数的返回值总是 <code>int</code> 类型。我们不必为 <code>main</code> 函数指定返回类型，但是我们可以这样做。需要注意的是，我们不能指定它的返回类型不是 <code>int</code>。</p>
-<p>通常，<code>main</code> 函数的返回值表明了程序退出状态。返回 <code>0</code> 或者 <code>EXIT_SUCCESS</code> 表明成功，<code>EXIT_FAILURE</code> 则表示错误。否则，返回的值由实现定义。</p>
-<p>在 <code>main</code> 函数的末尾到达 <code>&#125;</code> 而没有返回值，或者执行没有值的 <code>return</code> 语句（即 <code>return;</code>）都是等效的。在 C89 标准中，这是未定义的，然而在 C99 中明确定义这种情况返回 <code>0</code>。</p>
-<p>我们可以编写没有任何参数的 <code>main</code> 函数（也就是 <code>int main(void)</code>），或者从命令行接受参数。这是一个非常简单的没有参数的主函数：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">puts</span> (<span class="string">&quot;Hi there!&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>为了接受来自命令行的参数，我们需要 <code>main</code> 函数提供两个参数，<code>argc</code> 和 <code>*argv[]</code>。我们可以改变参数的名称，但是它们数据类型不能改变 – <code>int</code> 类型和 <code>char</code> 类型的数组指针。<code>argc</code> 是命令行参数的数量，包括程序本身的名称。<code>argv</code> 是参数的数组，以字符串的形式给出。<code>argv[0]</code> 数组的第一个元素是在命令行中键入的程序名称；之后任何数组元素都是程序名称的参数。</p>
-<p>下面的示例定义了 <code>main</code> 函数接受命名行参数，并且将其打印出来：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; argc; counter++)</span><br><span class="line">        <span class="built_in">printf</span> (<span class="string">&quot;%s\n&quot;</span>, argv[counter]);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="递归函数"><a href="#递归函数" class="headerlink" title="递归函数"></a>递归函数</h2><p>我们可以编写一个递归函数 – 调用自身的函数。如一个计算整数的阶乘的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (x &lt; <span class="number">1</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> (x * factorial(x - <span class="number">1</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注意不要编写无限递归的函数。在上面的示例中，一旦 <code>x</code> 为 <code>1</code>，则递归停止。但是，在以下示例中，递归不会停止，直到程序被中断或内存不足为止：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">watermelon(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> (watermelon(x));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>当然，函数也可以是间接递归的。</p>
-<h2 id="静态函数"><a href="#静态函数" class="headerlink" title="静态函数"></a>静态函数</h2><p>如果希望仅可在定义该函数的源文件中调用该函数，则可以将其定义为静态函数：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">int</span></span><br><span class="line">foo(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">return</span> x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果您正在构建可重用的函数库，并且需要包含一些最终用户不应该调用的子函数，则这很有用。</p>
-<p>以这种方式定义的函数被称为具有静态链接；不幸的是 <code>static</code> 关键字具有多重含义，见 <a href="/2019/06/C-type-and-storage-class-specifiers/" title="存储类型说明符">存储类型说明符</a>。</p>
-<h2 id="嵌套函数"><a href="#嵌套函数" class="headerlink" title="嵌套函数"></a>嵌套函数</h2><p>作为 GNU C 扩展，我们可以在其他函数中定义函数，这种技术称为嵌套函数。</p>
-<p>下面是使用嵌套函数定义的尾递归阶乘函数的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span></span><br><span class="line">    factorial_helper(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (a &lt; <span class="number">1</span>)</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> b;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> factorial_helper((a - <span class="number">1</span>), (a * b));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> factorial_helper(x, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>请注意，必须在函数的开头定义嵌套函数以及变量声明，然后再声明所有其他语句。</p>
-<p>实际上，我在 <code>gcc -std=c99</code> 的时候也能通过编译，我使用的是 <code>GCC 7.4</code>，而使用 <code>clang -std=gnu99</code> 不能通过编译（<code>clang-1001.0.46.4</code>），具体的可能是编译器实现的问题。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions</a></p>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>C 语言</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>C 语言词法元素</title>
     <url>/2019/06/C-lexical-elements/</url>
     <content><![CDATA[<p>本文主要介绍 C 语言的词法元素，包括标识符、关键字、常量、操作符以及分隔符。其中关于操作符的一些更为详细的信息将在后续进行介绍。</p>
@@ -322,29 +182,137 @@
       </tags>
   </entry>
   <entry>
-    <title>C 程序结构和范围</title>
-    <url>/2020/01/C-program-structure-and-scope/</url>
-    <content><![CDATA[<p>在之前的几篇关于 C 语言的文章中，我们以及掌握了 C 语言的基本要素，本文主要介绍 C 语言的程序结构和范围。</p>
+    <title>C 函数</title>
+    <url>/2019/11/C-functions/</url>
+    <content><![CDATA[<p>C 语言提供了子程序，它可以将我们的程序分割成不同的部分。为了编写函数，我们至少给出函数的定义。通常，我们还需要给出函数的声明；但是，函数的声明不是必须的，如果不给出函数声明，那么编译器将给出一个匹配该函数的隐式声明，而且我们将得到编译时警告。</p>
+<p>每个程序都至少需要一个名为 <code>main</code> 的函数，这是程序执行的入口函数。本文主要分为以下几部分：</p>
+<ul>
+<li>函数声明</li>
+<li>函数定义</li>
+<li>函数调用</li>
+<li>函数参数</li>
+<li>变长参数列表</li>
+<li>函数指针调用</li>
+<li><code>main</code> 函数</li>
+<li>递归函数</li>
+<li>静态函数</li>
+<li>嵌套函数</li>
+</ul>
 <a id="more"></a>
 
-<h2 id="程序结构"><a href="#程序结构" class="headerlink" title="程序结构"></a>程序结构</h2><p>我们可以将 C 程序写在一个源文件中，然而，更为常见的是将其按照功能模块将其划分到不同的源文件中。</p>
-<p>通常，头文件（即以 <code>.h</code> 结尾的文件）包含函数和变量的声明；源文件（即以 <code>.c</code> 结尾的文件）包含相应的定义。如果我们不想某些声明被外部文件访问，那么也可以将声明放在源文件中。</p>
-<p>例如，如果我们编写一个求平方根的函数，我们希望可以在定义该函数以外的文件访问，那么我们需要将函数的声明放在头文件中（即以 <code>.h</code> 结尾的文件）。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.h */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x);</span><br></pre></td></tr></table></figure>
+<h2 id="函数声明"><a href="#函数声明" class="headerlink" title="函数声明"></a>函数声明</h2><p>我们编写函数声明时需要指定函数名称、参数列表以及函数返回类型。函数声明以分号结尾，其形式如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type function-name(parameter-list);</span><br></pre></td></tr></table></figure>
 
-<p>该头文件可能包含其它我们需要使用的函数但其定义在不同的源文件中，我们可能不需要知道这些函数的实现。</p>
-<p>This header file could be included by other source files which need to use your function, but do not need to know how it was implemented.</p>
-<p>上述函数的定义应该在相应的源文件中出现（即以 <code>.c</code> 结尾的文件）。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.c */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;sqrt.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">double</span> result;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>return-type</code> 表明了函数返回值的数据类型。通过给定 <code>void</code> 的返回类型，我们可以声明函数不返回任何值。</li>
+<li><code>function-name</code> 可以是任何有效的标识符（见<a href="/2019/06/C-lexical-elements/" title="标示符">标示符</a>）。</li>
+<li><code>parameter-list</code> 由零个或多个参数组成，通过逗号隔开。参数由数据类型和可选的参数名组成。我们可以声明变长的参数，或者无参数（<code>void</code>）。如果不给定参数列表，那么就意味着该函数没有参数，但是最好显示的使用 <code>void</code> 给出。</li>
+</ul>
+<p>例如，下面是一个包含两个参数的函数声明：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span>, <span class="keyword">double</span>)</span></span>;</span><br></pre></td></tr></table></figure>
 
-<h2 id="范围"><a href="#范围" class="headerlink" title="范围"></a>范围</h2><p>范围是指程序的哪些部分可以“看到”声明的对象。声明的对象可以只在特定的函数中可见、或者是特定的文件、亦或者是包含这个声明的头文件的一系列源文件中（需要使用 <code>extern</code> 声明）。</p>
-<p>除非特定说明，在文件的顶层（即不在函数内）进行的声明对整个文件都是可见的，包括从函数内部，但在文件外部不可见；在函数内进行的声明仅在这些函数内可见；此外，声明对之前的声明不可见，例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">10</span>;</span><br><span class="line"><span class="keyword">int</span> y = x + <span class="number">5</span>;</span><br></pre></td></tr></table></figure>
+<p>如果我们需要包含参数名称，我们可以在参数类型后给出，例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foot</span><span class="params">(<span class="keyword">int</span> x, <span class="keyword">double</span> y)</span></span>;</span><br></pre></td></tr></table></figure>
 
-<p>这样是可以的，但是如下方式则是不行的。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = y + <span class="number">5</span>;</span><br><span class="line"><span class="keyword">int</span> y = <span class="number">10</span>;</span><br></pre></td></tr></table></figure>
+<p>参数名同样可以为任何标识符，如果我们包含多个参数，那么在同一个声明中参数名不能重复。函数声明中的参数名称可以不必与函数定义时的参数名称一致。</p>
+<p>我们应当在第一次使用函数之前声明该函数。我们可以将其放在头文件中，随后我们便可以在任何 C 源文件中通过 <code>#include</code> 指令来包含函数声明，从而使用该函数。</p>
+<h2 id="函数定义"><a href="#函数定义" class="headerlink" title="函数定义"></a>函数定义</h2><p>函数定义给出了函数实际执行的操作。函数定义包含函数名称、返回类型、参数列表（数据类型和参数名）以及函数主体。函数主体由一系列包含在大括号内的语句组成；实际上它就是一个块语句（见 <a href="/2019/10/C-statements/" title="块语句">块语句</a>）。下面是函数定义的通用形式：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type</span><br><span class="line">function-name(parameter-list)</span><br><span class="line">&#123;</span><br><span class="line">    function-body</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope</a></p>
+<ul>
+<li><p><code>return-type</code> 和 <code>function-name</code> 与函数声明中的相同（见函数声明）。</p>
+</li>
+<li><p><code>parameter-list</code> 与函数声明中的参数列表相同（见函数声明），但是，在函数定义时我们必须显示的给出参数名。</p>
+</li>
+</ul>
+<p>例如，下面的函数定义包含两个整型参数并且返回它们的和作为返回值：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(<span class="keyword">int</span> x, <span class="keyword">int</span> y)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为了兼容最初的 C 语言设计，我们还可以在参数列表的右括号后指定函数参数的类型，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(x, y)</span><br><span class="line">    <span class="keyword">int</span> x, <span class="keyword">int</span> y;</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是，我们强烈建议不要采用这种编码格式；它可能导致类型转换的细微问题，以及其他问题。</p>
+<h2 id="函数调用"><a href="#函数调用" class="headerlink" title="函数调用"></a>函数调用</h2><p>我们可以通过函数名称以及提供该函数必要的参数来调用函数，其一般形式如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">function-name(parameters)</span><br></pre></td></tr></table></figure>
+
+<p>函数调用可以是独立的语句，也可被用作子表达式。例如，下面是一个独立的函数调用示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">foo(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
+
+<p>在上述的示例中，函数 <code>foo</code> 的参数为 <code>5</code>。</p>
+<p>下面是用作子表达式的函数调用的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = square(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
+<p>假设函数 <code>square</code> 将其参数平方，则上面的示例将值 <code>25</code> 赋值给 <code>a</code>。</p>
+<p>如果一个函数接受多个参数，我们需要使用逗号将其分隔开。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = quux(<span class="number">5</span>, <span class="number">10</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="函数参数"><a href="#函数参数" class="headerlink" title="函数参数"></a>函数参数</h2><p>函数参数可以是任何表达式 – 字面值、变量存储的值、内存地址或者通过组合这些值而构建的更复杂的表达式。</p>
+<p>在函数体内，参数是传递给函数的值的本地副本；您不能通过更改本地副本来更改传入的值。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">23</span>;</span><br><span class="line">foo(x);</span><br><span class="line">...</span><br><span class="line"><span class="comment">/* 定义函数 foo */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    a = <span class="number">2</span> * a;</span><br><span class="line">    <span class="keyword">return</span> a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上面的示例总，即使传递给函数 <code>foo</code> 得到参数被修改了，传递给函数的变量 <code>x</code> 也不会发生改变。如果希望使用该函数来更改 <code>x</code> 的原始值，则必须将函数调用合并到赋值语句中：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">x = foo(x);</span><br></pre></td></tr></table></figure>
+
+<p>如果传递给函数的值是内存地址（即指针），则可以访问（并更改）存储在该内存地址的数据。这样可以达到与其他语言中的按引用传递相似的效果，但是效果不一样：内存地址只是一个值，就像其他任何值一样，并且本身不能更改。传递指针和传递整数之间的区别在于您可以使用函数中的值进行何种操作。</p>
+<p>下面是使用指针参数的函数调用示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    *x = *x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> a = <span class="number">15</span>;</span><br><span class="line">foo(&amp;a);</span><br></pre></td></tr></table></figure>
+
+<p>该函数的形式参数是 <code>int</code> 类型的指针，我们通过向其传递 <code>int</code> 类型变量的地址来调用该函数。通过在函数体内对指针进行解引用操作，我们可以获取内存地址中的值并对其进行修改。上述示例将修改变量 <code>a</code> 的值为 <code>57</code>。</p>
+<p>即使您不想改变存储在地址中的值，如果变量类型很大并且您需要节省内存空间或限制参数复制对性能的影响，则传递变量的地址而不是变量本身可能会很有用。例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">foo</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">int</span> x;</span><br><span class="line">    <span class="keyword">float</span> y;</span><br><span class="line">    <span class="keyword">double</span> z;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">const</span> struct foo *a)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，除非您在内存地址非常大的计算机上工作，否则传递结构体的指针要比传递结构实例花费更少的内存。</p>
+<p>任何类型的数组总是以指针的形式进行传递：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a[])</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
+
+<p>在上述示例中，使用参数 <code>a</code> 调用函数 <code>foo</code> 不会将整个数组复制到 <code>foo</code> 函数的新局部参数中；而是将 <code>x</code> 作为指针传递给 <code>foo</code> 函数的第一个参数。但是要小心：在函数内，您不能使用 <code>sizeof</code> 来确定数组 <code>x</code> 的大小，而 <code>sizeof</code> 却告诉您指针 <code>x</code> 的大小。实际上，以上代码等效于：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *a)</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
+
+<p>在参数声明中明确指定数组的长度无济于事。如果您确实需要按值传递数组，则可以将其包装在结构中，尽管这样做几乎没有用（传递 <code>const</code> 限定的指针通常足以表明调用者不应该修改数组）。</p>
+<h2 id="变长参数列表"><a href="#变长参数列表" class="headerlink" title="变长参数列表"></a>变长参数列表</h2><p>我们可以编写一个带有可变数量参数的函数。这些称为可变函数（_variadic functions_）。为此，该函数至少需要具有一个已知数据类型的参数，但是其余参数是可选的，并且在数量和数据类型上都可以不同。</p>
+<p>您可以像平常一样列出初始参数，但之后再使用省略号：<code>...</code>。下面是一个示例函数原型：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">add_multiple_values</span><span class="params">(<span class="keyword">int</span> number, ...)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>要使用函数定义中的可变参数，我们需要使用库头文件 <code>&lt;stdarg.h&gt;</code> 中定义的宏，因此必须使用 <code>#include</code> 包含该文件。有关这些宏的详细说明，请参见 GNU C 库手册中有关可变参数功能的部分。</p>
+<p>下面是一个可变参数函数的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_multiple_values (<span class="keyword">int</span> number, ...)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter, total = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 声明 &#x27;va_list&#x27; 类型变量 */</span></span><br><span class="line">    va_list parameters;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 调用 &#x27;va_start&#x27; 函数 */</span></span><br><span class="line">    va_start(parameters, number);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; number; counter++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/* 获取可选参数的值 */</span></span><br><span class="line">        total += va_arg(parameters, <span class="keyword">int</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 结束 &#x27;parameters&#x27; 变量的使用，释放资源 */</span></span><br><span class="line">    va_end(parameters);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> total;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>要使用可选参数，您需要一种方法来知道有多少个参数。这可能会有所不同，因此无法进行硬编码，但是如果您不知道有多少个可选参数，则可能很难知道何时停止使用 <code>va_arg</code> 函数。在上面的示例中，函数 <code>add_multiple_values</code> 的第一个参数 <code>number</code> 是实际传递的可选参数的数量。因此，我们可以这样调用函数：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">sum = add_multiple_values(<span class="number">3</span>, <span class="number">12</span>, <span class="number">34</span>, <span class="number">190</span>);</span><br></pre></td></tr></table></figure>
+
+<p>第一个参数指示跟随多少个可选参数。另外，请注意，您实际上并不需要使用 <code>va_end</code> 功能。实际上，对于GCC 而言，它什么也没做。但是，您可能要包括它以最大程度地与其他编译器兼容。</p>
+<h2 id="函数指针调用"><a href="#函数指针调用" class="headerlink" title="函数指针调用"></a>函数指针调用</h2><p>我们也可以调用由指针标识的函数。间接操作符 <code>*</code> 在执行此操作时是可选的。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;foo %d!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d bar!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">message</span><span class="params">(<span class="keyword">void</span> (*func)(<span class="keyword">int</span>), <span class="keyword">int</span> times)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> j;</span><br><span class="line">    <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; times; ++j)</span><br><span class="line">        func(j);  <span class="comment">/* 与 (*func) (j); 作用相同 */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">example</span><span class="params">(<span class="keyword">int</span> want_foo)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">int</span>) = &amp;bar; <span class="comment">/* 运算符 &amp; 是可选的 */</span></span><br><span class="line">    <span class="keyword">if</span> (want_foo)</span><br><span class="line">        pf = foo;</span><br><span class="line">    message (pf, <span class="number">5</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="main-函数"><a href="#main-函数" class="headerlink" title="main 函数"></a><code>main</code> 函数</h2><p>每个程序都至少需要一个名为 <code>main</code> 的函数。这是程序开始执行的地方。我们不需要为 <code>main</code> 函数提供声明或原型，我们只需要定义它即可。</p>
+<p><code>main</code> 函数的返回值总是 <code>int</code> 类型。我们不必为 <code>main</code> 函数指定返回类型，但是我们可以这样做。需要注意的是，我们不能指定它的返回类型不是 <code>int</code>。</p>
+<p>通常，<code>main</code> 函数的返回值表明了程序退出状态。返回 <code>0</code> 或者 <code>EXIT_SUCCESS</code> 表明成功，<code>EXIT_FAILURE</code> 则表示错误。否则，返回的值由实现定义。</p>
+<p>在 <code>main</code> 函数的末尾到达 <code>&#125;</code> 而没有返回值，或者执行没有值的 <code>return</code> 语句（即 <code>return;</code>）都是等效的。在 C89 标准中，这是未定义的，然而在 C99 中明确定义这种情况返回 <code>0</code>。</p>
+<p>我们可以编写没有任何参数的 <code>main</code> 函数（也就是 <code>int main(void)</code>），或者从命令行接受参数。这是一个非常简单的没有参数的主函数：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">puts</span> (<span class="string">&quot;Hi there!&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为了接受来自命令行的参数，我们需要 <code>main</code> 函数提供两个参数，<code>argc</code> 和 <code>*argv[]</code>。我们可以改变参数的名称，但是它们数据类型不能改变 – <code>int</code> 类型和 <code>char</code> 类型的数组指针。<code>argc</code> 是命令行参数的数量，包括程序本身的名称。<code>argv</code> 是参数的数组，以字符串的形式给出。<code>argv[0]</code> 数组的第一个元素是在命令行中键入的程序名称；之后任何数组元素都是程序名称的参数。</p>
+<p>下面的示例定义了 <code>main</code> 函数接受命名行参数，并且将其打印出来：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; argc; counter++)</span><br><span class="line">        <span class="built_in">printf</span> (<span class="string">&quot;%s\n&quot;</span>, argv[counter]);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="递归函数"><a href="#递归函数" class="headerlink" title="递归函数"></a>递归函数</h2><p>我们可以编写一个递归函数 – 调用自身的函数。如一个计算整数的阶乘的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (x &lt; <span class="number">1</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> (x * factorial(x - <span class="number">1</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注意不要编写无限递归的函数。在上面的示例中，一旦 <code>x</code> 为 <code>1</code>，则递归停止。但是，在以下示例中，递归不会停止，直到程序被中断或内存不足为止：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">watermelon(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> (watermelon(x));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当然，函数也可以是间接递归的。</p>
+<h2 id="静态函数"><a href="#静态函数" class="headerlink" title="静态函数"></a>静态函数</h2><p>如果希望仅可在定义该函数的源文件中调用该函数，则可以将其定义为静态函数：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">int</span></span><br><span class="line">foo(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">return</span> x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果您正在构建可重用的函数库，并且需要包含一些最终用户不应该调用的子函数，则这很有用。</p>
+<p>以这种方式定义的函数被称为具有静态链接；不幸的是 <code>static</code> 关键字具有多重含义，见 <a href="/2019/06/C-type-and-storage-class-specifiers/" title="存储类型说明符">存储类型说明符</a>。</p>
+<h2 id="嵌套函数"><a href="#嵌套函数" class="headerlink" title="嵌套函数"></a>嵌套函数</h2><p>作为 GNU C 扩展，我们可以在其他函数中定义函数，这种技术称为嵌套函数。</p>
+<p>下面是使用嵌套函数定义的尾递归阶乘函数的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span></span><br><span class="line">    factorial_helper(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (a &lt; <span class="number">1</span>)</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> b;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> factorial_helper((a - <span class="number">1</span>), (a * b));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> factorial_helper(x, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>请注意，必须在函数的开头定义嵌套函数以及变量声明，然后再声明所有其他语句。</p>
+<p>实际上，我在 <code>gcc -std=c99</code> 的时候也能通过编译，我使用的是 <code>GCC 7.4</code>，而使用 <code>clang -std=gnu99</code> 不能通过编译（<code>clang-1001.0.46.4</code>），具体的可能是编译器实现的问题。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions</a></p>
 ]]></content>
       <categories>
         <category>编程</category>
@@ -437,28 +405,35 @@
       </tags>
   </entry>
   <entry>
-    <title>非超级用户下运行 Solaris SMF 服务</title>
-    <url>/2019/10/SMF-on-Solaris-under-non-superuser/</url>
-    <content><![CDATA[<p>今天在 Solaris 上遇到一个问题，我需要在非超级用户下运行某个服务。默认情况下，通过 SMF 管理的都是在 root 用户下运行的，但是我们可以通过修改配置文件来使其运行到特定用户下。</p>
+    <title>C 程序结构和范围</title>
+    <url>/2020/01/C-program-structure-and-scope/</url>
+    <content><![CDATA[<p>在之前的几篇关于 C 语言的文章中，我们以及掌握了 C 语言的基本要素，本文主要介绍 C 语言的程序结构和范围。</p>
 <a id="more"></a>
 
-<p>例如，我们有如下一个配置文件（部分）：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h2 id="程序结构"><a href="#程序结构" class="headerlink" title="程序结构"></a>程序结构</h2><p>我们可以将 C 程序写在一个源文件中，然而，更为常见的是将其按照功能模块将其划分到不同的源文件中。</p>
+<p>通常，头文件（即以 <code>.h</code> 结尾的文件）包含函数和变量的声明；源文件（即以 <code>.c</code> 结尾的文件）包含相应的定义。如果我们不想某些声明被外部文件访问，那么也可以将声明放在源文件中。</p>
+<p>例如，如果我们编写一个求平方根的函数，我们希望可以在定义该函数以外的文件访问，那么我们需要将函数的声明放在头文件中（即以 <code>.h</code> 结尾的文件）。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.h */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x);</span><br></pre></td></tr></table></figure>
 
-<p>现在，我们想要 <code>exec_binary</code> 在 <code>tom</code> 用户下运行，那么我们需要加入 <code>method_credential</code> 元素，如下所示：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_credential</span> <span class="attr">user</span>=<span class="string">&quot;tom&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>该头文件可能包含其它我们需要使用的函数但其定义在不同的源文件中，我们可能不需要知道这些函数的实现。</p>
+<p>This header file could be included by other source files which need to use your function, but do not need to know how it was implemented.</p>
+<p>上述函数的定义应该在相应的源文件中出现（即以 <code>.c</code> 结尾的文件）。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.c */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;sqrt.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">double</span> result;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>这样，我们便可以在 <code>tom</code> 用户下运行 <code>exec_binary</code> 的服务了，这里需要注意 <code>method_credential</code> 的位置，它需要位于 <code>method_environment</code> 之前，否则将出现如下问题。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">element method_context: validity error : Element method_context content does not follow the DTD, expecting ((method_profile | method_credential)? , method_environment?), got (method_environment method_credential )</span><br><span class="line">svccfg: Document is not valid.</span><br></pre></td></tr></table></figure>
+<h2 id="范围"><a href="#范围" class="headerlink" title="范围"></a>范围</h2><p>范围是指程序的哪些部分可以“看到”声明的对象。声明的对象可以只在特定的函数中可见、或者是特定的文件、亦或者是包含这个声明的头文件的一系列源文件中（需要使用 <code>extern</code> 声明）。</p>
+<p>除非特定说明，在文件的顶层（即不在函数内）进行的声明对整个文件都是可见的，包括从函数内部，但在文件外部不可见；在函数内进行的声明仅在这些函数内可见；此外，声明对之前的声明不可见，例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">10</span>;</span><br><span class="line"><span class="keyword">int</span> y = x + <span class="number">5</span>;</span><br></pre></td></tr></table></figure>
 
-<p>我们可通过查看 <code>/usr/share/lib/xml/dtd/service_bundle.dtd.1</code> 文件来了解更多的 SMF 配置信息。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/">https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/</a><br>[2] <a href="https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html">https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html</a></p>
+<p>这样是可以的，但是如下方式则是不行的。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = y + <span class="number">5</span>;</span><br><span class="line"><span class="keyword">int</span> y = <span class="number">10</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope</a></p>
 ]]></content>
       <categories>
-        <category>杂项</category>
+        <category>编程</category>
       </categories>
       <tags>
-        <tag>Solaris</tag>
+        <tag>C 语言</tag>
       </tags>
   </entry>
   <entry>
@@ -492,6 +467,31 @@
       <tags>
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>非超级用户下运行 Solaris SMF 服务</title>
+    <url>/2019/10/SMF-on-Solaris-under-non-superuser/</url>
+    <content><![CDATA[<p>今天在 Solaris 上遇到一个问题，我需要在非超级用户下运行某个服务。默认情况下，通过 SMF 管理的都是在 root 用户下运行的，但是我们可以通过修改配置文件来使其运行到特定用户下。</p>
+<a id="more"></a>
+
+<p>例如，我们有如下一个配置文件（部分）：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>现在，我们想要 <code>exec_binary</code> 在 <code>tom</code> 用户下运行，那么我们需要加入 <code>method_credential</code> 元素，如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_credential</span> <span class="attr">user</span>=<span class="string">&quot;tom&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>这样，我们便可以在 <code>tom</code> 用户下运行 <code>exec_binary</code> 的服务了，这里需要注意 <code>method_credential</code> 的位置，它需要位于 <code>method_environment</code> 之前，否则将出现如下问题。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">element method_context: validity error : Element method_context content does not follow the DTD, expecting ((method_profile | method_credential)? , method_environment?), got (method_environment method_credential )</span><br><span class="line">svccfg: Document is not valid.</span><br></pre></td></tr></table></figure>
+
+<p>我们可通过查看 <code>/usr/share/lib/xml/dtd/service_bundle.dtd.1</code> 文件来了解更多的 SMF 配置信息。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/">https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/</a><br>[2] <a href="https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html">https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Solaris</tag>
       </tags>
   </entry>
   <entry>
@@ -553,32 +553,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Ubuntu 系统 DNS 服务器配置</title>
-    <url>/2018/09/configure-dns-on-ubuntu/</url>
-    <content><![CDATA[<p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
-<img src="/2018/09/configure-dns-on-ubuntu/Domain_name_space.png" class="" title="Domain name space">
-
-<a id="more"></a>
-
-<p>在 Ubuntu 平台，我目前所了解到的 DNS 的配置主要有两种方式 (配置文件修改)：网络配置文件 interfaces 和域名解析配置文件 resolvconf。</p>
-<h3 id="网络配置文件"><a href="#网络配置文件" class="headerlink" title="网络配置文件"></a>网络配置文件</h3><p>若是通过网络配置文件修改 DNS，那么我们只需要在 /etc/network/interfaces 文件中加入 nameserver 即可，如下所示：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">dns-nameserver 114.114.114.114</span><br><span class="line">dns-nameservers 8.8.8.8 8.8.4.4</span><br></pre></td></tr></table></figure>
-
-<p>dns-nameserver: 用于添加一个域名服务器，如果需要指定多个域名服务器则需要使用添加多行。<br>dns-nameservers: 用于同时指定多个域名服务器地址，用空格隔开。</p>
-<p>通过这种方式修改 DNS 后需要重启电脑方可生效。</p>
-<h3 id="域名解析配置文件"><a href="#域名解析配置文件" class="headerlink" title="域名解析配置文件"></a>域名解析配置文件</h3><p>Ubuntu 系统提供了 resolvconf 工具来管理其域名信息，其配置文件为在 /etc/resolvconf/resolv.conf.d/ 目录下，通过修改该目录下的 head 文件，我们可以添加特定的域名服务器。例如：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">nameserver 114.114.114.114</span><br><span class="line">nameserver 8.8.8.8</span><br><span class="line">nameserver 8.8.4.4</span><br></pre></td></tr></table></figure>
-
-<p>在该文件中，每个域名服务器的地址单独一行，不能同时在一行上指定多个域名服务器。修改成功后，我们只需要运行 <code>sudo resolvconf -u</code> 更新 /etc/resolv.conf 文件即可。这种方式不需要重启电脑。此外，我们也可以直接在 /etc/resolv.conf 文件中添加域名服务器，但是这种方式添加的域名服务器在系统重启之后将失效，这是因为 /etc/resolv.conf 文件是由 resolvconf 命令生成的，重启后该文件将被重写。</p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>DNS</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>MacOS 上创建 U 盘启动器</title>
     <url>/2020/07/create-u-bootloader-on-macos/</url>
     <content><![CDATA[<p>本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。</p>
@@ -602,6 +576,32 @@
       </categories>
       <tags>
         <tag>MacOS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Ubuntu 系统 DNS 服务器配置</title>
+    <url>/2018/09/configure-dns-on-ubuntu/</url>
+    <content><![CDATA[<p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
+<img src="/2018/09/configure-dns-on-ubuntu/Domain_name_space.png" class="" title="Domain name space">
+
+<a id="more"></a>
+
+<p>在 Ubuntu 平台，我目前所了解到的 DNS 的配置主要有两种方式 (配置文件修改)：网络配置文件 interfaces 和域名解析配置文件 resolvconf。</p>
+<h3 id="网络配置文件"><a href="#网络配置文件" class="headerlink" title="网络配置文件"></a>网络配置文件</h3><p>若是通过网络配置文件修改 DNS，那么我们只需要在 /etc/network/interfaces 文件中加入 nameserver 即可，如下所示：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">dns-nameserver 114.114.114.114</span><br><span class="line">dns-nameservers 8.8.8.8 8.8.4.4</span><br></pre></td></tr></table></figure>
+
+<p>dns-nameserver: 用于添加一个域名服务器，如果需要指定多个域名服务器则需要使用添加多行。<br>dns-nameservers: 用于同时指定多个域名服务器地址，用空格隔开。</p>
+<p>通过这种方式修改 DNS 后需要重启电脑方可生效。</p>
+<h3 id="域名解析配置文件"><a href="#域名解析配置文件" class="headerlink" title="域名解析配置文件"></a>域名解析配置文件</h3><p>Ubuntu 系统提供了 resolvconf 工具来管理其域名信息，其配置文件为在 /etc/resolvconf/resolv.conf.d/ 目录下，通过修改该目录下的 head 文件，我们可以添加特定的域名服务器。例如：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">nameserver 114.114.114.114</span><br><span class="line">nameserver 8.8.8.8</span><br><span class="line">nameserver 8.8.4.4</span><br></pre></td></tr></table></figure>
+
+<p>在该文件中，每个域名服务器的地址单独一行，不能同时在一行上指定多个域名服务器。修改成功后，我们只需要运行 <code>sudo resolvconf -u</code> 更新 /etc/resolv.conf 文件即可。这种方式不需要重启电脑。此外，我们也可以直接在 /etc/resolv.conf 文件中添加域名服务器，但是这种方式添加的域名服务器在系统重启之后将失效，这是因为 /etc/resolv.conf 文件是由 resolvconf 命令生成的，重启后该文件将被重写。</p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>DNS</tag>
       </tags>
   </entry>
   <entry>
@@ -647,6 +647,28 @@
       <tags>
         <tag>PostgreSQL</tag>
         <tag>dblink</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LaTeX 自定义封面</title>
+    <url>/2019/04/customize-latex-title-page/</url>
+    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
+<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
+<p style="text-align:center">图 1 LaTeX 自定义封面</p>
+
+<a id="more"></a>
+
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
+<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;book&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">begin</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line">    <span class="tag">\<span class="name">centering</span></span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.2\textheight&#125;</span></span>  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Huge</span></span> Customize <span class="tag">\<span class="name">LaTeX</span><span class="string">&#123;&#125;</span></span> Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.025\textheight&#125;</span></span>   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;0.83\textwidth&#125;</span><span class="string">&#123;0.4pt&#125;</span></span>  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Large</span></span> Author: <span class="tag">\<span class="name">textsc</span><span class="string">&#123;Japin Li&#125;</span></span>&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vfill</span></span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">large</span></span> <span class="tag">\<span class="name">today</span></span>&#125;</span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">end</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
+
+<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
+]]></content>
+      <categories>
+        <category>排版</category>
+      </categories>
+      <tags>
+        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -750,28 +772,6 @@
       <tags>
         <tag>cstore_fdw</tag>
         <tag>列存</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>LaTeX 自定义封面</title>
-    <url>/2019/04/customize-latex-title-page/</url>
-    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
-<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
-<p style="text-align:center">图 1 LaTeX 自定义封面</p>
-
-<a id="more"></a>
-
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
-<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;book&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">begin</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line">    <span class="tag">\<span class="name">centering</span></span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.2\textheight&#125;</span></span>  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Huge</span></span> Customize <span class="tag">\<span class="name">LaTeX</span><span class="string">&#123;&#125;</span></span> Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.025\textheight&#125;</span></span>   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;0.83\textwidth&#125;</span><span class="string">&#123;0.4pt&#125;</span></span>  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Large</span></span> Author: <span class="tag">\<span class="name">textsc</span><span class="string">&#123;Japin Li&#125;</span></span>&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vfill</span></span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">large</span></span> <span class="tag">\<span class="name">today</span></span>&#125;</span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">end</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
-
-<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -1247,52 +1247,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Go 语言 http 响应头设置</title>
-    <url>/2020/09/go-http-response-writer/</url>
-    <content><![CDATA[<p>Go 语言的 <code>net/http</code> 包为我们提供了一个 HTTP 客户端和服务器的实现，通过它我们可以快速的搭建一个 HTTP 服务器，本文记录一下在编写 HTTP 服务器时关于设置 HTTP 响应头遇到的一个小问题。</p>
-<a id="more"></a>
-
-<h2 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h2><p>问题的表象是通过 <code>w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)</code> （<code>w</code> 为 <code>http.ResponseWriter</code> 对象）无法设置响应头的 <code>Content-Type</code> 为 <code>application/json</code>。下面是是一个简单的示例：</p>
-<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">        <span class="string">&quot;encoding/json&quot;</span></span><br><span class="line">        <span class="string">&quot;net/http&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Status <span class="keyword">struct</span> &#123;</span><br><span class="line">        Code    <span class="keyword">int</span></span><br><span class="line">        Message <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">hello</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">        res := Status&#123;Code: <span class="number">200</span>, Message: <span class="string">&quot;hello world!&quot;</span>&#125;</span><br><span class="line"></span><br><span class="line">        w.WriteHeader(<span class="number">200</span>)</span><br><span class="line">        w.Header().Set(<span class="string">&quot;Content-Type&quot;</span>, <span class="string">&quot;application/json&quot;</span>)</span><br><span class="line"></span><br><span class="line">        json.NewEncoder(w).Encode(&amp;res)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">        http.HandleFunc(<span class="string">&quot;/hello&quot;</span>, hello)</span><br><span class="line"></span><br><span class="line">        http.ListenAndServe(<span class="string">&quot;:8080&quot;</span>, <span class="literal">nil</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>编译并运行上面的程序，随后我们去访问可以看到如下所示的响应。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ curl -i http:&#x2F;&#x2F;localhost:8080&#x2F;hello</span><br><span class="line">HTTP&#x2F;1.1 200 OK</span><br><span class="line">Date: Mon, 14 Sep 2020 09:40:11 GMT</span><br><span class="line">Content-Length: 38</span><br><span class="line">Content-Type: text&#x2F;plain; charset&#x3D;utf-8</span><br><span class="line"></span><br><span class="line">&#123;&quot;Code&quot;:200,&quot;Message&quot;:&quot;hello world!&quot;&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从响应的结果可以看到，<code>Content-Type</code> 并没有被设置为我想要的 <code>application/json</code>。</p>
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>通过测试我发现，经过如下修改，就可以正确的设置 HTTP 响应头。</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line">diff --git a/main.go b/main.go</span><br><span class="line">index 8bec8e3..459fb77 100644</span><br><span class="line"><span class="comment">--- a/main.go</span></span><br><span class="line"><span class="comment">+++ b/main.go</span></span><br><span class="line">@@ -13,8 +13,8 @@ type Status struct &#123;</span><br><span class="line"> func hello(w http.ResponseWriter, r *http.Request) &#123;</span><br><span class="line">        res := Status&#123;Code: 200, Message: &quot;hello world!&quot;&#125;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-       w.WriteHeader(200)</span></span><br><span class="line">        w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)</span><br><span class="line"><span class="addition">+       w.WriteHeader(200)</span></span><br><span class="line"></span><br><span class="line">        json.NewEncoder(w).Encode(&amp;res)</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
-
-<p>以下是测试输出。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ curl -i http:&#x2F;&#x2F;localhost:8080&#x2F;hello</span><br><span class="line">HTTP&#x2F;1.1 200 OK</span><br><span class="line">Content-Type: application&#x2F;json</span><br><span class="line">Date: Mon, 14 Sep 2020 09:48:52 GMT</span><br><span class="line">Content-Length: 38</span><br><span class="line"></span><br><span class="line">&#123;&quot;Code&quot;:200,&quot;Message&quot;:&quot;hello world!&quot;&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这是为什么呢？通过查看 <a href="https://github.com/golang/go/blob/master/src/net/http/server.go#L100">Go 语言的源码</a>，发现了如下内容：</p>
-<blockquote>
-<p> type ResponseWriter interface {<br>     // Header returns the header map that will be sent by<br>     // WriteHeader. The Header map also is the mechanism with which<br>     // Handlers can set HTTP trailers.<br>     //<br>     // Changing the header map after a call to WriteHeader (or<br>     // Write) has no effect unless the modified headers are<br>     // trailers.<br>     //<br>     // There are two ways to set Trailers. The preferred way is to<br>     // predeclare in the headers which trailers you will later<br>     // send by setting the “Trailer” header to the names of the<br>     // trailer keys which will come later. In this case, those<br>     // keys of the Header map are treated as if they were<br>     // trailers. See the example. The second way, for trailer<br>     // keys not known to the Handler until after the first Write,<br>     // is to prefix the Header map keys with the TrailerPrefix<br>     // constant value. See TrailerPrefix.<br>     //<br>     // To suppress automatic response headers (such as “Date”), set<br>     // their value to nil.<br>     Header() Header<br> …<br>}</p>
-</blockquote>
-<p>从注释我们可以看到，在调用了 <code>WriteHeader()</code> 或者是 <code>Write()</code> 函数之后去改变响应头（trailers 响应头除外）是没有效果的。<br>其实，在 Go 的文档里面也出现了上述注释，只是在读文档的时候不够仔细，导致忽略了这一点。</p>
-<p>关于 HTTP Trailers 的相关说明可以参考<a href="https://www.geeksforgeeks.org/http-headers-trailer/">这里</a>。</p>
-<p>我们从源码角度来做简要分析。首先，我们看看 <code>ResponseWriter</code> 是如何获取 <code>Header</code> 结构的，如下所示。</p>
-<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(w *response)</span> <span class="title">Header</span><span class="params">()</span> <span class="title">Header</span></span> &#123;</span><br><span class="line">        <span class="keyword">if</span> w.cw.header == <span class="literal">nil</span> &amp;&amp; w.wroteHeader &amp;&amp; !w.cw.wroteHeader &#123;</span><br><span class="line">                <span class="comment">// Accessing the header between logically writing it</span></span><br><span class="line">                <span class="comment">// and physically writing it means we need to allocate</span></span><br><span class="line">                <span class="comment">// a clone to snapshot the logically written state.</span></span><br><span class="line">                w.cw.header = w.handlerHeader.Clone()</span><br><span class="line">        &#125;</span><br><span class="line">        w.calledHeader = <span class="literal">true</span></span><br><span class="line">        <span class="keyword">return</span> w.handlerHeader</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从上面的代码可以看出，我们在调用 <code>w.Header()</code> 函数获取的其实是 <code>w.handlerHeader</code>，因此，我们添加的 HTTP 响应头也是存放在该结构中的。接着我们在来看看 <code>w.WriteHeader()</code> 函数是如何实现的。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">func (w *response) WriteHeader(code int) &#123;</span><br><span class="line">        if w.conn.hijacked() &#123;</span><br><span class="line">                caller :&#x3D; relevantCaller()</span><br><span class="line">                w.conn.server.logf(&quot;http: response.WriteHeader on hijacked connection from %s (%s:%d)&quot;, caller.Function, path.Base(caller.File), caller.Line)</span><br><span class="line">                return</span><br><span class="line">        &#125;</span><br><span class="line">        if w.wroteHeader &#123;</span><br><span class="line">                caller :&#x3D; relevantCaller()</span><br><span class="line">                w.conn.server.logf(&quot;http: superfluous response.WriteHeader call from %s (%s:%d)&quot;, caller.Function, path.Base(caller.File), caller.Line)</span><br><span class="line">                return</span><br><span class="line">        &#125;</span><br><span class="line">        checkWriteHeaderCode(code)</span><br><span class="line">        w.wroteHeader &#x3D; true</span><br><span class="line">        w.status &#x3D; code</span><br><span class="line"></span><br><span class="line">        if w.calledHeader &amp;&amp; w.cw.header &#x3D;&#x3D; nil &#123;</span><br><span class="line">                w.cw.header &#x3D; w.handlerHeader.Clone()</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if cl :&#x3D; w.handlerHeader.get(&quot;Content-Length&quot;); cl !&#x3D; &quot;&quot; &#123;</span><br><span class="line">                v, err :&#x3D; strconv.ParseInt(cl, 10, 64)</span><br><span class="line">                if err &#x3D;&#x3D; nil &amp;&amp; v &gt;&#x3D; 0 &#123;</span><br><span class="line">                        w.contentLength &#x3D; v</span><br><span class="line">                &#125; else &#123;</span><br><span class="line">                        w.conn.server.logf(&quot;http: invalid Content-Length of %q&quot;, cl)</span><br><span class="line">                        w.handlerHeader.Del(&quot;Content-Length&quot;)</span><br><span class="line">                &#125;</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>我们注意到，<code>w.WriteHeader()</code> 将 <code>w.handlerHeader</code> 中的 HTTP 响应头克隆到了 <code>w.cw.header</code> 中（其中 <code>cw</code> 为 <code>*chunkWriter</code> 类型）。最终，<code>net/http</code> 是通过 <code>func (cw *chunkWriter) writeHeader(p []byte)</code>  函数来完成响应头的处理的，而这其中关于 HTTP 响应头，除了 Trailer 类型的响应头外，都是从 <code>cw.header</code>  中获取的，因此，在调用 <code>w.WriteHeader()</code> 之后，我们设置的非 Trailer 响应头是无效的。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://github.com/golang/go/blob/master/src/net/http/server.go">https://github.com/golang/go/blob/master/src/net/http/server.go</a><br>[2] <a href="https://golang.org/pkg/net/http/">https://golang.org/pkg/net/http/</a><br>[3] <a href="https://www.geeksforgeeks.org/http-headers-trailer/">https://www.geeksforgeeks.org/http-headers-trailer/</a></p>
-<div class="just-for-fun">
-笑林广记 - 原不识字
-
-<p>有延师教其子者，师至，主人曰：“家贫，多失礼于先生，奈何！”<br>师曰：“何言之谦，仆固无不可者。”<br>主人曰：“蔬食，可乎？”<br>曰：“可。”<br>主人曰：“家无藏获，凡洒扫庭除，启闭门户，劳先生为之，可乎？”<br>曰：“可。”<br>主人曰：“或家人妇子欲买零星杂物，屈先生一行，可乎？”<br>曰：“可。”<br>主人曰：“如此，幸甚！”<br>师曰：“仆亦有一言，愿主人勿讶焉。”<br>主人问何言？<br>师曰：“自愧幼时不学耳！”<br>主人曰：“何言之谦。”<br>师曰：“不敢欺，仆实不识一字。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>Go</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Go 语言实战</title>
     <url>/2021/05/go-in-action/</url>
     <content><![CDATA[<p>最近由于需要从事 Go 语言相关的工作，为此花了约一个星期的时间将《Go 语言实战》这本书过了一遍，对 Go 语言有了一个基本的认识。这本书短小精悍，全书 200 多页，详细介绍了 Go 语言的数组、切片的底层原理，Go 语言的类型系统、并发、通道以及测试。当然部分内容也没有深入的讲解，如映射，其底层的实现介绍的不是很充分。《Go 语言实战》这本书适合有一定语言编程经验的读者。</p>
@@ -1350,6 +1304,52 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Go 语言 http 响应头设置</title>
+    <url>/2020/09/go-http-response-writer/</url>
+    <content><![CDATA[<p>Go 语言的 <code>net/http</code> 包为我们提供了一个 HTTP 客户端和服务器的实现，通过它我们可以快速的搭建一个 HTTP 服务器，本文记录一下在编写 HTTP 服务器时关于设置 HTTP 响应头遇到的一个小问题。</p>
+<a id="more"></a>
+
+<h2 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h2><p>问题的表象是通过 <code>w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)</code> （<code>w</code> 为 <code>http.ResponseWriter</code> 对象）无法设置响应头的 <code>Content-Type</code> 为 <code>application/json</code>。下面是是一个简单的示例：</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">        <span class="string">&quot;encoding/json&quot;</span></span><br><span class="line">        <span class="string">&quot;net/http&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Status <span class="keyword">struct</span> &#123;</span><br><span class="line">        Code    <span class="keyword">int</span></span><br><span class="line">        Message <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">hello</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">        res := Status&#123;Code: <span class="number">200</span>, Message: <span class="string">&quot;hello world!&quot;</span>&#125;</span><br><span class="line"></span><br><span class="line">        w.WriteHeader(<span class="number">200</span>)</span><br><span class="line">        w.Header().Set(<span class="string">&quot;Content-Type&quot;</span>, <span class="string">&quot;application/json&quot;</span>)</span><br><span class="line"></span><br><span class="line">        json.NewEncoder(w).Encode(&amp;res)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">        http.HandleFunc(<span class="string">&quot;/hello&quot;</span>, hello)</span><br><span class="line"></span><br><span class="line">        http.ListenAndServe(<span class="string">&quot;:8080&quot;</span>, <span class="literal">nil</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编译并运行上面的程序，随后我们去访问可以看到如下所示的响应。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ curl -i http:&#x2F;&#x2F;localhost:8080&#x2F;hello</span><br><span class="line">HTTP&#x2F;1.1 200 OK</span><br><span class="line">Date: Mon, 14 Sep 2020 09:40:11 GMT</span><br><span class="line">Content-Length: 38</span><br><span class="line">Content-Type: text&#x2F;plain; charset&#x3D;utf-8</span><br><span class="line"></span><br><span class="line">&#123;&quot;Code&quot;:200,&quot;Message&quot;:&quot;hello world!&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从响应的结果可以看到，<code>Content-Type</code> 并没有被设置为我想要的 <code>application/json</code>。</p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>通过测试我发现，经过如下修改，就可以正确的设置 HTTP 响应头。</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line">diff --git a/main.go b/main.go</span><br><span class="line">index 8bec8e3..459fb77 100644</span><br><span class="line"><span class="comment">--- a/main.go</span></span><br><span class="line"><span class="comment">+++ b/main.go</span></span><br><span class="line">@@ -13,8 +13,8 @@ type Status struct &#123;</span><br><span class="line"> func hello(w http.ResponseWriter, r *http.Request) &#123;</span><br><span class="line">        res := Status&#123;Code: 200, Message: &quot;hello world!&quot;&#125;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-       w.WriteHeader(200)</span></span><br><span class="line">        w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)</span><br><span class="line"><span class="addition">+       w.WriteHeader(200)</span></span><br><span class="line"></span><br><span class="line">        json.NewEncoder(w).Encode(&amp;res)</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是测试输出。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ curl -i http:&#x2F;&#x2F;localhost:8080&#x2F;hello</span><br><span class="line">HTTP&#x2F;1.1 200 OK</span><br><span class="line">Content-Type: application&#x2F;json</span><br><span class="line">Date: Mon, 14 Sep 2020 09:48:52 GMT</span><br><span class="line">Content-Length: 38</span><br><span class="line"></span><br><span class="line">&#123;&quot;Code&quot;:200,&quot;Message&quot;:&quot;hello world!&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是为什么呢？通过查看 <a href="https://github.com/golang/go/blob/master/src/net/http/server.go#L100">Go 语言的源码</a>，发现了如下内容：</p>
+<blockquote>
+<p> type ResponseWriter interface {<br>     // Header returns the header map that will be sent by<br>     // WriteHeader. The Header map also is the mechanism with which<br>     // Handlers can set HTTP trailers.<br>     //<br>     // Changing the header map after a call to WriteHeader (or<br>     // Write) has no effect unless the modified headers are<br>     // trailers.<br>     //<br>     // There are two ways to set Trailers. The preferred way is to<br>     // predeclare in the headers which trailers you will later<br>     // send by setting the “Trailer” header to the names of the<br>     // trailer keys which will come later. In this case, those<br>     // keys of the Header map are treated as if they were<br>     // trailers. See the example. The second way, for trailer<br>     // keys not known to the Handler until after the first Write,<br>     // is to prefix the Header map keys with the TrailerPrefix<br>     // constant value. See TrailerPrefix.<br>     //<br>     // To suppress automatic response headers (such as “Date”), set<br>     // their value to nil.<br>     Header() Header<br> …<br>}</p>
+</blockquote>
+<p>从注释我们可以看到，在调用了 <code>WriteHeader()</code> 或者是 <code>Write()</code> 函数之后去改变响应头（trailers 响应头除外）是没有效果的。<br>其实，在 Go 的文档里面也出现了上述注释，只是在读文档的时候不够仔细，导致忽略了这一点。</p>
+<p>关于 HTTP Trailers 的相关说明可以参考<a href="https://www.geeksforgeeks.org/http-headers-trailer/">这里</a>。</p>
+<p>我们从源码角度来做简要分析。首先，我们看看 <code>ResponseWriter</code> 是如何获取 <code>Header</code> 结构的，如下所示。</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(w *response)</span> <span class="title">Header</span><span class="params">()</span> <span class="title">Header</span></span> &#123;</span><br><span class="line">        <span class="keyword">if</span> w.cw.header == <span class="literal">nil</span> &amp;&amp; w.wroteHeader &amp;&amp; !w.cw.wroteHeader &#123;</span><br><span class="line">                <span class="comment">// Accessing the header between logically writing it</span></span><br><span class="line">                <span class="comment">// and physically writing it means we need to allocate</span></span><br><span class="line">                <span class="comment">// a clone to snapshot the logically written state.</span></span><br><span class="line">                w.cw.header = w.handlerHeader.Clone()</span><br><span class="line">        &#125;</span><br><span class="line">        w.calledHeader = <span class="literal">true</span></span><br><span class="line">        <span class="keyword">return</span> w.handlerHeader</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的代码可以看出，我们在调用 <code>w.Header()</code> 函数获取的其实是 <code>w.handlerHeader</code>，因此，我们添加的 HTTP 响应头也是存放在该结构中的。接着我们在来看看 <code>w.WriteHeader()</code> 函数是如何实现的。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">func (w *response) WriteHeader(code int) &#123;</span><br><span class="line">        if w.conn.hijacked() &#123;</span><br><span class="line">                caller :&#x3D; relevantCaller()</span><br><span class="line">                w.conn.server.logf(&quot;http: response.WriteHeader on hijacked connection from %s (%s:%d)&quot;, caller.Function, path.Base(caller.File), caller.Line)</span><br><span class="line">                return</span><br><span class="line">        &#125;</span><br><span class="line">        if w.wroteHeader &#123;</span><br><span class="line">                caller :&#x3D; relevantCaller()</span><br><span class="line">                w.conn.server.logf(&quot;http: superfluous response.WriteHeader call from %s (%s:%d)&quot;, caller.Function, path.Base(caller.File), caller.Line)</span><br><span class="line">                return</span><br><span class="line">        &#125;</span><br><span class="line">        checkWriteHeaderCode(code)</span><br><span class="line">        w.wroteHeader &#x3D; true</span><br><span class="line">        w.status &#x3D; code</span><br><span class="line"></span><br><span class="line">        if w.calledHeader &amp;&amp; w.cw.header &#x3D;&#x3D; nil &#123;</span><br><span class="line">                w.cw.header &#x3D; w.handlerHeader.Clone()</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if cl :&#x3D; w.handlerHeader.get(&quot;Content-Length&quot;); cl !&#x3D; &quot;&quot; &#123;</span><br><span class="line">                v, err :&#x3D; strconv.ParseInt(cl, 10, 64)</span><br><span class="line">                if err &#x3D;&#x3D; nil &amp;&amp; v &gt;&#x3D; 0 &#123;</span><br><span class="line">                        w.contentLength &#x3D; v</span><br><span class="line">                &#125; else &#123;</span><br><span class="line">                        w.conn.server.logf(&quot;http: invalid Content-Length of %q&quot;, cl)</span><br><span class="line">                        w.handlerHeader.Del(&quot;Content-Length&quot;)</span><br><span class="line">                &#125;</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们注意到，<code>w.WriteHeader()</code> 将 <code>w.handlerHeader</code> 中的 HTTP 响应头克隆到了 <code>w.cw.header</code> 中（其中 <code>cw</code> 为 <code>*chunkWriter</code> 类型）。最终，<code>net/http</code> 是通过 <code>func (cw *chunkWriter) writeHeader(p []byte)</code>  函数来完成响应头的处理的，而这其中关于 HTTP 响应头，除了 Trailer 类型的响应头外，都是从 <code>cw.header</code>  中获取的，因此，在调用 <code>w.WriteHeader()</code> 之后，我们设置的非 Trailer 响应头是无效的。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://github.com/golang/go/blob/master/src/net/http/server.go">https://github.com/golang/go/blob/master/src/net/http/server.go</a><br>[2] <a href="https://golang.org/pkg/net/http/">https://golang.org/pkg/net/http/</a><br>[3] <a href="https://www.geeksforgeeks.org/http-headers-trailer/">https://www.geeksforgeeks.org/http-headers-trailer/</a></p>
+<div class="just-for-fun">
+笑林广记 - 原不识字
+
+<p>有延师教其子者，师至，主人曰：“家贫，多失礼于先生，奈何！”<br>师曰：“何言之谦，仆固无不可者。”<br>主人曰：“蔬食，可乎？”<br>曰：“可。”<br>主人曰：“家无藏获，凡洒扫庭除，启闭门户，劳先生为之，可乎？”<br>曰：“可。”<br>主人曰：“或家人妇子欲买零星杂物，屈先生一行，可乎？”<br>曰：“可。”<br>主人曰：“如此，幸甚！”<br>师曰：“仆亦有一言，愿主人勿讶焉。”<br>主人问何言？<br>师曰：“自愧幼时不学耳！”<br>主人曰：“何言之谦。”<br>师曰：“不敢欺，仆实不识一字。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>Go</tag>
       </tags>
   </entry>
   <entry>
@@ -1692,43 +1692,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL auto_explain 插件内存泄露</title>
-    <url>/2021/02/postgresql-auto-explain-memory-leak/</url>
-    <content><![CDATA[<p>最近看到 PostgreSQL 邮件列表中有人说 auto_explain 插件在特定情况下会导致 OOM 问题，经过一番分析发现原来是由于内存上下文的问题导致的。目前该泄露已经修复，并合并到代码库中。</p>
-<img src="/2021/02/postgresql-auto-explain-memory-leak/fix_memory_leak_in_auto_explain.png" class="">
-
-<a id="more"></a>
-
-<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>首先我们来看看如何重现这个问题。首先，我们需要一个已运行的 PostgreSQL 数据库服务器。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql postgres -c &#39;ALTER SYSTEM SET shared_preload_libraries TO auto_explain;&#39;</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">$ psql postgres -c &#39;ALTER SYSTEM SET auto_explain.log_min_duration TO 0;&#39;</span><br><span class="line">$ psql postgres -c &#39;ALTER SYSTEM SET auto_explain.log_nested_statements TO on;&#39;</span><br><span class="line">$ pg_ctl restart</span><br></pre></td></tr></table></figure>
-
-<p>接着，我们通过 psql 连接数据库，并创建如下函数。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> gibberish(<span class="built_in">int</span>) <span class="keyword">RETURNS</span> <span class="built_in">text</span></span><br><span class="line"><span class="keyword">LANGUAGE</span> <span class="keyword">SQL</span> <span class="keyword">AS</span> $_$</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">left</span>(string_agg(<span class="keyword">md5</span>(random()::<span class="built_in">text</span>),$$$$),$<span class="number">1</span>) <span class="keyword">FROM</span> generate_series(<span class="number">0</span>,$<span class="number">1</span>/<span class="number">32</span>)</span><br><span class="line">$_$;</span><br></pre></td></tr></table></figure>
-
-<p>接着我们执行下面的查询命令。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    x, <span class="keyword">md5</span>(random()::<span class="built_in">text</span>) <span class="keyword">as</span> t11,</span><br><span class="line">    gibberish(<span class="number">1500</span>) <span class="keyword">as</span> t12</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    generate_series(<span class="number">1</span>,<span class="number">20e6</span>) f(x);</span><br></pre></td></tr></table></figure>
-
-<p>这个为了简化我省略了 <code>CREATE TABLE j1 AS</code>，因为这个不是内存泄露的关键。在执行上述命令的时候，我们可以通过 <code>top -p &lt;pid&gt;</code> 去观察，发现确实是内存一直在增长。</p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>为了缩写范围，我尝试将 auto_explain 插件移除，并执行上面的查询，发现内存并不会增长。那么内存泄露的问题就被缩小到了 auto_explain 代码中了，通过查看 auto_explain 源码，我发现这里面有两个地方会显示的调用内存分配 <code>explain_ExecutorStart()</code> 函数和 <code>explain_ExecutorEnd()</code>。该 bug 的发现者指出该内存泄露是发生在 SQL function 内存上下文中，经过调试我发现确实在执行 <code>explain_ExecutorEnd()</code> 函数时该内存上下文为 SQL function。</p>
-<p>那么 SQL function 的内存上下文是什么时候创建的呢？通过查找，我发现它是在 <code>src/backend/executor/functions.c</code> 文件中的 <code>init_sql_fcache()</code> 函数中创建的。然而，在调用函数时 <code>fmgr_sql()</code> 函数中有如下注释。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">Datum</span><br><span class="line">fmgr_sql(PG_FUNCTION_ARGS)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fcache == <span class="literal">NULL</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        init_sql_fcache(fcinfo, PG_GET_COLLATION(), lazyEvalOK);</span><br><span class="line">        fcache = (SQLFunctionCachePtr) fcinfo-&gt;flinfo-&gt;fn_extra;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Switch to context in which the fcache lives.  This ensures that our</span></span><br><span class="line"><span class="comment">     * tuplestore etc will have sufficient lifetime.  The sub-executor is</span></span><br><span class="line"><span class="comment">     * responsible for deleting per-tuple information.  (XXX in the case of a</span></span><br><span class="line"><span class="comment">     * long-lived FmgrInfo, this policy represents more memory leakage, but</span></span><br><span class="line"><span class="comment">     * it&#x27;s not entirely clear where to keep stuff instead.)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    oldcontext = MemoryContextSwitchTo(fcache-&gt;fcontext);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这里可以看到，SQL function 的内存上下文可能会存在较长的生命周期，那么我们频繁的在该内存上下文上分配内存，就有可能导致内存泄露，而 <code>explain_ExecutorEnd()</code> 函数执行时的内存上下文就是在 SQL function 内存上下文中，对于相对简单的查询，可能这并不会有什么问题，这也是这个内存泄露没有被即使发现的原因，当我们执行上面的查询时这个问题就暴露出来了。</p>
-<p><strong>备注：</strong> 这里的内存泄露主要是 <code>explain_ExecutorEnd()</code> 函数中 <code>ExplainState</code> 结构的分配导致的。</p>
-<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>那么这个问题这么解决呢？在分析了之后，我发现这个内存的分配其实在执行完 <code>ExecutorEnd()</code> 之后就不再需要了，因此我们可以将其放在每个查询的内存上下文中（即 <code>queryDesc-&gt;estate-&gt;es_query_cxt</code> 中），那么每次执行完之后该内存就被回收了，从而避免了内存泄露。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">diff --git a&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c b&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c</span><br><span class="line">index faa6231d87..445bb37191 100644</span><br><span class="line">--- a&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c</span><br><span class="line">+++ b&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c</span><br><span class="line">@@ -371,8 +371,15 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> &#123;</span><br><span class="line"> 	if (queryDesc-&gt;totaltime &amp;&amp; auto_explain_enabled())</span><br><span class="line"> 	&#123;</span><br><span class="line">+		MemoryContext oldcxt;</span><br><span class="line"> 		double		msec;</span><br><span class="line"></span><br><span class="line">+		&#x2F;*</span><br><span class="line">+		 * Make sure we operate in the per-query context, so any cruft will be</span><br><span class="line">+		 * discarded later during ExecutorEnd.</span><br><span class="line">+		 *&#x2F;</span><br><span class="line">+		oldcxt &#x3D; MemoryContextSwitchTo(queryDesc-&gt;estate-&gt;es_query_cxt);</span><br><span class="line">+</span><br><span class="line"> 		&#x2F;*</span><br><span class="line"> 		 * Make sure stats accumulation is done.  (Note: it&#39;s okay if several</span><br><span class="line"> 		 * levels of hook all do this.)</span><br><span class="line">@@ -424,9 +431,9 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> 					(errmsg(&quot;duration: %.3f ms  plan:\n%s&quot;,</span><br><span class="line"> 							msec, es-&gt;str-&gt;data),</span><br><span class="line"> 					 errhidestmt(true)));</span><br><span class="line">-</span><br><span class="line">-			pfree(es-&gt;str-&gt;data);</span><br><span class="line"> 		&#125;</span><br><span class="line">+</span><br><span class="line">+		MemoryContextSwitchTo(oldcxt);</span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"> 	if (prev_ExecutorEnd)</span><br></pre></td></tr></table></figure>
-
-<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://www.postgresql.org/message-id/CAMkU%3D1wCVtbeRn0s9gt12KwQ7PLXovbpM8eg25SYocKW3BT4hg%40mail.gmail.com">memory leak in auto_explain</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 13 - backtrace 功能预览</title>
     <url>/2020/08/postgresql-backtrace/</url>
     <content><![CDATA[<p>目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。</p>
@@ -1767,42 +1730,6 @@ table th:nth-of-type(2) {
 
 <p><code>set_backtrace()</code> 函数通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 函数来获取堆栈信息，并将其添加到 <code>edata-&gt;backtrace</code> 字段中（方便后续处理），<code>num_skip</code> 参数指定了需要跳过的内部栈的数量，这是由于我们报错的地方实际上并不是 <code>set_backtrace()</code> 函数位置，而是在调用该函数的位置（可能是一层或多层），因此，我们需要定位到真实报错的地方，从这个地方开始输出堆栈信息。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html">https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html</a><br>[2] <a href="https://www.postgresql.org/docs/devel/runtime-config-developer.html">https://www.postgresql.org/docs/devel/runtime-config-developer.html</a><br>[3] <a href="https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190">https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 聚簇索引</title>
-    <url>/2019/11/postgresql-cluster-index/</url>
-    <content><![CDATA[<p>聚簇索引是按照数据存放的物理位置为顺序的，每个表仅有一个聚簇索引。</p>
-<p>MySQL 数据库中的 InnoDB 引擎中的主键即为聚簇索引，当我们在表上定义主键时，InnoDB 会将其用作聚簇索引，如果表上没有定义主键，那么 InnoDB 将会使用第一个全不为空的唯一性索引作为聚簇索引，如果表上即没有主键、也没有唯一性索引，那么 InnoDB 将会自动生成一个隐藏的 <code>GEN_CLUST_INDEX</code> 索引作为聚簇索引。</p>
-<p>PostgreSQL 在创建表时并不能指定聚簇索引，但是我们可以通过 <code>CLUSTER</code> 来创建聚簇索引，本文主要介绍 PostgreSQL 数据库中的聚簇索引。</p>
-<a id="more"></a>
-
-<p>我们首先建立一个数据表，如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE TABLE account (id integer, nickname text, password text);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres&#x3D;# \d account</span><br><span class="line">               Table &quot;public.account&quot;</span><br><span class="line">  Column  |  Type   | Collation | Nullable | Default</span><br><span class="line">----------+---------+-----------+----------+---------</span><br><span class="line"> id       | integer |           |          |</span><br><span class="line"> nickname | text    |           |          |</span><br><span class="line"> password | text    |           |          |</span><br></pre></td></tr></table></figure>
-
-<p>随后，我们随机插入一些数据。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# INSERT INTO account SELECT id, &#39;user&#39; || id::text, md5(id::text)</span><br><span class="line">postgres-# FROM generate_series(1, 100) id ORDER BY random();</span><br><span class="line">INSERT 0 100</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account LIMIT 20;</span><br><span class="line">  ctid  | id | nickname |             password</span><br><span class="line">--------+----+----------+----------------------------------</span><br><span class="line"> (0,1)  | 85 | user85   | 3ef815416f775098fe977004015c6193</span><br><span class="line"> (0,2)  | 22 | user22   | b6d767d2f8ed5d21a44b0e5886680cb9</span><br><span class="line"> (0,3)  | 43 | user43   | 17e62166fc8586dfa4d1bc0e1742c08b</span><br><span class="line"> (0,4)  | 89 | user89   | 7647966b7343c29048673252e490f736</span><br><span class="line"> (0,5)  | 75 | user75   | d09bf41544a3365a46c9077ebb5e35c3</span><br><span class="line"> (0,6)  | 81 | user81   | 43ec517d68b6edd3015b3edc9a11367b</span><br><span class="line"> (0,7)  | 91 | user91   | 54229abfcfa5649e7003b83dd4755294</span><br><span class="line"> (0,8)  | 65 | user65   | fc490ca45c00b1249bbe3554a4fdf6fb</span><br><span class="line"> (0,9)  | 67 | user67   | 735b90b4568125ed6c3f678819b6e058</span><br><span class="line"> (0,10) | 11 | user11   | 6512bd43d9caa6e02c990b0a82652dca</span><br><span class="line"> (0,11) | 72 | user72   | 32bb90e8976aab5298d5da10fe66f21d</span><br><span class="line"> (0,12) | 36 | user36   | 19ca14e7ea6328a42e0eb13d585e4c22</span><br><span class="line"> (0,13) | 69 | user69   | 14bfa6bb14875e45bba028a21ed38046</span><br><span class="line"> (0,14) | 32 | user32   | 6364d3f0f495b6ab9dcf8d3b5c6e0b01</span><br><span class="line"> (0,15) | 17 | user17   | 70efdf2ec9b086079795c442636b55fb</span><br><span class="line"> (0,16) | 15 | user15   | 9bf31c7ff062936a96d3c8bd1f8f2ff3</span><br><span class="line"> (0,17) | 46 | user46   | d9d4f495e875a2e075a1a4a6e1b9770f</span><br><span class="line"> (0,18) | 83 | user83   | fe9fc289c3ff0af142b6d3bead98a923</span><br><span class="line"> (0,19) | 82 | user82   | 9778d5d219c5080b9a6a17bef029331c</span><br><span class="line"> (0,20) | 20 | user20   | 98f13708210194c475687be6106a3b84</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
-
-<p>PostgreSQL 在创建表的时候无法指定聚簇索引，我们必须使用 <code>CLUSTER</code> 命令来创建聚簇索引，此外，我们在初次创建聚簇索引时，需要指定使用的索引名。例如：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CLUSTER account;</span><br><span class="line">ERROR:  there is no previously clustered index for table &quot;account&quot;</span><br></pre></td></tr></table></figure>
-
-<p>上面我们没有指定索引名，因为我们还没有对其创建索引。接下来，我们在 <code>accout</code> 表上创建一个索引：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE INDEX account_id_idx ON account(id);</span><br><span class="line">CREATE INDEX</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account LIMIT 20;</span><br><span class="line">  ctid  | id | nickname |             password</span><br><span class="line">--------+----+----------+----------------------------------</span><br><span class="line"> (0,1)  | 85 | user85   | 3ef815416f775098fe977004015c6193</span><br><span class="line"> (0,2)  | 22 | user22   | b6d767d2f8ed5d21a44b0e5886680cb9</span><br><span class="line"> (0,3)  | 43 | user43   | 17e62166fc8586dfa4d1bc0e1742c08b</span><br><span class="line"> (0,4)  | 89 | user89   | 7647966b7343c29048673252e490f736</span><br><span class="line"> (0,5)  | 75 | user75   | d09bf41544a3365a46c9077ebb5e35c3</span><br><span class="line"> (0,6)  | 81 | user81   | 43ec517d68b6edd3015b3edc9a11367b</span><br><span class="line"> (0,7)  | 91 | user91   | 54229abfcfa5649e7003b83dd4755294</span><br><span class="line"> (0,8)  | 65 | user65   | fc490ca45c00b1249bbe3554a4fdf6fb</span><br><span class="line"> (0,9)  | 67 | user67   | 735b90b4568125ed6c3f678819b6e058</span><br><span class="line"> (0,10) | 11 | user11   | 6512bd43d9caa6e02c990b0a82652dca</span><br><span class="line"> (0,11) | 72 | user72   | 32bb90e8976aab5298d5da10fe66f21d</span><br><span class="line"> (0,12) | 36 | user36   | 19ca14e7ea6328a42e0eb13d585e4c22</span><br><span class="line"> (0,13) | 69 | user69   | 14bfa6bb14875e45bba028a21ed38046</span><br><span class="line"> (0,14) | 32 | user32   | 6364d3f0f495b6ab9dcf8d3b5c6e0b01</span><br><span class="line"> (0,15) | 17 | user17   | 70efdf2ec9b086079795c442636b55fb</span><br><span class="line"> (0,16) | 15 | user15   | 9bf31c7ff062936a96d3c8bd1f8f2ff3</span><br><span class="line"> (0,17) | 46 | user46   | d9d4f495e875a2e075a1a4a6e1b9770f</span><br><span class="line"> (0,18) | 83 | user83   | fe9fc289c3ff0af142b6d3bead98a923</span><br><span class="line"> (0,19) | 82 | user82   | 9778d5d219c5080b9a6a17bef029331c</span><br><span class="line"> (0,20) | 20 | user20   | 98f13708210194c475687be6106a3b84</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到，创建索引之后，数据的物理位置并没有发生变化。现在我们使用 <code>account_id_idx</code> 作为 <code>account</code> 表的聚簇索引，如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CLUSTER account USING account_id_idx;</span><br><span class="line">CLUSTER</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account LIMIT 20;</span><br><span class="line">  ctid  | id | nickname |             password</span><br><span class="line">--------+----+----------+----------------------------------</span><br><span class="line"> (0,1)  |  1 | user1    | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line"> (0,2)  |  2 | user2    | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line"> (0,3)  |  3 | user3    | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line"> (0,4)  |  4 | user4    | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line"> (0,5)  |  5 | user5    | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line"> (0,6)  |  6 | user6    | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line"> (0,7)  |  7 | user7    | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line"> (0,8)  |  8 | user8    | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line"> (0,9)  |  9 | user9    | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line"> (0,10) | 10 | user10   | d3d9446802a44259755d38e6d163e820</span><br><span class="line"> (0,11) | 11 | user11   | 6512bd43d9caa6e02c990b0a82652dca</span><br><span class="line"> (0,12) | 12 | user12   | c20ad4d76fe97759aa27a0c99bff6710</span><br><span class="line"> (0,13) | 13 | user13   | c51ce410c124a10e0db5e4b97fc2af39</span><br><span class="line"> (0,14) | 14 | user14   | aab3238922bcc25a6f606eb525ffdc56</span><br><span class="line"> (0,15) | 15 | user15   | 9bf31c7ff062936a96d3c8bd1f8f2ff3</span><br><span class="line"> (0,16) | 16 | user16   | c74d97b01eae257e44aa9d5bade97baf</span><br><span class="line"> (0,17) | 17 | user17   | 70efdf2ec9b086079795c442636b55fb</span><br><span class="line"> (0,18) | 18 | user18   | 6f4922f45568161a8cdf4ad2299f6d23</span><br><span class="line"> (0,19) | 19 | user19   | 1f0e3dad99908345f7439f8ffabdffc4</span><br><span class="line"> (0,20) | 20 | user20   | 98f13708210194c475687be6106a3b84</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到，数据的物理位置发生了变化，数据的物理位置与索引相同。虽然，我们对 <code>account</code> 表创建了聚簇索引，但是在新插入数据时，PostgreSQL 并不会维护索引的正确性（即后续插入的数据并不是按照聚簇索引的顺序在物理上排序），我们需要再次使用 <code>CLUSTER</code> 命令来维护聚簇索引的正确性。</p>
-<p>下面的示例展示了 PostgreSQL 在创建聚簇索引后再次插入数据后，数据的物理顺序，并再次进行 <code>CLUSTER</code> 后的物理顺序。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# INSERT INTO account SELECT id, &#39;test&#39;||id::text, md5(id::text)</span><br><span class="line">postgres-# FROM generate_series(200, 300) id ORDER BY random();</span><br><span class="line">INSERT 0 101</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account WHERE nickname ~ &#39;test&#39; LIMIT 20;</span><br><span class="line">  ctid   | id  | nickname |             password</span><br><span class="line">---------+-----+----------+----------------------------------</span><br><span class="line"> (0,101) | 296 | test296  | d296c101daa88a51f6ca8cfc1ac79b50</span><br><span class="line"> (0,102) | 292 | test292  | 1700002963a49da13542e0726b7bb758</span><br><span class="line"> (0,103) | 208 | test208  | 091d584fced301b442654dd8c23b3fc9</span><br><span class="line"> (0,104) | 210 | test210  | 6f3ef77ac0e3619e98159e9b6febf557</span><br><span class="line"> (0,105) | 240 | test240  | 335f5352088d7d9bf74191e006d8e24c</span><br><span class="line"> (0,106) | 211 | test211  | eb163727917cbba1eea208541a643e74</span><br><span class="line"> (0,107) | 265 | test265  | e56954b4f6347e897f954495eab16a88</span><br><span class="line"> (1,1)   | 269 | test269  | 06138bc5af6023646ede0e1f7c1eac75</span><br><span class="line"> (1,2)   | 222 | test222  | bcbe3365e6ac95ea2c0343a2395834dd</span><br><span class="line"> (1,3)   | 252 | test252  | 03c6b06952c750899bb03d998e631860</span><br><span class="line"> (1,4)   | 230 | test230  | 6da9003b743b65f4c0ccd295cc484e57</span><br><span class="line"> (1,5)   | 282 | test282  | 6a9aeddfc689c1d0e3b9ccc3ab651bc5</span><br><span class="line"> (1,6)   | 235 | test235  | 577ef1154f3240ad5b9b413aa7346a1e</span><br><span class="line"> (1,7)   | 213 | test213  | 979d472a84804b9f647bc185a877a8b5</span><br><span class="line"> (1,8)   | 249 | test249  | 077e29b11be80ab57e1a2ecabb7da330</span><br><span class="line"> (1,9)   | 200 | test200  | 3644a684f98ea8fe223c713b77189a77</span><br><span class="line"> (1,10)  | 267 | test267  | eda80a3d5b344bc40f3bc04f65b7a357</span><br><span class="line"> (1,11)  | 247 | test247  | 3cec07e9ba5f5bb252d13f5f431e4bbb</span><br><span class="line"> (1,12)  | 228 | test228  | 74db120f0a8e5646ef5a30154e9f6deb</span><br><span class="line"> (1,13)  | 262 | test262  | 36660e59856b4de58a219bcf4e27eba3</span><br><span class="line">(20 rows)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# CLUSTER account ;</span><br><span class="line">CLUSTER</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account WHERE nickname ~ &#39;test&#39; LIMIT 20;</span><br><span class="line">  ctid   | id  | nickname |             password</span><br><span class="line">---------+-----+----------+----------------------------------</span><br><span class="line"> (0,101) | 200 | test200  | 3644a684f98ea8fe223c713b77189a77</span><br><span class="line"> (0,102) | 201 | test201  | 757b505cfd34c64c85ca5b5690ee5293</span><br><span class="line"> (0,103) | 202 | test202  | 854d6fae5ee42911677c739ee1734486</span><br><span class="line"> (0,104) | 203 | test203  | e2c0be24560d78c5e599c2a9c9d0bbd2</span><br><span class="line"> (0,105) | 204 | test204  | 274ad4786c3abca69fa097b85867d9a4</span><br><span class="line"> (0,106) | 205 | test205  | eae27d77ca20db309e056e3d2dcd7d69</span><br><span class="line"> (0,107) | 206 | test206  | 7eabe3a1649ffa2b3ff8c02ebfd5659f</span><br><span class="line"> (1,1)   | 207 | test207  | 69adc1e107f7f7d035d7baf04342e1ca</span><br><span class="line"> (1,2)   | 208 | test208  | 091d584fced301b442654dd8c23b3fc9</span><br><span class="line"> (1,3)   | 209 | test209  | b1d10e7bafa4421218a51b1e1f1b0ba2</span><br><span class="line"> (1,4)   | 210 | test210  | 6f3ef77ac0e3619e98159e9b6febf557</span><br><span class="line"> (1,5)   | 211 | test211  | eb163727917cbba1eea208541a643e74</span><br><span class="line"> (1,6)   | 212 | test212  | 1534b76d325a8f591b52d302e7181331</span><br><span class="line"> (1,7)   | 213 | test213  | 979d472a84804b9f647bc185a877a8b5</span><br><span class="line"> (1,8)   | 214 | test214  | ca46c1b9512a7a8315fa3c5a946e8265</span><br><span class="line"> (1,9)   | 215 | test215  | 3b8a614226a953a8cd9526fca6fe9ba5</span><br><span class="line"> (1,10)  | 216 | test216  | 45fbc6d3e05ebd93369ce542e8f2322d</span><br><span class="line"> (1,11)  | 217 | test217  | 63dc7ed1010d3c3b8269faf0ba7491d4</span><br><span class="line"> (1,12)  | 218 | test218  | e96ed478dab8595a7dbda4cbcbee168f</span><br><span class="line"> (1,13)  | 219 | test219  | c0e190d8267e36708f955d7ab048990d</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.guru99.com/clustered-vs-non-clustered-index.html">https://www.guru99.com/clustered-vs-non-clustered-index.html</a><br>[2] <a href="https://dev.mysql.com/doc/refman/5.7/en/innodb-index-types.html">https://dev.mysql.com/doc/refman/5.7/en/innodb-index-types.html</a></p>
 ]]></content>
       <categories>
         <category>数据库</category>
@@ -1894,6 +1821,42 @@ table th:nth-of-type(2) {
 
 <p>在恢复完成之后，PostgreSQL 将把 recovery.conf 文件重命名为 recovery.done。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/static/continuous-archiving.html">https://www.postgresql.org/docs/10/static/continuous-archiving.html</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 聚簇索引</title>
+    <url>/2019/11/postgresql-cluster-index/</url>
+    <content><![CDATA[<p>聚簇索引是按照数据存放的物理位置为顺序的，每个表仅有一个聚簇索引。</p>
+<p>MySQL 数据库中的 InnoDB 引擎中的主键即为聚簇索引，当我们在表上定义主键时，InnoDB 会将其用作聚簇索引，如果表上没有定义主键，那么 InnoDB 将会使用第一个全不为空的唯一性索引作为聚簇索引，如果表上即没有主键、也没有唯一性索引，那么 InnoDB 将会自动生成一个隐藏的 <code>GEN_CLUST_INDEX</code> 索引作为聚簇索引。</p>
+<p>PostgreSQL 在创建表时并不能指定聚簇索引，但是我们可以通过 <code>CLUSTER</code> 来创建聚簇索引，本文主要介绍 PostgreSQL 数据库中的聚簇索引。</p>
+<a id="more"></a>
+
+<p>我们首先建立一个数据表，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE TABLE account (id integer, nickname text, password text);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres&#x3D;# \d account</span><br><span class="line">               Table &quot;public.account&quot;</span><br><span class="line">  Column  |  Type   | Collation | Nullable | Default</span><br><span class="line">----------+---------+-----------+----------+---------</span><br><span class="line"> id       | integer |           |          |</span><br><span class="line"> nickname | text    |           |          |</span><br><span class="line"> password | text    |           |          |</span><br></pre></td></tr></table></figure>
+
+<p>随后，我们随机插入一些数据。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# INSERT INTO account SELECT id, &#39;user&#39; || id::text, md5(id::text)</span><br><span class="line">postgres-# FROM generate_series(1, 100) id ORDER BY random();</span><br><span class="line">INSERT 0 100</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account LIMIT 20;</span><br><span class="line">  ctid  | id | nickname |             password</span><br><span class="line">--------+----+----------+----------------------------------</span><br><span class="line"> (0,1)  | 85 | user85   | 3ef815416f775098fe977004015c6193</span><br><span class="line"> (0,2)  | 22 | user22   | b6d767d2f8ed5d21a44b0e5886680cb9</span><br><span class="line"> (0,3)  | 43 | user43   | 17e62166fc8586dfa4d1bc0e1742c08b</span><br><span class="line"> (0,4)  | 89 | user89   | 7647966b7343c29048673252e490f736</span><br><span class="line"> (0,5)  | 75 | user75   | d09bf41544a3365a46c9077ebb5e35c3</span><br><span class="line"> (0,6)  | 81 | user81   | 43ec517d68b6edd3015b3edc9a11367b</span><br><span class="line"> (0,7)  | 91 | user91   | 54229abfcfa5649e7003b83dd4755294</span><br><span class="line"> (0,8)  | 65 | user65   | fc490ca45c00b1249bbe3554a4fdf6fb</span><br><span class="line"> (0,9)  | 67 | user67   | 735b90b4568125ed6c3f678819b6e058</span><br><span class="line"> (0,10) | 11 | user11   | 6512bd43d9caa6e02c990b0a82652dca</span><br><span class="line"> (0,11) | 72 | user72   | 32bb90e8976aab5298d5da10fe66f21d</span><br><span class="line"> (0,12) | 36 | user36   | 19ca14e7ea6328a42e0eb13d585e4c22</span><br><span class="line"> (0,13) | 69 | user69   | 14bfa6bb14875e45bba028a21ed38046</span><br><span class="line"> (0,14) | 32 | user32   | 6364d3f0f495b6ab9dcf8d3b5c6e0b01</span><br><span class="line"> (0,15) | 17 | user17   | 70efdf2ec9b086079795c442636b55fb</span><br><span class="line"> (0,16) | 15 | user15   | 9bf31c7ff062936a96d3c8bd1f8f2ff3</span><br><span class="line"> (0,17) | 46 | user46   | d9d4f495e875a2e075a1a4a6e1b9770f</span><br><span class="line"> (0,18) | 83 | user83   | fe9fc289c3ff0af142b6d3bead98a923</span><br><span class="line"> (0,19) | 82 | user82   | 9778d5d219c5080b9a6a17bef029331c</span><br><span class="line"> (0,20) | 20 | user20   | 98f13708210194c475687be6106a3b84</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 在创建表的时候无法指定聚簇索引，我们必须使用 <code>CLUSTER</code> 命令来创建聚簇索引，此外，我们在初次创建聚簇索引时，需要指定使用的索引名。例如：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CLUSTER account;</span><br><span class="line">ERROR:  there is no previously clustered index for table &quot;account&quot;</span><br></pre></td></tr></table></figure>
+
+<p>上面我们没有指定索引名，因为我们还没有对其创建索引。接下来，我们在 <code>accout</code> 表上创建一个索引：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE INDEX account_id_idx ON account(id);</span><br><span class="line">CREATE INDEX</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account LIMIT 20;</span><br><span class="line">  ctid  | id | nickname |             password</span><br><span class="line">--------+----+----------+----------------------------------</span><br><span class="line"> (0,1)  | 85 | user85   | 3ef815416f775098fe977004015c6193</span><br><span class="line"> (0,2)  | 22 | user22   | b6d767d2f8ed5d21a44b0e5886680cb9</span><br><span class="line"> (0,3)  | 43 | user43   | 17e62166fc8586dfa4d1bc0e1742c08b</span><br><span class="line"> (0,4)  | 89 | user89   | 7647966b7343c29048673252e490f736</span><br><span class="line"> (0,5)  | 75 | user75   | d09bf41544a3365a46c9077ebb5e35c3</span><br><span class="line"> (0,6)  | 81 | user81   | 43ec517d68b6edd3015b3edc9a11367b</span><br><span class="line"> (0,7)  | 91 | user91   | 54229abfcfa5649e7003b83dd4755294</span><br><span class="line"> (0,8)  | 65 | user65   | fc490ca45c00b1249bbe3554a4fdf6fb</span><br><span class="line"> (0,9)  | 67 | user67   | 735b90b4568125ed6c3f678819b6e058</span><br><span class="line"> (0,10) | 11 | user11   | 6512bd43d9caa6e02c990b0a82652dca</span><br><span class="line"> (0,11) | 72 | user72   | 32bb90e8976aab5298d5da10fe66f21d</span><br><span class="line"> (0,12) | 36 | user36   | 19ca14e7ea6328a42e0eb13d585e4c22</span><br><span class="line"> (0,13) | 69 | user69   | 14bfa6bb14875e45bba028a21ed38046</span><br><span class="line"> (0,14) | 32 | user32   | 6364d3f0f495b6ab9dcf8d3b5c6e0b01</span><br><span class="line"> (0,15) | 17 | user17   | 70efdf2ec9b086079795c442636b55fb</span><br><span class="line"> (0,16) | 15 | user15   | 9bf31c7ff062936a96d3c8bd1f8f2ff3</span><br><span class="line"> (0,17) | 46 | user46   | d9d4f495e875a2e075a1a4a6e1b9770f</span><br><span class="line"> (0,18) | 83 | user83   | fe9fc289c3ff0af142b6d3bead98a923</span><br><span class="line"> (0,19) | 82 | user82   | 9778d5d219c5080b9a6a17bef029331c</span><br><span class="line"> (0,20) | 20 | user20   | 98f13708210194c475687be6106a3b84</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，创建索引之后，数据的物理位置并没有发生变化。现在我们使用 <code>account_id_idx</code> 作为 <code>account</code> 表的聚簇索引，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CLUSTER account USING account_id_idx;</span><br><span class="line">CLUSTER</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account LIMIT 20;</span><br><span class="line">  ctid  | id | nickname |             password</span><br><span class="line">--------+----+----------+----------------------------------</span><br><span class="line"> (0,1)  |  1 | user1    | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line"> (0,2)  |  2 | user2    | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line"> (0,3)  |  3 | user3    | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line"> (0,4)  |  4 | user4    | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line"> (0,5)  |  5 | user5    | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line"> (0,6)  |  6 | user6    | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line"> (0,7)  |  7 | user7    | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line"> (0,8)  |  8 | user8    | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line"> (0,9)  |  9 | user9    | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line"> (0,10) | 10 | user10   | d3d9446802a44259755d38e6d163e820</span><br><span class="line"> (0,11) | 11 | user11   | 6512bd43d9caa6e02c990b0a82652dca</span><br><span class="line"> (0,12) | 12 | user12   | c20ad4d76fe97759aa27a0c99bff6710</span><br><span class="line"> (0,13) | 13 | user13   | c51ce410c124a10e0db5e4b97fc2af39</span><br><span class="line"> (0,14) | 14 | user14   | aab3238922bcc25a6f606eb525ffdc56</span><br><span class="line"> (0,15) | 15 | user15   | 9bf31c7ff062936a96d3c8bd1f8f2ff3</span><br><span class="line"> (0,16) | 16 | user16   | c74d97b01eae257e44aa9d5bade97baf</span><br><span class="line"> (0,17) | 17 | user17   | 70efdf2ec9b086079795c442636b55fb</span><br><span class="line"> (0,18) | 18 | user18   | 6f4922f45568161a8cdf4ad2299f6d23</span><br><span class="line"> (0,19) | 19 | user19   | 1f0e3dad99908345f7439f8ffabdffc4</span><br><span class="line"> (0,20) | 20 | user20   | 98f13708210194c475687be6106a3b84</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，数据的物理位置发生了变化，数据的物理位置与索引相同。虽然，我们对 <code>account</code> 表创建了聚簇索引，但是在新插入数据时，PostgreSQL 并不会维护索引的正确性（即后续插入的数据并不是按照聚簇索引的顺序在物理上排序），我们需要再次使用 <code>CLUSTER</code> 命令来维护聚簇索引的正确性。</p>
+<p>下面的示例展示了 PostgreSQL 在创建聚簇索引后再次插入数据后，数据的物理顺序，并再次进行 <code>CLUSTER</code> 后的物理顺序。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# INSERT INTO account SELECT id, &#39;test&#39;||id::text, md5(id::text)</span><br><span class="line">postgres-# FROM generate_series(200, 300) id ORDER BY random();</span><br><span class="line">INSERT 0 101</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account WHERE nickname ~ &#39;test&#39; LIMIT 20;</span><br><span class="line">  ctid   | id  | nickname |             password</span><br><span class="line">---------+-----+----------+----------------------------------</span><br><span class="line"> (0,101) | 296 | test296  | d296c101daa88a51f6ca8cfc1ac79b50</span><br><span class="line"> (0,102) | 292 | test292  | 1700002963a49da13542e0726b7bb758</span><br><span class="line"> (0,103) | 208 | test208  | 091d584fced301b442654dd8c23b3fc9</span><br><span class="line"> (0,104) | 210 | test210  | 6f3ef77ac0e3619e98159e9b6febf557</span><br><span class="line"> (0,105) | 240 | test240  | 335f5352088d7d9bf74191e006d8e24c</span><br><span class="line"> (0,106) | 211 | test211  | eb163727917cbba1eea208541a643e74</span><br><span class="line"> (0,107) | 265 | test265  | e56954b4f6347e897f954495eab16a88</span><br><span class="line"> (1,1)   | 269 | test269  | 06138bc5af6023646ede0e1f7c1eac75</span><br><span class="line"> (1,2)   | 222 | test222  | bcbe3365e6ac95ea2c0343a2395834dd</span><br><span class="line"> (1,3)   | 252 | test252  | 03c6b06952c750899bb03d998e631860</span><br><span class="line"> (1,4)   | 230 | test230  | 6da9003b743b65f4c0ccd295cc484e57</span><br><span class="line"> (1,5)   | 282 | test282  | 6a9aeddfc689c1d0e3b9ccc3ab651bc5</span><br><span class="line"> (1,6)   | 235 | test235  | 577ef1154f3240ad5b9b413aa7346a1e</span><br><span class="line"> (1,7)   | 213 | test213  | 979d472a84804b9f647bc185a877a8b5</span><br><span class="line"> (1,8)   | 249 | test249  | 077e29b11be80ab57e1a2ecabb7da330</span><br><span class="line"> (1,9)   | 200 | test200  | 3644a684f98ea8fe223c713b77189a77</span><br><span class="line"> (1,10)  | 267 | test267  | eda80a3d5b344bc40f3bc04f65b7a357</span><br><span class="line"> (1,11)  | 247 | test247  | 3cec07e9ba5f5bb252d13f5f431e4bbb</span><br><span class="line"> (1,12)  | 228 | test228  | 74db120f0a8e5646ef5a30154e9f6deb</span><br><span class="line"> (1,13)  | 262 | test262  | 36660e59856b4de58a219bcf4e27eba3</span><br><span class="line">(20 rows)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# CLUSTER account ;</span><br><span class="line">CLUSTER</span><br><span class="line">postgres&#x3D;# SELECT ctid, * FROM account WHERE nickname ~ &#39;test&#39; LIMIT 20;</span><br><span class="line">  ctid   | id  | nickname |             password</span><br><span class="line">---------+-----+----------+----------------------------------</span><br><span class="line"> (0,101) | 200 | test200  | 3644a684f98ea8fe223c713b77189a77</span><br><span class="line"> (0,102) | 201 | test201  | 757b505cfd34c64c85ca5b5690ee5293</span><br><span class="line"> (0,103) | 202 | test202  | 854d6fae5ee42911677c739ee1734486</span><br><span class="line"> (0,104) | 203 | test203  | e2c0be24560d78c5e599c2a9c9d0bbd2</span><br><span class="line"> (0,105) | 204 | test204  | 274ad4786c3abca69fa097b85867d9a4</span><br><span class="line"> (0,106) | 205 | test205  | eae27d77ca20db309e056e3d2dcd7d69</span><br><span class="line"> (0,107) | 206 | test206  | 7eabe3a1649ffa2b3ff8c02ebfd5659f</span><br><span class="line"> (1,1)   | 207 | test207  | 69adc1e107f7f7d035d7baf04342e1ca</span><br><span class="line"> (1,2)   | 208 | test208  | 091d584fced301b442654dd8c23b3fc9</span><br><span class="line"> (1,3)   | 209 | test209  | b1d10e7bafa4421218a51b1e1f1b0ba2</span><br><span class="line"> (1,4)   | 210 | test210  | 6f3ef77ac0e3619e98159e9b6febf557</span><br><span class="line"> (1,5)   | 211 | test211  | eb163727917cbba1eea208541a643e74</span><br><span class="line"> (1,6)   | 212 | test212  | 1534b76d325a8f591b52d302e7181331</span><br><span class="line"> (1,7)   | 213 | test213  | 979d472a84804b9f647bc185a877a8b5</span><br><span class="line"> (1,8)   | 214 | test214  | ca46c1b9512a7a8315fa3c5a946e8265</span><br><span class="line"> (1,9)   | 215 | test215  | 3b8a614226a953a8cd9526fca6fe9ba5</span><br><span class="line"> (1,10)  | 216 | test216  | 45fbc6d3e05ebd93369ce542e8f2322d</span><br><span class="line"> (1,11)  | 217 | test217  | 63dc7ed1010d3c3b8269faf0ba7491d4</span><br><span class="line"> (1,12)  | 218 | test218  | e96ed478dab8595a7dbda4cbcbee168f</span><br><span class="line"> (1,13)  | 219 | test219  | c0e190d8267e36708f955d7ab048990d</span><br><span class="line">(20 rows)</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.guru99.com/clustered-vs-non-clustered-index.html">https://www.guru99.com/clustered-vs-non-clustered-index.html</a><br>[2] <a href="https://dev.mysql.com/doc/refman/5.7/en/innodb-index-types.html">https://dev.mysql.com/doc/refman/5.7/en/innodb-index-types.html</a></p>
 ]]></content>
       <categories>
         <category>数据库</category>
@@ -2043,6 +2006,40 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL HASH 索引拾遗</title>
+    <url>/2020/02/postgresql-hash-index/</url>
+    <content><![CDATA[<p>PostgreSQL 的 HASH 索引在 9.6 和 10 版本中有所不同，主要的区别在于 HASH 索引在 9.6 及其之前的版本中不会记录在 WAL 日志中，然而在 10 及其之后的版本这个已经被修复了。</p>
+<p>例如，下面是在 PostgreSQL 9.6.17 中创建 HASH 索引。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE INDEX id_hash_index ON hash_table USING hash(id);</span><br><span class="line">WARNING:  hash indexes are not WAL-logged and their use is discouraged</span><br><span class="line">CREATE INDEX</span><br></pre></td></tr></table></figure>
+
+<p>从警告中可以看到，PostgreSQL 已经给出了明确提示。然而在 PostgreSQL 12.2 中，创建 HASH 索引则没有上述提示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# create index idx_hash_id on hash_table using hash(id);</span><br><span class="line">CREATE INDEX</span><br></pre></td></tr></table></figure>
+
+<a id="more"></a>
+
+<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>首先我们通过 ruby 创建测试数据：</p>
+<figure class="highlight ruby"><table><tr><td class="code"><pre><span class="line">$ ruby -e <span class="string">&#x27;(1..1000).each &#123; |i| puts i.to_s.rjust(20, &quot;0&quot;) &#125;&#x27;</span> &gt; data.txt</span><br></pre></td></tr></table></figure>
+
+<p>我们采用 PG9.6.17 搭建主从同步流复制，随后在主库上创建 <code>hash_table</code> 表，然后插入数据，并在从库查询，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# create table hash_table(id varchar(256));</span><br><span class="line">postgres&#x3D;# copy hash_table from &#39;&#x2F;path&#x2F;to&#x2F;data.txt&#39;;</span><br><span class="line">postgres&#x3D;# create index idx_hash_table_id on hash_table using hash(id);</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们分别在主库和从库上查看，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 主库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">          id</span><br><span class="line">----------------------</span><br><span class="line"> 00000000000000000023</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 528 kB</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 从库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">ERROR:  could not read block 0 in file &quot;base&#x2F;12407&#x2F;24577&quot;: read only 0 of 8192 bytes</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 0 bytes</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>从上面的输出结果也可以看到，HASH 索引并没有记录到 WAL 日志中，因此有关 HASH 索引的操作都不会在从节点进行重放。</p>
+<p>同样地，我们也可以在 PG12.2 中进行测试。其结果如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 主库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">          id</span><br><span class="line">----------------------</span><br><span class="line"> 00000000000000000023</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id&#39;));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 592 kB</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 从库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">          id</span><br><span class="line">----------------------</span><br><span class="line"> 00000000000000000023</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id&#39;));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 592 kB</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://postgrespro.com/blog/pgsql/4161321">https://postgrespro.com/blog/pgsql/4161321</a><br>[2] <a href="https://www.postgresql.org/docs/9.6/continuous-archiving.html">https://www.postgresql.org/docs/9.6/continuous-archiving.html</a><br>[3] <a href="https://www.postgresql.org/docs/10/continuous-archiving.html">https://www.postgresql.org/docs/10/continuous-archiving.html</a><br>[4] <a href="https://blog.andrebarbosa.co/hash-indexes-on-postgres/">https://blog.andrebarbosa.co/hash-indexes-on-postgres/</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 数据库大小监控</title>
     <url>/2019/09/postgresql-database-size-monitor/</url>
     <content><![CDATA[<p>最近在客户那边了解到一个需求，想要监控 PostgreSQL 数据库每天的大小变化。其实这个功能挺简单的，PostgreSQL 可以通过函数 <code>pg_database_size()</code> 来获取数据库的大小，而客户需要做的就是每天去执行一下，并与上次的结果进行比较就可以得到了。当然，手动执行的效率不是很高，因此，我利用业余时间整理了一下，将这个需求通过 PostgreSQL 插件的形式提供出来。本文主要介绍一下如何实现这个功能。</p>
@@ -2095,40 +2092,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL HASH 索引拾遗</title>
-    <url>/2020/02/postgresql-hash-index/</url>
-    <content><![CDATA[<p>PostgreSQL 的 HASH 索引在 9.6 和 10 版本中有所不同，主要的区别在于 HASH 索引在 9.6 及其之前的版本中不会记录在 WAL 日志中，然而在 10 及其之后的版本这个已经被修复了。</p>
-<p>例如，下面是在 PostgreSQL 9.6.17 中创建 HASH 索引。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE INDEX id_hash_index ON hash_table USING hash(id);</span><br><span class="line">WARNING:  hash indexes are not WAL-logged and their use is discouraged</span><br><span class="line">CREATE INDEX</span><br></pre></td></tr></table></figure>
-
-<p>从警告中可以看到，PostgreSQL 已经给出了明确提示。然而在 PostgreSQL 12.2 中，创建 HASH 索引则没有上述提示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# create index idx_hash_id on hash_table using hash(id);</span><br><span class="line">CREATE INDEX</span><br></pre></td></tr></table></figure>
-
-<a id="more"></a>
-
-<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>首先我们通过 ruby 创建测试数据：</p>
-<figure class="highlight ruby"><table><tr><td class="code"><pre><span class="line">$ ruby -e <span class="string">&#x27;(1..1000).each &#123; |i| puts i.to_s.rjust(20, &quot;0&quot;) &#125;&#x27;</span> &gt; data.txt</span><br></pre></td></tr></table></figure>
-
-<p>我们采用 PG9.6.17 搭建主从同步流复制，随后在主库上创建 <code>hash_table</code> 表，然后插入数据，并在从库查询，如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# create table hash_table(id varchar(256));</span><br><span class="line">postgres&#x3D;# copy hash_table from &#39;&#x2F;path&#x2F;to&#x2F;data.txt&#39;;</span><br><span class="line">postgres&#x3D;# create index idx_hash_table_id on hash_table using hash(id);</span><br></pre></td></tr></table></figure>
-
-<p>接着，我们分别在主库和从库上查看，如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 主库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">          id</span><br><span class="line">----------------------</span><br><span class="line"> 00000000000000000023</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 528 kB</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 从库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">ERROR:  could not read block 0 in file &quot;base&#x2F;12407&#x2F;24577&quot;: read only 0 of 8192 bytes</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 0 bytes</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-
-<p>从上面的输出结果也可以看到，HASH 索引并没有记录到 WAL 日志中，因此有关 HASH 索引的操作都不会在从节点进行重放。</p>
-<p>同样地，我们也可以在 PG12.2 中进行测试。其结果如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 主库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">          id</span><br><span class="line">----------------------</span><br><span class="line"> 00000000000000000023</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id&#39;));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 592 kB</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select count(*) from hash_table;  -- 从库</span><br><span class="line"> count</span><br><span class="line">-------</span><br><span class="line"> 10000</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select * from hash_table where id &#x3D; &#39;00000000000000000023&#39;;</span><br><span class="line">          id</span><br><span class="line">----------------------</span><br><span class="line"> 00000000000000000023</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# select pg_size_pretty(pg_relation_size(&#39;idx_hash_table_id&#39;));</span><br><span class="line"> pg_size_pretty</span><br><span class="line">----------------</span><br><span class="line"> 592 kB</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://postgrespro.com/blog/pgsql/4161321">https://postgrespro.com/blog/pgsql/4161321</a><br>[2] <a href="https://www.postgresql.org/docs/9.6/continuous-archiving.html">https://www.postgresql.org/docs/9.6/continuous-archiving.html</a><br>[3] <a href="https://www.postgresql.org/docs/10/continuous-archiving.html">https://www.postgresql.org/docs/10/continuous-archiving.html</a><br>[4] <a href="https://blog.andrebarbosa.co/hash-indexes-on-postgres/">https://blog.andrebarbosa.co/hash-indexes-on-postgres/</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -2311,6 +2274,43 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL auto_explain 插件内存泄露</title>
+    <url>/2021/02/postgresql-auto-explain-memory-leak/</url>
+    <content><![CDATA[<p>最近看到 PostgreSQL 邮件列表中有人说 auto_explain 插件在特定情况下会导致 OOM 问题，经过一番分析发现原来是由于内存上下文的问题导致的。目前该泄露已经修复，并合并到代码库中。</p>
+<img src="/2021/02/postgresql-auto-explain-memory-leak/fix_memory_leak_in_auto_explain.png" class="">
+
+<a id="more"></a>
+
+<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>首先我们来看看如何重现这个问题。首先，我们需要一个已运行的 PostgreSQL 数据库服务器。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql postgres -c &#39;ALTER SYSTEM SET shared_preload_libraries TO auto_explain;&#39;</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">$ psql postgres -c &#39;ALTER SYSTEM SET auto_explain.log_min_duration TO 0;&#39;</span><br><span class="line">$ psql postgres -c &#39;ALTER SYSTEM SET auto_explain.log_nested_statements TO on;&#39;</span><br><span class="line">$ pg_ctl restart</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们通过 psql 连接数据库，并创建如下函数。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> gibberish(<span class="built_in">int</span>) <span class="keyword">RETURNS</span> <span class="built_in">text</span></span><br><span class="line"><span class="keyword">LANGUAGE</span> <span class="keyword">SQL</span> <span class="keyword">AS</span> $_$</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">left</span>(string_agg(<span class="keyword">md5</span>(random()::<span class="built_in">text</span>),$$$$),$<span class="number">1</span>) <span class="keyword">FROM</span> generate_series(<span class="number">0</span>,$<span class="number">1</span>/<span class="number">32</span>)</span><br><span class="line">$_$;</span><br></pre></td></tr></table></figure>
+
+<p>接着我们执行下面的查询命令。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    x, <span class="keyword">md5</span>(random()::<span class="built_in">text</span>) <span class="keyword">as</span> t11,</span><br><span class="line">    gibberish(<span class="number">1500</span>) <span class="keyword">as</span> t12</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    generate_series(<span class="number">1</span>,<span class="number">20e6</span>) f(x);</span><br></pre></td></tr></table></figure>
+
+<p>这个为了简化我省略了 <code>CREATE TABLE j1 AS</code>，因为这个不是内存泄露的关键。在执行上述命令的时候，我们可以通过 <code>top -p &lt;pid&gt;</code> 去观察，发现确实是内存一直在增长。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>为了缩写范围，我尝试将 auto_explain 插件移除，并执行上面的查询，发现内存并不会增长。那么内存泄露的问题就被缩小到了 auto_explain 代码中了，通过查看 auto_explain 源码，我发现这里面有两个地方会显示的调用内存分配 <code>explain_ExecutorStart()</code> 函数和 <code>explain_ExecutorEnd()</code>。该 bug 的发现者指出该内存泄露是发生在 SQL function 内存上下文中，经过调试我发现确实在执行 <code>explain_ExecutorEnd()</code> 函数时该内存上下文为 SQL function。</p>
+<p>那么 SQL function 的内存上下文是什么时候创建的呢？通过查找，我发现它是在 <code>src/backend/executor/functions.c</code> 文件中的 <code>init_sql_fcache()</code> 函数中创建的。然而，在调用函数时 <code>fmgr_sql()</code> 函数中有如下注释。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">Datum</span><br><span class="line">fmgr_sql(PG_FUNCTION_ARGS)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fcache == <span class="literal">NULL</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        init_sql_fcache(fcinfo, PG_GET_COLLATION(), lazyEvalOK);</span><br><span class="line">        fcache = (SQLFunctionCachePtr) fcinfo-&gt;flinfo-&gt;fn_extra;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Switch to context in which the fcache lives.  This ensures that our</span></span><br><span class="line"><span class="comment">     * tuplestore etc will have sufficient lifetime.  The sub-executor is</span></span><br><span class="line"><span class="comment">     * responsible for deleting per-tuple information.  (XXX in the case of a</span></span><br><span class="line"><span class="comment">     * long-lived FmgrInfo, this policy represents more memory leakage, but</span></span><br><span class="line"><span class="comment">     * it&#x27;s not entirely clear where to keep stuff instead.)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    oldcontext = MemoryContextSwitchTo(fcache-&gt;fcontext);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里可以看到，SQL function 的内存上下文可能会存在较长的生命周期，那么我们频繁的在该内存上下文上分配内存，就有可能导致内存泄露，而 <code>explain_ExecutorEnd()</code> 函数执行时的内存上下文就是在 SQL function 内存上下文中，对于相对简单的查询，可能这并不会有什么问题，这也是这个内存泄露没有被即使发现的原因，当我们执行上面的查询时这个问题就暴露出来了。</p>
+<p><strong>备注：</strong> 这里的内存泄露主要是 <code>explain_ExecutorEnd()</code> 函数中 <code>ExplainState</code> 结构的分配导致的。</p>
+<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>那么这个问题这么解决呢？在分析了之后，我发现这个内存的分配其实在执行完 <code>ExecutorEnd()</code> 之后就不再需要了，因此我们可以将其放在每个查询的内存上下文中（即 <code>queryDesc-&gt;estate-&gt;es_query_cxt</code> 中），那么每次执行完之后该内存就被回收了，从而避免了内存泄露。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">diff --git a&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c b&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c</span><br><span class="line">index faa6231d87..445bb37191 100644</span><br><span class="line">--- a&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c</span><br><span class="line">+++ b&#x2F;contrib&#x2F;auto_explain&#x2F;auto_explain.c</span><br><span class="line">@@ -371,8 +371,15 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> &#123;</span><br><span class="line"> 	if (queryDesc-&gt;totaltime &amp;&amp; auto_explain_enabled())</span><br><span class="line"> 	&#123;</span><br><span class="line">+		MemoryContext oldcxt;</span><br><span class="line"> 		double		msec;</span><br><span class="line"></span><br><span class="line">+		&#x2F;*</span><br><span class="line">+		 * Make sure we operate in the per-query context, so any cruft will be</span><br><span class="line">+		 * discarded later during ExecutorEnd.</span><br><span class="line">+		 *&#x2F;</span><br><span class="line">+		oldcxt &#x3D; MemoryContextSwitchTo(queryDesc-&gt;estate-&gt;es_query_cxt);</span><br><span class="line">+</span><br><span class="line"> 		&#x2F;*</span><br><span class="line"> 		 * Make sure stats accumulation is done.  (Note: it&#39;s okay if several</span><br><span class="line"> 		 * levels of hook all do this.)</span><br><span class="line">@@ -424,9 +431,9 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> 					(errmsg(&quot;duration: %.3f ms  plan:\n%s&quot;,</span><br><span class="line"> 							msec, es-&gt;str-&gt;data),</span><br><span class="line"> 					 errhidestmt(true)));</span><br><span class="line">-</span><br><span class="line">-			pfree(es-&gt;str-&gt;data);</span><br><span class="line"> 		&#125;</span><br><span class="line">+</span><br><span class="line">+		MemoryContextSwitchTo(oldcxt);</span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"> 	if (prev_ExecutorEnd)</span><br></pre></td></tr></table></figure>
+
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://www.postgresql.org/message-id/CAMkU%3D1wCVtbeRn0s9gt12KwQ7PLXovbpM8eg25SYocKW3BT4hg%40mail.gmail.com">memory leak in auto_explain</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL palloc0 函数优化</title>
     <url>/2020/10/postgresql-palloc0/</url>
     <content><![CDATA[<p>最近在查看 PostgreSQL 数据库中内存分配相关的代码时，我发现 <code>palloc()</code> 和 <code>palloc0()</code> 函数存在大量的冗余代码。本着减少冗余代码的想法，我将修改后的代码提交到社区，得到的反馈是这样修改会影响整体效率。本文简要分析一下这是如何影响效率的。</p>
@@ -2339,55 +2339,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 行级安全策略的使用</title>
-    <url>/2019/07/postgresql-row-level-security-policy/</url>
-    <content><![CDATA[<p>今天朋友咨询了下面一个问题：</p>
-<blockquote>
-<p>一个信息系统中包含全省的数据，但是各个市州可以访问自己的数据，而不能访问其他市州的数据。<br>例如，四川省下辖的成都市、绵阳市等有自己的数据，它们可以使用自己的用户登陆并更新自己的数据，<br>而不能修改其他市的数据（不可见）；而四川省级别的用户则对下辖的所有市的数据均可见。</p>
-</blockquote>
-<p>在我初看这个问题时，PostgreSQL 的行级安全策略 (Row Security Policy) 浮现在我的脑海中。PostgreSQL 的行级安全策略可以基于每个用户限制正常查询可以返回哪些行，或者由数据修改命令插入，更新或删除哪些行。默认情况下，PostgreSQL 中的表是不具备任何策略的。</p>
-<a id="more"></a>
-
-<h2 id="启用行级安全策略"><a href="#启用行级安全策略" class="headerlink" title="启用行级安全策略"></a>启用行级安全策略</h2><p>基于上述问题，假设我们有如下的表：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> city_info (city <span class="built_in">text</span>, people <span class="built_in">int</span>);</span><br></pre></td></tr></table></figure>
-
-<p>默认情况下是没有启用行级安全策略，我们可以使用如下命令在该表上启用该特性：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> city_info <span class="keyword">ENABLE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br></pre></td></tr></table></figure>
-
-<p>为了测试，我们先创建三个用户，它们分别为 <code>admin</code>, <code>chengdu</code> 以及 <code>mianyang</code>。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">CREATE ROLE admin WITH LOGIN;</span><br><span class="line">CREATE ROLE chengdu WITH LOGIN;</span><br><span class="line">CREATE ROLE mianyang WITH LOGIN;</span><br><span class="line">ALTER TABLE city_info OWNER TO admin;</span><br></pre></td></tr></table></figure>
-
-<p>接着，我们插入两条测试数据：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> city_info <span class="keyword">VALUES</span> (<span class="string">&#x27;chengdu&#x27;</span>, <span class="number">100</span>), (<span class="string">&#x27;mianyang&#x27;</span>, <span class="number">80</span>);</span><br></pre></td></tr></table></figure>
-
-<h2 id="创建策略"><a href="#创建策略" class="headerlink" title="创建策略"></a>创建策略</h2><p>现在，我们为其创建策略使得相应的市只能访问其对应的数据。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">POLICY</span> city_policy <span class="keyword">ON</span> city_info <span class="keyword">USING</span> (city = <span class="keyword">current_user</span>);</span><br></pre></td></tr></table></figure>
-
-<p>在创建好策略之后，我们使用 <code>chengdu</code> 用户登陆并查询数据时出现如下提示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ERROR:  permission denied for relation city_info</span><br></pre></td></tr></table></figure>
-
-<p>这是由于我们还没有对用户授权。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> <span class="keyword">ALL</span> <span class="keyword">ON</span> city_info <span class="keyword">TO</span> chengdu;</span><br><span class="line"><span class="keyword">GRANT</span> <span class="keyword">ALL</span> <span class="keyword">ON</span> city_info <span class="keyword">TO</span> mianyang;</span><br></pre></td></tr></table></figure>
-
-<h2 id="验证方案"><a href="#验证方案" class="headerlink" title="验证方案"></a>验证方案</h2><p>在授权完成之后，我们就可以查询数据了。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql -U chengdu postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">  city   | people</span><br><span class="line">---------+--------</span><br><span class="line"> chengdu |    100</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-
-<p>而我们使用 <code>admin</code> 用户登陆则可以查询所有数据。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql -U admin postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">   city   | people</span><br><span class="line">----------+--------</span><br><span class="line"> chengdu  |    100</span><br><span class="line"> mianyang |     80</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
-
-<p>当我们尝试使用 <code>mianyang</code> 用户去修改数据时只能修改其可见的数据；而原本属于 <code>chengdu</code> 用户的数据是不会被修改的。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql -U mianyang postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">   city   | people</span><br><span class="line">----------+--------</span><br><span class="line"> mianyang |     80</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; update city_info set people &#x3D; 90;</span><br><span class="line">UPDATE 1</span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">   city   | people</span><br><span class="line">----------+--------</span><br><span class="line"> mianyang |     90</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.postgresql.org/docs/10/ddl-rowsecurity.html">https://www.postgresql.org/docs/10/ddl-rowsecurity.html</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -3318,6 +3269,55 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 行级安全策略的使用</title>
+    <url>/2019/07/postgresql-row-level-security-policy/</url>
+    <content><![CDATA[<p>今天朋友咨询了下面一个问题：</p>
+<blockquote>
+<p>一个信息系统中包含全省的数据，但是各个市州可以访问自己的数据，而不能访问其他市州的数据。<br>例如，四川省下辖的成都市、绵阳市等有自己的数据，它们可以使用自己的用户登陆并更新自己的数据，<br>而不能修改其他市的数据（不可见）；而四川省级别的用户则对下辖的所有市的数据均可见。</p>
+</blockquote>
+<p>在我初看这个问题时，PostgreSQL 的行级安全策略 (Row Security Policy) 浮现在我的脑海中。PostgreSQL 的行级安全策略可以基于每个用户限制正常查询可以返回哪些行，或者由数据修改命令插入，更新或删除哪些行。默认情况下，PostgreSQL 中的表是不具备任何策略的。</p>
+<a id="more"></a>
+
+<h2 id="启用行级安全策略"><a href="#启用行级安全策略" class="headerlink" title="启用行级安全策略"></a>启用行级安全策略</h2><p>基于上述问题，假设我们有如下的表：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> city_info (city <span class="built_in">text</span>, people <span class="built_in">int</span>);</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下是没有启用行级安全策略，我们可以使用如下命令在该表上启用该特性：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> city_info <span class="keyword">ENABLE</span> <span class="keyword">ROW</span> <span class="keyword">LEVEL</span> <span class="keyword">SECURITY</span>;</span><br></pre></td></tr></table></figure>
+
+<p>为了测试，我们先创建三个用户，它们分别为 <code>admin</code>, <code>chengdu</code> 以及 <code>mianyang</code>。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">CREATE ROLE admin WITH LOGIN;</span><br><span class="line">CREATE ROLE chengdu WITH LOGIN;</span><br><span class="line">CREATE ROLE mianyang WITH LOGIN;</span><br><span class="line">ALTER TABLE city_info OWNER TO admin;</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们插入两条测试数据：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> city_info <span class="keyword">VALUES</span> (<span class="string">&#x27;chengdu&#x27;</span>, <span class="number">100</span>), (<span class="string">&#x27;mianyang&#x27;</span>, <span class="number">80</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="创建策略"><a href="#创建策略" class="headerlink" title="创建策略"></a>创建策略</h2><p>现在，我们为其创建策略使得相应的市只能访问其对应的数据。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">POLICY</span> city_policy <span class="keyword">ON</span> city_info <span class="keyword">USING</span> (city = <span class="keyword">current_user</span>);</span><br></pre></td></tr></table></figure>
+
+<p>在创建好策略之后，我们使用 <code>chengdu</code> 用户登陆并查询数据时出现如下提示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ERROR:  permission denied for relation city_info</span><br></pre></td></tr></table></figure>
+
+<p>这是由于我们还没有对用户授权。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> <span class="keyword">ALL</span> <span class="keyword">ON</span> city_info <span class="keyword">TO</span> chengdu;</span><br><span class="line"><span class="keyword">GRANT</span> <span class="keyword">ALL</span> <span class="keyword">ON</span> city_info <span class="keyword">TO</span> mianyang;</span><br></pre></td></tr></table></figure>
+
+<h2 id="验证方案"><a href="#验证方案" class="headerlink" title="验证方案"></a>验证方案</h2><p>在授权完成之后，我们就可以查询数据了。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql -U chengdu postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">  city   | people</span><br><span class="line">---------+--------</span><br><span class="line"> chengdu |    100</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>而我们使用 <code>admin</code> 用户登陆则可以查询所有数据。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql -U admin postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">   city   | people</span><br><span class="line">----------+--------</span><br><span class="line"> chengdu  |    100</span><br><span class="line"> mianyang |     80</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>当我们尝试使用 <code>mianyang</code> 用户去修改数据时只能修改其可见的数据；而原本属于 <code>chengdu</code> 用户的数据是不会被修改的。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql -U mianyang postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">   city   | people</span><br><span class="line">----------+--------</span><br><span class="line"> mianyang |     80</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;&gt; update city_info set people &#x3D; 90;</span><br><span class="line">UPDATE 1</span><br><span class="line">postgres&#x3D;&gt; select * from city_info ;</span><br><span class="line">   city   | people</span><br><span class="line">----------+--------</span><br><span class="line"> mianyang |     90</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.postgresql.org/docs/10/ddl-rowsecurity.html">https://www.postgresql.org/docs/10/ddl-rowsecurity.html</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Python 多语言国际化支持</title>
     <url>/2018/11/python-internationalization-support/</url>
     <content><![CDATA[<!--
@@ -3381,29 +3381,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </categories>
       <tags>
         <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Seafile 与 OnlyOffice 在线预览 Office 文档</title>
-    <url>/2020/05/seafile-with-onlyoffice/</url>
-    <content><![CDATA[<p>最近，在公司采用 Seafile 搭建了一个文件服务器，并结合 OnlyOffice 实现在线预览功能。本文简要记录一下这个过程中所遇到的问题。</p>
-<a id="more"></a>
-
-<h2 id="环境介绍"><a href="#环境介绍" class="headerlink" title="环境介绍"></a>环境介绍</h2><p>我使用了三台机器来构建整个系统，一台 nginx 服务器，用来作为前端代理；一台 Seafile 服务器用于存放文档；一台 OnlyOffice 服务器用来实现在线预览 Office 文档。</p>
-<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><p>首先，我们按照 <a href="https://cloud.seafile.com/published/seafile-manual-cn/deploy/using_mysql.md">Seafile 官方给出的部署方式</a>安装 Seafile 服务器，然后采用 <a href="https://cloud.seafile.com/published/seafile-manual-cn/deploy/deploy_with_nginx.md">Nginx 来代理 Seafile 的请求</a>，最后使用 <a href="https://cloud.seafile.com/published/seafile-manual-cn/deploy/only_office.md">OnlyOffice 实现在线预览</a>。</p>
-<p><strong>备注：</strong> OnlyOffice 在线预览需要开源版本 6.1.0+ 的 Seafile，本文采用的是 Seafile 7.0.5 版本。</p>
-<h2 id="遇到的问题"><a href="#遇到的问题" class="headerlink" title="遇到的问题"></a>遇到的问题</h2><h3 id="预览文件下载失败"><a href="#预览文件下载失败" class="headerlink" title="预览文件下载失败"></a>预览文件下载失败</h3><p>在安装好之后，通过 Seafile 域名可以正常访问，并且访问 <code>http://example.seafile.com/onlyoffice/welcome</code> 可以得到 <code>Document Server is running</code> 结果，但是在打开 Word 文档预览时却提示下载失败。这是由于我使用域名来访问 Seafile，但是在 ccnet.conf 配置文件的 SERVICE_URL 配置却是 IP 地址格式导致的。我们可以在 Web 页面进行修改，也可以通过配置文件修改将其修改为域名形式即可，见参考文献 [2]。</p>
-<h3 id="预览文件暂时无法访问"><a href="#预览文件暂时无法访问" class="headerlink" title="预览文件暂时无法访问"></a>预览文件暂时无法访问</h3><p>随后，我又遇到文件暂时无法访问的问题，这同样是由于域名导致的，我采用 docker 的方式安装 OnlyOffice，通过查看日志（如下所示）发现它无法解析域名。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[2020-05-16T01:11:42.235] [ERROR] nodeJS - dnsLookup error: hostname &#x3D; example.seafile.com</span><br><span class="line">Error: getaddrinfo ENOTFOUND example.seafile.com</span><br><span class="line">    at GetAddrInfoReqWrap.onlookup [as oncomplete] (dns.js:56:26)</span><br></pre></td></tr></table></figure>
-
-<p>因此，我们需要在 docker 中添加正确的域名解析即可。</p>
-<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>[1] <a href="https://cloud.seafile.com/published/seafile-manual-cn/home.md">https://cloud.seafile.com/published/seafile-manual-cn/home.md</a><br>[2] <a href="https://bbs.seafile.com/t/topic/4528/2">https://bbs.seafile.com/t/topic/4528/2</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Seafile</tag>
       </tags>
   </entry>
   <entry>
@@ -3475,6 +3452,29 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Seafile 与 OnlyOffice 在线预览 Office 文档</title>
+    <url>/2020/05/seafile-with-onlyoffice/</url>
+    <content><![CDATA[<p>最近，在公司采用 Seafile 搭建了一个文件服务器，并结合 OnlyOffice 实现在线预览功能。本文简要记录一下这个过程中所遇到的问题。</p>
+<a id="more"></a>
+
+<h2 id="环境介绍"><a href="#环境介绍" class="headerlink" title="环境介绍"></a>环境介绍</h2><p>我使用了三台机器来构建整个系统，一台 nginx 服务器，用来作为前端代理；一台 Seafile 服务器用于存放文档；一台 OnlyOffice 服务器用来实现在线预览 Office 文档。</p>
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><p>首先，我们按照 <a href="https://cloud.seafile.com/published/seafile-manual-cn/deploy/using_mysql.md">Seafile 官方给出的部署方式</a>安装 Seafile 服务器，然后采用 <a href="https://cloud.seafile.com/published/seafile-manual-cn/deploy/deploy_with_nginx.md">Nginx 来代理 Seafile 的请求</a>，最后使用 <a href="https://cloud.seafile.com/published/seafile-manual-cn/deploy/only_office.md">OnlyOffice 实现在线预览</a>。</p>
+<p><strong>备注：</strong> OnlyOffice 在线预览需要开源版本 6.1.0+ 的 Seafile，本文采用的是 Seafile 7.0.5 版本。</p>
+<h2 id="遇到的问题"><a href="#遇到的问题" class="headerlink" title="遇到的问题"></a>遇到的问题</h2><h3 id="预览文件下载失败"><a href="#预览文件下载失败" class="headerlink" title="预览文件下载失败"></a>预览文件下载失败</h3><p>在安装好之后，通过 Seafile 域名可以正常访问，并且访问 <code>http://example.seafile.com/onlyoffice/welcome</code> 可以得到 <code>Document Server is running</code> 结果，但是在打开 Word 文档预览时却提示下载失败。这是由于我使用域名来访问 Seafile，但是在 ccnet.conf 配置文件的 SERVICE_URL 配置却是 IP 地址格式导致的。我们可以在 Web 页面进行修改，也可以通过配置文件修改将其修改为域名形式即可，见参考文献 [2]。</p>
+<h3 id="预览文件暂时无法访问"><a href="#预览文件暂时无法访问" class="headerlink" title="预览文件暂时无法访问"></a>预览文件暂时无法访问</h3><p>随后，我又遇到文件暂时无法访问的问题，这同样是由于域名导致的，我采用 docker 的方式安装 OnlyOffice，通过查看日志（如下所示）发现它无法解析域名。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[2020-05-16T01:11:42.235] [ERROR] nodeJS - dnsLookup error: hostname &#x3D; example.seafile.com</span><br><span class="line">Error: getaddrinfo ENOTFOUND example.seafile.com</span><br><span class="line">    at GetAddrInfoReqWrap.onlookup [as oncomplete] (dns.js:56:26)</span><br></pre></td></tr></table></figure>
+
+<p>因此，我们需要在 docker 中添加正确的域名解析即可。</p>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>[1] <a href="https://cloud.seafile.com/published/seafile-manual-cn/home.md">https://cloud.seafile.com/published/seafile-manual-cn/home.md</a><br>[2] <a href="https://bbs.seafile.com/t/topic/4528/2">https://bbs.seafile.com/t/topic/4528/2</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Seafile</tag>
       </tags>
   </entry>
   <entry>
