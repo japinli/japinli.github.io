@@ -6,7 +6,7 @@
   <link href="https://blog.japinli.top/atom.xml" rel="self"/>
   
   <link href="https://blog.japinli.top/"/>
-  <updated>2021-05-22T00:17:44.992Z</updated>
+  <updated>2021-05-23T00:43:02.090Z</updated>
   <id>https://blog.japinli.top/</id>
   
   <author>
@@ -17,21 +17,34 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>MongoDB 数据库分片集群入门</title>
+    <link href="https://blog.japinli.top/2021/05/MongoDB-sharding/"/>
+    <id>https://blog.japinli.top/2021/05/MongoDB-sharding/</id>
+    <published>2021-05-23T00:34:22.000Z</published>
+    <updated>2021-05-23T00:43:02.090Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;本文结合官方文档整理记录了一下关于 MongoDB 中分片的概念以及如何搭建一个分片集群。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="MongoDB" scheme="https://blog.japinli.top/tags/MongoDB/"/>
+    
+  </entry>
+  
+  <entry>
     <title>Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</title>
     <link href="https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/"/>
     <id>https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/</id>
     <published>2021-05-21T08:29:27.000Z</published>
-    <updated>2021-05-22T00:17:44.992Z</updated>
+    <updated>2021-05-22T00:30:10.336Z</updated>
     
     
-      
-      
-        
-        
     <summary type="html">&lt;p&gt;本文简要记录一下如何将 Oracle 数据库中的 &lt;code&gt;sys_connect_by_path()&lt;/code&gt; 函数迁移到 PostgreSQL 数据库中。&lt;/p&gt;
-&lt;p&gt;函数 &lt;code&gt;sys_connect_by_path()&lt;/code&gt; 通常是与</summary>
-        
-      
+&lt;p&gt;函数 &lt;code&gt;sys_connect_by_path()&lt;/code&gt; 通常是与 Oracle 中的 &lt;code&gt;connect by&lt;/code&gt; 子句一起使用的，而 &lt;code&gt;connect by&lt;/code&gt; 子句转换到 PostgreSQL 中时通常是使用 &lt;code&gt;WITH RECUSIVE&lt;/code&gt; 来实现。&lt;/p&gt;</summary>
     
     
     
@@ -423,29 +436,6 @@
     <category term="breed" scheme="https://blog.japinli.top/tags/breed/"/>
     
     <category term="padavan" scheme="https://blog.japinli.top/tags/padavan/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>PostgreSQL 修改配置参数</title>
-    <link href="https://blog.japinli.top/2020/06/postgresql-alter-system/"/>
-    <id>https://blog.japinli.top/2020/06/postgresql-alter-system/</id>
-    <published>2020-06-09T13:12:39.000Z</published>
-    <updated>2021-04-16T03:51:06.617Z</updated>
-    
-    
-    <summary type="html">&lt;p&gt;今天在使用 &lt;code&gt;ALTER SYSTEM&lt;/code&gt; 来修改 PostgreSQL 参数时遇到无法启动数据库的问题。如下所示：&lt;/p&gt;
-&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;postgres&amp;#x3D;# ALTER SYSTEM SET shared_preload_libraries TO &amp;#39;pg_buffercache,passwordcheck&amp;#39;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;ALTER SYSTEM&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;postgres&amp;#x3D;# \q&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;$ pg_ctl restart&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;waiting for server to shut down.... done&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;server stopped&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;waiting for server to start....postgres: could not access directory &amp;quot;&amp;#x2F;Users&amp;#x2F;japinli&amp;#x2F;Codes&amp;#x2F;postgresql&amp;#x2F;pg&amp;#x2F;data&amp;quot;: No such file or directory&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Run initdb or pg_basebackup to initialize a PostgreSQL data directory.&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; stopped waiting&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;pg_ctl: could not start server&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Examine the log output.&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-
-&lt;p&gt;你是否也遇到了这样的问题呢？其实这都是由于我们先入为主的思想导致的，&lt;code&gt;ALTER SYSTEM&lt;/code&gt; 支持以逗号分割的列表，而这类参数的修改不需要使用引号。因此，正确的使用方式如下：&lt;/p&gt;
-&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ALTER SYSTEM SET shared_preload_libraries TO pg_buffercache, passwordcheck;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;</summary>
-    
-    
-    
-    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
-    
-    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
     
   </entry>
   
