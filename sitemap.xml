@@ -282,13 +282,6 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2018/10/postgresql-continuous-archiving/</loc>
-    
-    <lastmod>2021-04-16</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>https://blog.japinli.top/2019/05/postgresql-create-table-query-plan/</loc>
     
     <lastmod>2021-04-16</lastmod>
@@ -304,6 +297,13 @@
   
   <url>
     <loc>https://blog.japinli.top/2019/09/postgresql-database-size-monitor/</loc>
+    
+    <lastmod>2021-04-16</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://blog.japinli.top/2018/10/postgresql-continuous-archiving/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -373,14 +373,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2018/09/introduction-cstore-fdw-columnar-store/</loc>
+    <loc>https://blog.japinli.top/2019/01/import-certificate-into-eclipse/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/01/import-certificate-into-eclipse/</loc>
+    <loc>https://blog.japinli.top/2018/09/introduction-cstore-fdw-columnar-store/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -436,14 +436,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/08/git-skip-ssl-verify/</loc>
+    <loc>https://blog.japinli.top/2019/12/git-discard-changes/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/12/git-discard-changes/</loc>
+    <loc>https://blog.japinli.top/2019/08/git-skip-ssl-verify/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -464,14 +464,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2020/05/download-go-package/</loc>
+    <loc>https://blog.japinli.top/2019/04/customize-latex-title-page/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/04/customize-latex-title-page/</loc>
+    <loc>https://blog.japinli.top/2020/05/download-go-package/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -555,14 +555,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/06/C-lexical-elements/</loc>
+    <loc>https://blog.japinli.top/2019/11/C-functions/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/11/C-functions/</loc>
+    <loc>https://blog.japinli.top/2019/06/C-lexical-elements/</loc>
     
     <lastmod>2021-04-16</lastmod>
     
@@ -641,14 +641,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/ARP/</loc>
+    <loc>https://blog.japinli.top/tags/DNS/</loc>
     <lastmod>2021-05-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/DNS/</loc>
+    <loc>https://blog.japinli.top/tags/ARP/</loc>
     <lastmod>2021-05-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -676,14 +676,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/Go/</loc>
+    <loc>https://blog.japinli.top/tags/LaTeX/</loc>
     <lastmod>2021-05-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/LaTeX/</loc>
+    <loc>https://blog.japinli.top/tags/Go/</loc>
     <lastmod>2021-05-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -795,14 +795,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/Ubuntu/</loc>
+    <loc>https://blog.japinli.top/tags/%E7%BF%BB%E8%AF%91/</loc>
     <lastmod>2021-05-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/tags/%E7%BF%BB%E8%AF%91/</loc>
+    <loc>https://blog.japinli.top/tags/Ubuntu/</loc>
     <lastmod>2021-05-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>

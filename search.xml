@@ -1,6 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>C 函数</title>
+    <url>/2019/11/C-functions/</url>
+    <content><![CDATA[<p>C 语言提供了子程序，它可以将我们的程序分割成不同的部分。为了编写函数，我们至少给出函数的定义。通常，我们还需要给出函数的声明；但是，函数的声明不是必须的，如果不给出函数声明，那么编译器将给出一个匹配该函数的隐式声明，而且我们将得到编译时警告。</p>
+<p>每个程序都至少需要一个名为 <code>main</code> 的函数，这是程序执行的入口函数。本文主要分为以下几部分：</p>
+<ul>
+<li>函数声明</li>
+<li>函数定义</li>
+<li>函数调用</li>
+<li>函数参数</li>
+<li>变长参数列表</li>
+<li>函数指针调用</li>
+<li><code>main</code> 函数</li>
+<li>递归函数</li>
+<li>静态函数</li>
+<li>嵌套函数</li>
+</ul>
+<a id="more"></a>
+
+<h2 id="函数声明"><a href="#函数声明" class="headerlink" title="函数声明"></a>函数声明</h2><p>我们编写函数声明时需要指定函数名称、参数列表以及函数返回类型。函数声明以分号结尾，其形式如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type function-name(parameter-list);</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>return-type</code> 表明了函数返回值的数据类型。通过给定 <code>void</code> 的返回类型，我们可以声明函数不返回任何值。</li>
+<li><code>function-name</code> 可以是任何有效的标识符（见<a href="/2019/06/C-lexical-elements/" title="标示符">标示符</a>）。</li>
+<li><code>parameter-list</code> 由零个或多个参数组成，通过逗号隔开。参数由数据类型和可选的参数名组成。我们可以声明变长的参数，或者无参数（<code>void</code>）。如果不给定参数列表，那么就意味着该函数没有参数，但是最好显示的使用 <code>void</code> 给出。</li>
+</ul>
+<p>例如，下面是一个包含两个参数的函数声明：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span>, <span class="keyword">double</span>)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>如果我们需要包含参数名称，我们可以在参数类型后给出，例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foot</span><span class="params">(<span class="keyword">int</span> x, <span class="keyword">double</span> y)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>参数名同样可以为任何标识符，如果我们包含多个参数，那么在同一个声明中参数名不能重复。函数声明中的参数名称可以不必与函数定义时的参数名称一致。</p>
+<p>我们应当在第一次使用函数之前声明该函数。我们可以将其放在头文件中，随后我们便可以在任何 C 源文件中通过 <code>#include</code> 指令来包含函数声明，从而使用该函数。</p>
+<h2 id="函数定义"><a href="#函数定义" class="headerlink" title="函数定义"></a>函数定义</h2><p>函数定义给出了函数实际执行的操作。函数定义包含函数名称、返回类型、参数列表（数据类型和参数名）以及函数主体。函数主体由一系列包含在大括号内的语句组成；实际上它就是一个块语句（见 <a href="/2019/10/C-statements/" title="块语句">块语句</a>）。下面是函数定义的通用形式：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type</span><br><span class="line">function-name(parameter-list)</span><br><span class="line">&#123;</span><br><span class="line">    function-body</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p><code>return-type</code> 和 <code>function-name</code> 与函数声明中的相同（见函数声明）。</p>
+</li>
+<li><p><code>parameter-list</code> 与函数声明中的参数列表相同（见函数声明），但是，在函数定义时我们必须显示的给出参数名。</p>
+</li>
+</ul>
+<p>例如，下面的函数定义包含两个整型参数并且返回它们的和作为返回值：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(<span class="keyword">int</span> x, <span class="keyword">int</span> y)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为了兼容最初的 C 语言设计，我们还可以在参数列表的右括号后指定函数参数的类型，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(x, y)</span><br><span class="line">    <span class="keyword">int</span> x, <span class="keyword">int</span> y;</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是，我们强烈建议不要采用这种编码格式；它可能导致类型转换的细微问题，以及其他问题。</p>
+<h2 id="函数调用"><a href="#函数调用" class="headerlink" title="函数调用"></a>函数调用</h2><p>我们可以通过函数名称以及提供该函数必要的参数来调用函数，其一般形式如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">function-name(parameters)</span><br></pre></td></tr></table></figure>
+
+<p>函数调用可以是独立的语句，也可被用作子表达式。例如，下面是一个独立的函数调用示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">foo(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
+
+<p>在上述的示例中，函数 <code>foo</code> 的参数为 <code>5</code>。</p>
+<p>下面是用作子表达式的函数调用的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = square(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
+<p>假设函数 <code>square</code> 将其参数平方，则上面的示例将值 <code>25</code> 赋值给 <code>a</code>。</p>
+<p>如果一个函数接受多个参数，我们需要使用逗号将其分隔开。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = quux(<span class="number">5</span>, <span class="number">10</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="函数参数"><a href="#函数参数" class="headerlink" title="函数参数"></a>函数参数</h2><p>函数参数可以是任何表达式 – 字面值、变量存储的值、内存地址或者通过组合这些值而构建的更复杂的表达式。</p>
+<p>在函数体内，参数是传递给函数的值的本地副本；您不能通过更改本地副本来更改传入的值。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">23</span>;</span><br><span class="line">foo(x);</span><br><span class="line">...</span><br><span class="line"><span class="comment">/* 定义函数 foo */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    a = <span class="number">2</span> * a;</span><br><span class="line">    <span class="keyword">return</span> a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上面的示例总，即使传递给函数 <code>foo</code> 得到参数被修改了，传递给函数的变量 <code>x</code> 也不会发生改变。如果希望使用该函数来更改 <code>x</code> 的原始值，则必须将函数调用合并到赋值语句中：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">x = foo(x);</span><br></pre></td></tr></table></figure>
+
+<p>如果传递给函数的值是内存地址（即指针），则可以访问（并更改）存储在该内存地址的数据。这样可以达到与其他语言中的按引用传递相似的效果，但是效果不一样：内存地址只是一个值，就像其他任何值一样，并且本身不能更改。传递指针和传递整数之间的区别在于您可以使用函数中的值进行何种操作。</p>
+<p>下面是使用指针参数的函数调用示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    *x = *x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> a = <span class="number">15</span>;</span><br><span class="line">foo(&amp;a);</span><br></pre></td></tr></table></figure>
+
+<p>该函数的形式参数是 <code>int</code> 类型的指针，我们通过向其传递 <code>int</code> 类型变量的地址来调用该函数。通过在函数体内对指针进行解引用操作，我们可以获取内存地址中的值并对其进行修改。上述示例将修改变量 <code>a</code> 的值为 <code>57</code>。</p>
+<p>即使您不想改变存储在地址中的值，如果变量类型很大并且您需要节省内存空间或限制参数复制对性能的影响，则传递变量的地址而不是变量本身可能会很有用。例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">foo</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">int</span> x;</span><br><span class="line">    <span class="keyword">float</span> y;</span><br><span class="line">    <span class="keyword">double</span> z;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">const</span> struct foo *a)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，除非您在内存地址非常大的计算机上工作，否则传递结构体的指针要比传递结构实例花费更少的内存。</p>
+<p>任何类型的数组总是以指针的形式进行传递：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a[])</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
+
+<p>在上述示例中，使用参数 <code>a</code> 调用函数 <code>foo</code> 不会将整个数组复制到 <code>foo</code> 函数的新局部参数中；而是将 <code>x</code> 作为指针传递给 <code>foo</code> 函数的第一个参数。但是要小心：在函数内，您不能使用 <code>sizeof</code> 来确定数组 <code>x</code> 的大小，而 <code>sizeof</code> 却告诉您指针 <code>x</code> 的大小。实际上，以上代码等效于：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *a)</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
+
+<p>在参数声明中明确指定数组的长度无济于事。如果您确实需要按值传递数组，则可以将其包装在结构中，尽管这样做几乎没有用（传递 <code>const</code> 限定的指针通常足以表明调用者不应该修改数组）。</p>
+<h2 id="变长参数列表"><a href="#变长参数列表" class="headerlink" title="变长参数列表"></a>变长参数列表</h2><p>我们可以编写一个带有可变数量参数的函数。这些称为可变函数（_variadic functions_）。为此，该函数至少需要具有一个已知数据类型的参数，但是其余参数是可选的，并且在数量和数据类型上都可以不同。</p>
+<p>您可以像平常一样列出初始参数，但之后再使用省略号：<code>...</code>。下面是一个示例函数原型：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">add_multiple_values</span><span class="params">(<span class="keyword">int</span> number, ...)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>要使用函数定义中的可变参数，我们需要使用库头文件 <code>&lt;stdarg.h&gt;</code> 中定义的宏，因此必须使用 <code>#include</code> 包含该文件。有关这些宏的详细说明，请参见 GNU C 库手册中有关可变参数功能的部分。</p>
+<p>下面是一个可变参数函数的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_multiple_values (<span class="keyword">int</span> number, ...)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter, total = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 声明 &#x27;va_list&#x27; 类型变量 */</span></span><br><span class="line">    va_list parameters;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 调用 &#x27;va_start&#x27; 函数 */</span></span><br><span class="line">    va_start(parameters, number);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; number; counter++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/* 获取可选参数的值 */</span></span><br><span class="line">        total += va_arg(parameters, <span class="keyword">int</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 结束 &#x27;parameters&#x27; 变量的使用，释放资源 */</span></span><br><span class="line">    va_end(parameters);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> total;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>要使用可选参数，您需要一种方法来知道有多少个参数。这可能会有所不同，因此无法进行硬编码，但是如果您不知道有多少个可选参数，则可能很难知道何时停止使用 <code>va_arg</code> 函数。在上面的示例中，函数 <code>add_multiple_values</code> 的第一个参数 <code>number</code> 是实际传递的可选参数的数量。因此，我们可以这样调用函数：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">sum = add_multiple_values(<span class="number">3</span>, <span class="number">12</span>, <span class="number">34</span>, <span class="number">190</span>);</span><br></pre></td></tr></table></figure>
+
+<p>第一个参数指示跟随多少个可选参数。另外，请注意，您实际上并不需要使用 <code>va_end</code> 功能。实际上，对于GCC 而言，它什么也没做。但是，您可能要包括它以最大程度地与其他编译器兼容。</p>
+<h2 id="函数指针调用"><a href="#函数指针调用" class="headerlink" title="函数指针调用"></a>函数指针调用</h2><p>我们也可以调用由指针标识的函数。间接操作符 <code>*</code> 在执行此操作时是可选的。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;foo %d!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d bar!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">message</span><span class="params">(<span class="keyword">void</span> (*func)(<span class="keyword">int</span>), <span class="keyword">int</span> times)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> j;</span><br><span class="line">    <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; times; ++j)</span><br><span class="line">        func(j);  <span class="comment">/* 与 (*func) (j); 作用相同 */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">example</span><span class="params">(<span class="keyword">int</span> want_foo)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">int</span>) = &amp;bar; <span class="comment">/* 运算符 &amp; 是可选的 */</span></span><br><span class="line">    <span class="keyword">if</span> (want_foo)</span><br><span class="line">        pf = foo;</span><br><span class="line">    message (pf, <span class="number">5</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="main-函数"><a href="#main-函数" class="headerlink" title="main 函数"></a><code>main</code> 函数</h2><p>每个程序都至少需要一个名为 <code>main</code> 的函数。这是程序开始执行的地方。我们不需要为 <code>main</code> 函数提供声明或原型，我们只需要定义它即可。</p>
+<p><code>main</code> 函数的返回值总是 <code>int</code> 类型。我们不必为 <code>main</code> 函数指定返回类型，但是我们可以这样做。需要注意的是，我们不能指定它的返回类型不是 <code>int</code>。</p>
+<p>通常，<code>main</code> 函数的返回值表明了程序退出状态。返回 <code>0</code> 或者 <code>EXIT_SUCCESS</code> 表明成功，<code>EXIT_FAILURE</code> 则表示错误。否则，返回的值由实现定义。</p>
+<p>在 <code>main</code> 函数的末尾到达 <code>&#125;</code> 而没有返回值，或者执行没有值的 <code>return</code> 语句（即 <code>return;</code>）都是等效的。在 C89 标准中，这是未定义的，然而在 C99 中明确定义这种情况返回 <code>0</code>。</p>
+<p>我们可以编写没有任何参数的 <code>main</code> 函数（也就是 <code>int main(void)</code>），或者从命令行接受参数。这是一个非常简单的没有参数的主函数：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">puts</span> (<span class="string">&quot;Hi there!&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为了接受来自命令行的参数，我们需要 <code>main</code> 函数提供两个参数，<code>argc</code> 和 <code>*argv[]</code>。我们可以改变参数的名称，但是它们数据类型不能改变 – <code>int</code> 类型和 <code>char</code> 类型的数组指针。<code>argc</code> 是命令行参数的数量，包括程序本身的名称。<code>argv</code> 是参数的数组，以字符串的形式给出。<code>argv[0]</code> 数组的第一个元素是在命令行中键入的程序名称；之后任何数组元素都是程序名称的参数。</p>
+<p>下面的示例定义了 <code>main</code> 函数接受命名行参数，并且将其打印出来：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; argc; counter++)</span><br><span class="line">        <span class="built_in">printf</span> (<span class="string">&quot;%s\n&quot;</span>, argv[counter]);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="递归函数"><a href="#递归函数" class="headerlink" title="递归函数"></a>递归函数</h2><p>我们可以编写一个递归函数 – 调用自身的函数。如一个计算整数的阶乘的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (x &lt; <span class="number">1</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> (x * factorial(x - <span class="number">1</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注意不要编写无限递归的函数。在上面的示例中，一旦 <code>x</code> 为 <code>1</code>，则递归停止。但是，在以下示例中，递归不会停止，直到程序被中断或内存不足为止：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">watermelon(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> (watermelon(x));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当然，函数也可以是间接递归的。</p>
+<h2 id="静态函数"><a href="#静态函数" class="headerlink" title="静态函数"></a>静态函数</h2><p>如果希望仅可在定义该函数的源文件中调用该函数，则可以将其定义为静态函数：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">int</span></span><br><span class="line">foo(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">return</span> x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果您正在构建可重用的函数库，并且需要包含一些最终用户不应该调用的子函数，则这很有用。</p>
+<p>以这种方式定义的函数被称为具有静态链接；不幸的是 <code>static</code> 关键字具有多重含义，见 <a href="/2019/06/C-type-and-storage-class-specifiers/" title="存储类型说明符">存储类型说明符</a>。</p>
+<h2 id="嵌套函数"><a href="#嵌套函数" class="headerlink" title="嵌套函数"></a>嵌套函数</h2><p>作为 GNU C 扩展，我们可以在其他函数中定义函数，这种技术称为嵌套函数。</p>
+<p>下面是使用嵌套函数定义的尾递归阶乘函数的示例：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span></span><br><span class="line">    factorial_helper(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (a &lt; <span class="number">1</span>)</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> b;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> factorial_helper((a - <span class="number">1</span>), (a * b));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> factorial_helper(x, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>请注意，必须在函数的开头定义嵌套函数以及变量声明，然后再声明所有其他语句。</p>
+<p>实际上，我在 <code>gcc -std=c99</code> 的时候也能通过编译，我使用的是 <code>GCC 7.4</code>，而使用 <code>clang -std=gnu99</code> 不能通过编译（<code>clang-1001.0.46.4</code>），具体的可能是编译器实现的问题。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions</a></p>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>C 语言</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>C 语言词法元素</title>
     <url>/2019/06/C-lexical-elements/</url>
     <content><![CDATA[<p>本文主要介绍 C 语言的词法元素，包括标识符、关键字、常量、操作符以及分隔符。其中关于操作符的一些更为详细的信息将在后续进行介绍。</p>
@@ -214,177 +354,6 @@
       </tags>
   </entry>
   <entry>
-    <title>C 语言类型及存储类限定符</title>
-    <url>/2019/06/C-type-and-storage-class-specifiers/</url>
-    <content><![CDATA[<p>本文主要介绍 C 语言中的类型及存储类限定符，C 语言中提高了两个类型限定符：<code>const</code> 和 <code>volatile</code>；类型限定符指明了变量的访问方式。存储类限定符则指定了变量在内存中的存储方式，C 语言提供了四种存储类限定符：<code>auto</code>，<code>register</code>，<code>extern</code> 和 <code>static</code>。</p>
-<a id="more"></a>
-
-<h2 id="类型限定符"><a href="#类型限定符" class="headerlink" title="类型限定符"></a>类型限定符</h2><p>类型限定符允许您指定变量的访问方式，C 语言提供了两个类型限定符：(a) <code>const</code> 指明变量是只读的，一旦初始化，它的值将不能被改变；(b) <code>volatile</code> 表明变量是显式可变的，并且看似无用的变量访问（例如，通过指针）不应该被优化掉。例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="keyword">float</span> pi = <span class="number">3.14159f</span>;</span><br><span class="line"><span class="keyword">volatile</span> <span class="keyword">float</span> currentTemperature = <span class="number">40.0</span>;</span><br></pre></td></tr></table></figure>
-
-<p><code>const</code> 限定符除了能防止变量被意外改变之外，它还能辅助编译器进行优化。针对有回调函数或者信号处理函数更新的变量，我们可以将其定义为 <code>volatile</code> 从而避免编译器过度优化导致数据不一致。</p>
-<h2 id="存储类限定符"><a href="#存储类限定符" class="headerlink" title="存储类限定符"></a>存储类限定符</h2><p>存储类限定允许您定义变量在内存中的存储方式。<code>auto</code> 关键字用于定义函数内部的局部变量，当函数返回时，这是局部变量（自动变量）将自动被清理掉，这是函数内部的变量默认行为。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">foo(<span class="keyword">int</span> value)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">auto</span> <span class="keyword">int</span> x = value;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>register</code> 关键字定义的变量被称为寄存器变量，它的行为与 <code>auto</code> 定义的变量几乎类似，稍有不同的是，该关键字表明该变量的使用频率极高，如果可能尽量将其放在寄存器中。如果变量被声明为 <code>register</code> 类型，__那么将不能对其进行取地址运算 (<code>&amp;</code>)__。这意味着您不能引用使用存储类寄存器声明的数组的元素。GCC 编译器在优化时可以很好的选择哪些变量使用被保存在寄存器中，因此寄存器变量很少使用。</p>
-<p><code>static</code> 限定符与 <code>auto</code> 的作用正好相反：当将 <code>static</code> 应用于函数内部或块内的变量时，即使函数完成或块结束之后，这些变量都将保存其值。这就是所谓的__静态存储持续期 (Static Storage Duration)__。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">sum (<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> sumSoFar = <span class="number">0</span>;</span><br><span class="line">    sumSoFar = sumSoFar + x;</span><br><span class="line">    <span class="keyword">return</span> sumSoFar;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>此外，您还可以在顶层（即不在函数内）将变量（或函数）声明为 <code>static</code>。这些变量（全局变量）仅在当前源文件可见，其它源文件则不可见。这就给 <code>static</code> 带来了双重含义；第二种意义则是__静态链接 (Static Linkage)__。在单独的文件中具有静态链接的两个函数或变量是完全独立的；在声明它的文件之外都不可见。</p>
-<p>声明为 <code>extern</code> 的未初始化变量的默认值为 <code>0</code>，<code>0.0</code> 或 <code>NULL</code>，具体值则取决于其类型。声明为 <code>auto</code> 和 <code>register</code> 的未初始化变量保留为初始化状态，因此不应假设这些变量保存特定的值。</p>
-<p><code>extern</code> 对于声明要链接到项目的所有源文件可见的变量很有用。变量声明时并不会为其分配存储空间，所以你无法在 <code>extern</code> 声明语句中进行初始化操作。您必须同时进行 <code>extern</code> 声明和非 <code>extern</code> 声明，实际上后者是变量的定义，它将为期分配存储空间。<code>extern</code> 声明语句可以重复多次。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="keyword">int</span> numberOfClients;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> numberOfClients = <span class="number">4</span>;</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers</a></p>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>C 语言</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>C 函数</title>
-    <url>/2019/11/C-functions/</url>
-    <content><![CDATA[<p>C 语言提供了子程序，它可以将我们的程序分割成不同的部分。为了编写函数，我们至少给出函数的定义。通常，我们还需要给出函数的声明；但是，函数的声明不是必须的，如果不给出函数声明，那么编译器将给出一个匹配该函数的隐式声明，而且我们将得到编译时警告。</p>
-<p>每个程序都至少需要一个名为 <code>main</code> 的函数，这是程序执行的入口函数。本文主要分为以下几部分：</p>
-<ul>
-<li>函数声明</li>
-<li>函数定义</li>
-<li>函数调用</li>
-<li>函数参数</li>
-<li>变长参数列表</li>
-<li>函数指针调用</li>
-<li><code>main</code> 函数</li>
-<li>递归函数</li>
-<li>静态函数</li>
-<li>嵌套函数</li>
-</ul>
-<a id="more"></a>
-
-<h2 id="函数声明"><a href="#函数声明" class="headerlink" title="函数声明"></a>函数声明</h2><p>我们编写函数声明时需要指定函数名称、参数列表以及函数返回类型。函数声明以分号结尾，其形式如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type function-name(parameter-list);</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li><code>return-type</code> 表明了函数返回值的数据类型。通过给定 <code>void</code> 的返回类型，我们可以声明函数不返回任何值。</li>
-<li><code>function-name</code> 可以是任何有效的标识符（见<a href="/2019/06/C-lexical-elements/" title="标示符">标示符</a>）。</li>
-<li><code>parameter-list</code> 由零个或多个参数组成，通过逗号隔开。参数由数据类型和可选的参数名组成。我们可以声明变长的参数，或者无参数（<code>void</code>）。如果不给定参数列表，那么就意味着该函数没有参数，但是最好显示的使用 <code>void</code> 给出。</li>
-</ul>
-<p>例如，下面是一个包含两个参数的函数声明：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span>, <span class="keyword">double</span>)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>如果我们需要包含参数名称，我们可以在参数类型后给出，例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foot</span><span class="params">(<span class="keyword">int</span> x, <span class="keyword">double</span> y)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>参数名同样可以为任何标识符，如果我们包含多个参数，那么在同一个声明中参数名不能重复。函数声明中的参数名称可以不必与函数定义时的参数名称一致。</p>
-<p>我们应当在第一次使用函数之前声明该函数。我们可以将其放在头文件中，随后我们便可以在任何 C 源文件中通过 <code>#include</code> 指令来包含函数声明，从而使用该函数。</p>
-<h2 id="函数定义"><a href="#函数定义" class="headerlink" title="函数定义"></a>函数定义</h2><p>函数定义给出了函数实际执行的操作。函数定义包含函数名称、返回类型、参数列表（数据类型和参数名）以及函数主体。函数主体由一系列包含在大括号内的语句组成；实际上它就是一个块语句（见 <a href="/2019/10/C-statements/" title="块语句">块语句</a>）。下面是函数定义的通用形式：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return-type</span><br><span class="line">function-name(parameter-list)</span><br><span class="line">&#123;</span><br><span class="line">    function-body</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li><p><code>return-type</code> 和 <code>function-name</code> 与函数声明中的相同（见函数声明）。</p>
-</li>
-<li><p><code>parameter-list</code> 与函数声明中的参数列表相同（见函数声明），但是，在函数定义时我们必须显示的给出参数名。</p>
-</li>
-</ul>
-<p>例如，下面的函数定义包含两个整型参数并且返回它们的和作为返回值：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(<span class="keyword">int</span> x, <span class="keyword">int</span> y)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>为了兼容最初的 C 语言设计，我们还可以在参数列表的右括号后指定函数参数的类型，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_values(x, y)</span><br><span class="line">    <span class="keyword">int</span> x, <span class="keyword">int</span> y;</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> x + y;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>但是，我们强烈建议不要采用这种编码格式；它可能导致类型转换的细微问题，以及其他问题。</p>
-<h2 id="函数调用"><a href="#函数调用" class="headerlink" title="函数调用"></a>函数调用</h2><p>我们可以通过函数名称以及提供该函数必要的参数来调用函数，其一般形式如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">function-name(parameters)</span><br></pre></td></tr></table></figure>
-
-<p>函数调用可以是独立的语句，也可被用作子表达式。例如，下面是一个独立的函数调用示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">foo(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
-
-<p>在上述的示例中，函数 <code>foo</code> 的参数为 <code>5</code>。</p>
-<p>下面是用作子表达式的函数调用的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = square(<span class="number">5</span>);</span><br></pre></td></tr></table></figure>
-<p>假设函数 <code>square</code> 将其参数平方，则上面的示例将值 <code>25</code> 赋值给 <code>a</code>。</p>
-<p>如果一个函数接受多个参数，我们需要使用逗号将其分隔开。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">a = quux(<span class="number">5</span>, <span class="number">10</span>);</span><br></pre></td></tr></table></figure>
-
-<h2 id="函数参数"><a href="#函数参数" class="headerlink" title="函数参数"></a>函数参数</h2><p>函数参数可以是任何表达式 – 字面值、变量存储的值、内存地址或者通过组合这些值而构建的更复杂的表达式。</p>
-<p>在函数体内，参数是传递给函数的值的本地副本；您不能通过更改本地副本来更改传入的值。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">23</span>;</span><br><span class="line">foo(x);</span><br><span class="line">...</span><br><span class="line"><span class="comment">/* 定义函数 foo */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    a = <span class="number">2</span> * a;</span><br><span class="line">    <span class="keyword">return</span> a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在上面的示例总，即使传递给函数 <code>foo</code> 得到参数被修改了，传递给函数的变量 <code>x</code> 也不会发生改变。如果希望使用该函数来更改 <code>x</code> 的原始值，则必须将函数调用合并到赋值语句中：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">x = foo(x);</span><br></pre></td></tr></table></figure>
-
-<p>如果传递给函数的值是内存地址（即指针），则可以访问（并更改）存储在该内存地址的数据。这样可以达到与其他语言中的按引用传递相似的效果，但是效果不一样：内存地址只是一个值，就像其他任何值一样，并且本身不能更改。传递指针和传递整数之间的区别在于您可以使用函数中的值进行何种操作。</p>
-<p>下面是使用指针参数的函数调用示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    *x = *x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> a = <span class="number">15</span>;</span><br><span class="line">foo(&amp;a);</span><br></pre></td></tr></table></figure>
-
-<p>该函数的形式参数是 <code>int</code> 类型的指针，我们通过向其传递 <code>int</code> 类型变量的地址来调用该函数。通过在函数体内对指针进行解引用操作，我们可以获取内存地址中的值并对其进行修改。上述示例将修改变量 <code>a</code> 的值为 <code>57</code>。</p>
-<p>即使您不想改变存储在地址中的值，如果变量类型很大并且您需要节省内存空间或限制参数复制对性能的影响，则传递变量的地址而不是变量本身可能会很有用。例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">foo</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">int</span> x;</span><br><span class="line">    <span class="keyword">float</span> y;</span><br><span class="line">    <span class="keyword">double</span> z;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">const</span> struct foo *a)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>在这种情况下，除非您在内存地址非常大的计算机上工作，否则传递结构体的指针要比传递结构实例花费更少的内存。</p>
-<p>任何类型的数组总是以指针的形式进行传递：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> a[])</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
-
-<p>在上述示例中，使用参数 <code>a</code> 调用函数 <code>foo</code> 不会将整个数组复制到 <code>foo</code> 函数的新局部参数中；而是将 <code>x</code> 作为指针传递给 <code>foo</code> 函数的第一个参数。但是要小心：在函数内，您不能使用 <code>sizeof</code> 来确定数组 <code>x</code> 的大小，而 <code>sizeof</code> 却告诉您指针 <code>x</code> 的大小。实际上，以上代码等效于：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> *a)</span></span>;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> x[<span class="number">100</span>];</span><br><span class="line">foo(x);</span><br></pre></td></tr></table></figure>
-
-<p>在参数声明中明确指定数组的长度无济于事。如果您确实需要按值传递数组，则可以将其包装在结构中，尽管这样做几乎没有用（传递 <code>const</code> 限定的指针通常足以表明调用者不应该修改数组）。</p>
-<h2 id="变长参数列表"><a href="#变长参数列表" class="headerlink" title="变长参数列表"></a>变长参数列表</h2><p>我们可以编写一个带有可变数量参数的函数。这些称为可变函数（_variadic functions_）。为此，该函数至少需要具有一个已知数据类型的参数，但是其余参数是可选的，并且在数量和数据类型上都可以不同。</p>
-<p>您可以像平常一样列出初始参数，但之后再使用省略号：<code>...</code>。下面是一个示例函数原型：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">add_multiple_values</span><span class="params">(<span class="keyword">int</span> number, ...)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>要使用函数定义中的可变参数，我们需要使用库头文件 <code>&lt;stdarg.h&gt;</code> 中定义的宏，因此必须使用 <code>#include</code> 包含该文件。有关这些宏的详细说明，请参见 GNU C 库手册中有关可变参数功能的部分。</p>
-<p>下面是一个可变参数函数的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">add_multiple_values (<span class="keyword">int</span> number, ...)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter, total = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 声明 &#x27;va_list&#x27; 类型变量 */</span></span><br><span class="line">    va_list parameters;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 调用 &#x27;va_start&#x27; 函数 */</span></span><br><span class="line">    va_start(parameters, number);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; number; counter++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/* 获取可选参数的值 */</span></span><br><span class="line">        total += va_arg(parameters, <span class="keyword">int</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 结束 &#x27;parameters&#x27; 变量的使用，释放资源 */</span></span><br><span class="line">    va_end(parameters);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> total;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>要使用可选参数，您需要一种方法来知道有多少个参数。这可能会有所不同，因此无法进行硬编码，但是如果您不知道有多少个可选参数，则可能很难知道何时停止使用 <code>va_arg</code> 函数。在上面的示例中，函数 <code>add_multiple_values</code> 的第一个参数 <code>number</code> 是实际传递的可选参数的数量。因此，我们可以这样调用函数：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">sum = add_multiple_values(<span class="number">3</span>, <span class="number">12</span>, <span class="number">34</span>, <span class="number">190</span>);</span><br></pre></td></tr></table></figure>
-
-<p>第一个参数指示跟随多少个可选参数。另外，请注意，您实际上并不需要使用 <code>va_end</code> 功能。实际上，对于GCC 而言，它什么也没做。但是，您可能要包括它以最大程度地与其他编译器兼容。</p>
-<h2 id="函数指针调用"><a href="#函数指针调用" class="headerlink" title="函数指针调用"></a>函数指针调用</h2><p>我们也可以调用由指针标识的函数。间接操作符 <code>*</code> 在执行此操作时是可选的。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">foo</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;foo %d!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">bar</span><span class="params">(<span class="keyword">int</span> i)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d bar!\n&quot;</span>, i);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">message</span><span class="params">(<span class="keyword">void</span> (*func)(<span class="keyword">int</span>), <span class="keyword">int</span> times)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> j;</span><br><span class="line">    <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; times; ++j)</span><br><span class="line">        func(j);  <span class="comment">/* 与 (*func) (j); 作用相同 */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">example</span><span class="params">(<span class="keyword">int</span> want_foo)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*pf)(<span class="keyword">int</span>) = &amp;bar; <span class="comment">/* 运算符 &amp; 是可选的 */</span></span><br><span class="line">    <span class="keyword">if</span> (want_foo)</span><br><span class="line">        pf = foo;</span><br><span class="line">    message (pf, <span class="number">5</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="main-函数"><a href="#main-函数" class="headerlink" title="main 函数"></a><code>main</code> 函数</h2><p>每个程序都至少需要一个名为 <code>main</code> 的函数。这是程序开始执行的地方。我们不需要为 <code>main</code> 函数提供声明或原型，我们只需要定义它即可。</p>
-<p><code>main</code> 函数的返回值总是 <code>int</code> 类型。我们不必为 <code>main</code> 函数指定返回类型，但是我们可以这样做。需要注意的是，我们不能指定它的返回类型不是 <code>int</code>。</p>
-<p>通常，<code>main</code> 函数的返回值表明了程序退出状态。返回 <code>0</code> 或者 <code>EXIT_SUCCESS</code> 表明成功，<code>EXIT_FAILURE</code> 则表示错误。否则，返回的值由实现定义。</p>
-<p>在 <code>main</code> 函数的末尾到达 <code>&#125;</code> 而没有返回值，或者执行没有值的 <code>return</code> 语句（即 <code>return;</code>）都是等效的。在 C89 标准中，这是未定义的，然而在 C99 中明确定义这种情况返回 <code>0</code>。</p>
-<p>我们可以编写没有任何参数的 <code>main</code> 函数（也就是 <code>int main(void)</code>），或者从命令行接受参数。这是一个非常简单的没有参数的主函数：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">puts</span> (<span class="string">&quot;Hi there!&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>为了接受来自命令行的参数，我们需要 <code>main</code> 函数提供两个参数，<code>argc</code> 和 <code>*argv[]</code>。我们可以改变参数的名称，但是它们数据类型不能改变 – <code>int</code> 类型和 <code>char</code> 类型的数组指针。<code>argc</code> 是命令行参数的数量，包括程序本身的名称。<code>argv</code> 是参数的数组，以字符串的形式给出。<code>argv[0]</code> 数组的第一个元素是在命令行中键入的程序名称；之后任何数组元素都是程序名称的参数。</p>
-<p>下面的示例定义了 <code>main</code> 函数接受命名行参数，并且将其打印出来：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">main(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span> counter;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (counter = <span class="number">0</span>; counter &lt; argc; counter++)</span><br><span class="line">        <span class="built_in">printf</span> (<span class="string">&quot;%s\n&quot;</span>, argv[counter]);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="递归函数"><a href="#递归函数" class="headerlink" title="递归函数"></a>递归函数</h2><p>我们可以编写一个递归函数 – 调用自身的函数。如一个计算整数的阶乘的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (x &lt; <span class="number">1</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> (x * factorial(x - <span class="number">1</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>注意不要编写无限递归的函数。在上面的示例中，一旦 <code>x</code> 为 <code>1</code>，则递归停止。但是，在以下示例中，递归不会停止，直到程序被中断或内存不足为止：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">watermelon(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> (watermelon(x));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>当然，函数也可以是间接递归的。</p>
-<h2 id="静态函数"><a href="#静态函数" class="headerlink" title="静态函数"></a>静态函数</h2><p>如果希望仅可在定义该函数的源文件中调用该函数，则可以将其定义为静态函数：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">int</span></span><br><span class="line">foo(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">  <span class="keyword">return</span> x + <span class="number">42</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果您正在构建可重用的函数库，并且需要包含一些最终用户不应该调用的子函数，则这很有用。</p>
-<p>以这种方式定义的函数被称为具有静态链接；不幸的是 <code>static</code> 关键字具有多重含义，见 <a href="/2019/06/C-type-and-storage-class-specifiers/" title="存储类型说明符">存储类型说明符</a>。</p>
-<h2 id="嵌套函数"><a href="#嵌套函数" class="headerlink" title="嵌套函数"></a>嵌套函数</h2><p>作为 GNU C 扩展，我们可以在其他函数中定义函数，这种技术称为嵌套函数。</p>
-<p>下面是使用嵌套函数定义的尾递归阶乘函数的示例：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">factorial(<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">int</span></span><br><span class="line">    factorial_helper(<span class="keyword">int</span> a, <span class="keyword">int</span> b)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (a &lt; <span class="number">1</span>)</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> b;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">          <span class="keyword">return</span> factorial_helper((a - <span class="number">1</span>), (a * b));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> factorial_helper(x, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>请注意，必须在函数的开头定义嵌套函数以及变量声明，然后再声明所有其他语句。</p>
-<p>实际上，我在 <code>gcc -std=c99</code> 的时候也能通过编译，我使用的是 <code>GCC 7.4</code>，而使用 <code>clang -std=gnu99</code> 不能通过编译（<code>clang-1001.0.46.4</code>），具体的可能是编译器实现的问题。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Functions</a></p>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>C 语言</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>MacOS Mojave 上 GDB 调试配置</title>
     <url>/2019/06/GDB-on-MacOS-Mojave/</url>
     <content><![CDATA[<p>最近在 MacOS 上写代码，需要使用 gdb 进行调试，踩了一些坑，因此在这里做一个简要记录。稍微搜索一下我们就可以知道要在 MacOS 上使用 gdb 需要先创建一个自签名证书（<a href="https://gist.github.com/gravitylow/fb595186ce6068537a6e9da6d8b5b96d">看这里</a>)。</p>
@@ -434,6 +403,37 @@
       <tags>
         <tag>MacOS</tag>
         <tag>gdb</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>C 语言类型及存储类限定符</title>
+    <url>/2019/06/C-type-and-storage-class-specifiers/</url>
+    <content><![CDATA[<p>本文主要介绍 C 语言中的类型及存储类限定符，C 语言中提高了两个类型限定符：<code>const</code> 和 <code>volatile</code>；类型限定符指明了变量的访问方式。存储类限定符则指定了变量在内存中的存储方式，C 语言提供了四种存储类限定符：<code>auto</code>，<code>register</code>，<code>extern</code> 和 <code>static</code>。</p>
+<a id="more"></a>
+
+<h2 id="类型限定符"><a href="#类型限定符" class="headerlink" title="类型限定符"></a>类型限定符</h2><p>类型限定符允许您指定变量的访问方式，C 语言提供了两个类型限定符：(a) <code>const</code> 指明变量是只读的，一旦初始化，它的值将不能被改变；(b) <code>volatile</code> 表明变量是显式可变的，并且看似无用的变量访问（例如，通过指针）不应该被优化掉。例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="keyword">float</span> pi = <span class="number">3.14159f</span>;</span><br><span class="line"><span class="keyword">volatile</span> <span class="keyword">float</span> currentTemperature = <span class="number">40.0</span>;</span><br></pre></td></tr></table></figure>
+
+<p><code>const</code> 限定符除了能防止变量被意外改变之外，它还能辅助编译器进行优化。针对有回调函数或者信号处理函数更新的变量，我们可以将其定义为 <code>volatile</code> 从而避免编译器过度优化导致数据不一致。</p>
+<h2 id="存储类限定符"><a href="#存储类限定符" class="headerlink" title="存储类限定符"></a>存储类限定符</h2><p>存储类限定允许您定义变量在内存中的存储方式。<code>auto</code> 关键字用于定义函数内部的局部变量，当函数返回时，这是局部变量（自动变量）将自动被清理掉，这是函数内部的变量默认行为。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">foo(<span class="keyword">int</span> value)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">auto</span> <span class="keyword">int</span> x = value;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>register</code> 关键字定义的变量被称为寄存器变量，它的行为与 <code>auto</code> 定义的变量几乎类似，稍有不同的是，该关键字表明该变量的使用频率极高，如果可能尽量将其放在寄存器中。如果变量被声明为 <code>register</code> 类型，__那么将不能对其进行取地址运算 (<code>&amp;</code>)__。这意味着您不能引用使用存储类寄存器声明的数组的元素。GCC 编译器在优化时可以很好的选择哪些变量使用被保存在寄存器中，因此寄存器变量很少使用。</p>
+<p><code>static</code> 限定符与 <code>auto</code> 的作用正好相反：当将 <code>static</code> 应用于函数内部或块内的变量时，即使函数完成或块结束之后，这些变量都将保存其值。这就是所谓的__静态存储持续期 (Static Storage Duration)__。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span></span><br><span class="line">sum (<span class="keyword">int</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> sumSoFar = <span class="number">0</span>;</span><br><span class="line">    sumSoFar = sumSoFar + x;</span><br><span class="line">    <span class="keyword">return</span> sumSoFar;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>此外，您还可以在顶层（即不在函数内）将变量（或函数）声明为 <code>static</code>。这些变量（全局变量）仅在当前源文件可见，其它源文件则不可见。这就给 <code>static</code> 带来了双重含义；第二种意义则是__静态链接 (Static Linkage)__。在单独的文件中具有静态链接的两个函数或变量是完全独立的；在声明它的文件之外都不可见。</p>
+<p>声明为 <code>extern</code> 的未初始化变量的默认值为 <code>0</code>，<code>0.0</code> 或 <code>NULL</code>，具体值则取决于其类型。声明为 <code>auto</code> 和 <code>register</code> 的未初始化变量保留为初始化状态，因此不应假设这些变量保存特定的值。</p>
+<p><code>extern</code> 对于声明要链接到项目的所有源文件可见的变量很有用。变量声明时并不会为其分配存储空间，所以你无法在 <code>extern</code> 声明语句中进行初始化操作。您必须同时进行 <code>extern</code> 声明和非 <code>extern</code> 声明，实际上后者是变量的定义，它将为期分配存储空间。<code>extern</code> 声明语句可以重复多次。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="keyword">int</span> numberOfClients;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> numberOfClients = <span class="number">4</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers</a></p>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>C 语言</tag>
       </tags>
   </entry>
   <entry>
@@ -690,6 +690,32 @@
       </tags>
   </entry>
   <entry>
+    <title>Ubuntu 系统 DNS 服务器配置</title>
+    <url>/2018/09/configure-dns-on-ubuntu/</url>
+    <content><![CDATA[<p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
+<img src="/2018/09/configure-dns-on-ubuntu/Domain_name_space.png" class="" title="Domain name space">
+
+<a id="more"></a>
+
+<p>在 Ubuntu 平台，我目前所了解到的 DNS 的配置主要有两种方式 (配置文件修改)：网络配置文件 interfaces 和域名解析配置文件 resolvconf。</p>
+<h3 id="网络配置文件"><a href="#网络配置文件" class="headerlink" title="网络配置文件"></a>网络配置文件</h3><p>若是通过网络配置文件修改 DNS，那么我们只需要在 /etc/network/interfaces 文件中加入 nameserver 即可，如下所示：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">dns-nameserver 114.114.114.114</span><br><span class="line">dns-nameservers 8.8.8.8 8.8.4.4</span><br></pre></td></tr></table></figure>
+
+<p>dns-nameserver: 用于添加一个域名服务器，如果需要指定多个域名服务器则需要使用添加多行。<br>dns-nameservers: 用于同时指定多个域名服务器地址，用空格隔开。</p>
+<p>通过这种方式修改 DNS 后需要重启电脑方可生效。</p>
+<h3 id="域名解析配置文件"><a href="#域名解析配置文件" class="headerlink" title="域名解析配置文件"></a>域名解析配置文件</h3><p>Ubuntu 系统提供了 resolvconf 工具来管理其域名信息，其配置文件为在 /etc/resolvconf/resolv.conf.d/ 目录下，通过修改该目录下的 head 文件，我们可以添加特定的域名服务器。例如：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">nameserver 114.114.114.114</span><br><span class="line">nameserver 8.8.8.8</span><br><span class="line">nameserver 8.8.4.4</span><br></pre></td></tr></table></figure>
+
+<p>在该文件中，每个域名服务器的地址单独一行，不能同时在一行上指定多个域名服务器。修改成功后，我们只需要运行 <code>sudo resolvconf -u</code> 更新 /etc/resolv.conf 文件即可。这种方式不需要重启电脑。此外，我们也可以直接在 /etc/resolv.conf 文件中添加域名服务器，但是这种方式添加的域名服务器在系统重启之后将失效，这是因为 /etc/resolv.conf 文件是由 resolvconf 命令生成的，重启后该文件将被重写。</p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>DNS</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>重拾 ARP 协议</title>
     <url>/2019/09/arp-protocol/</url>
     <content><![CDATA[<p>ARP (Address Resolution Protoco)，中文地址解析协议，用来将网络层的 IP 地址转换为数据链路层的物理地址，该协议属于 TCP/IP 协议簇。当一台主机把以太网数据帧发送到位于同一局域网上的另一台主机时，是根据 48 bit 的以太网地址来确定目的接口的。设备驱动程序从不检查 IP 数据报中的目的 IP 地址。而地址解析为这两种不同的地址形式提供映射: 32 bit 的 IP 地址和数据链路层使用的任何类型的地址。<a href="https://tools.ietf.org/rfc/rfc826.txt">RFC 826</a> 给出了 ARP 协议的规范。ARP 协议为 IP 地址到对应的硬件物理地址提供了动态映射，通常情况下用户或系统管理员不用担心。</p>
@@ -745,32 +771,6 @@
       </categories>
       <tags>
         <tag>ARP</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Ubuntu 系统 DNS 服务器配置</title>
-    <url>/2018/09/configure-dns-on-ubuntu/</url>
-    <content><![CDATA[<p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
-<img src="/2018/09/configure-dns-on-ubuntu/Domain_name_space.png" class="" title="Domain name space">
-
-<a id="more"></a>
-
-<p>在 Ubuntu 平台，我目前所了解到的 DNS 的配置主要有两种方式 (配置文件修改)：网络配置文件 interfaces 和域名解析配置文件 resolvconf。</p>
-<h3 id="网络配置文件"><a href="#网络配置文件" class="headerlink" title="网络配置文件"></a>网络配置文件</h3><p>若是通过网络配置文件修改 DNS，那么我们只需要在 /etc/network/interfaces 文件中加入 nameserver 即可，如下所示：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">dns-nameserver 114.114.114.114</span><br><span class="line">dns-nameservers 8.8.8.8 8.8.4.4</span><br></pre></td></tr></table></figure>
-
-<p>dns-nameserver: 用于添加一个域名服务器，如果需要指定多个域名服务器则需要使用添加多行。<br>dns-nameservers: 用于同时指定多个域名服务器地址，用空格隔开。</p>
-<p>通过这种方式修改 DNS 后需要重启电脑方可生效。</p>
-<h3 id="域名解析配置文件"><a href="#域名解析配置文件" class="headerlink" title="域名解析配置文件"></a>域名解析配置文件</h3><p>Ubuntu 系统提供了 resolvconf 工具来管理其域名信息，其配置文件为在 /etc/resolvconf/resolv.conf.d/ 目录下，通过修改该目录下的 head 文件，我们可以添加特定的域名服务器。例如：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">nameserver 114.114.114.114</span><br><span class="line">nameserver 8.8.8.8</span><br><span class="line">nameserver 8.8.4.4</span><br></pre></td></tr></table></figure>
-
-<p>在该文件中，每个域名服务器的地址单独一行，不能同时在一行上指定多个域名服务器。修改成功后，我们只需要运行 <code>sudo resolvconf -u</code> 更新 /etc/resolv.conf 文件即可。这种方式不需要重启电脑。此外，我们也可以直接在 /etc/resolv.conf 文件中添加域名服务器，但是这种方式添加的域名服务器在系统重启之后将失效，这是因为 /etc/resolv.conf 文件是由 resolvconf 命令生成的，重启后该文件将被重写。</p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>DNS</tag>
       </tags>
   </entry>
   <entry>
@@ -948,6 +948,28 @@
       </tags>
   </entry>
   <entry>
+    <title>LaTeX 自定义封面</title>
+    <url>/2019/04/customize-latex-title-page/</url>
+    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
+<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
+<p style="text-align:center">图 1 LaTeX 自定义封面</p>
+
+<a id="more"></a>
+
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
+<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;book&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">begin</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line">    <span class="tag">\<span class="name">centering</span></span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.2\textheight&#125;</span></span>  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Huge</span></span> Customize <span class="tag">\<span class="name">LaTeX</span><span class="string">&#123;&#125;</span></span> Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.025\textheight&#125;</span></span>   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;0.83\textwidth&#125;</span><span class="string">&#123;0.4pt&#125;</span></span>  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Large</span></span> Author: <span class="tag">\<span class="name">textsc</span><span class="string">&#123;Japin Li&#125;</span></span>&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vfill</span></span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">large</span></span> <span class="tag">\<span class="name">today</span></span>&#125;</span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">end</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
+
+<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
+]]></content>
+      <categories>
+        <category>排版</category>
+      </categories>
+      <tags>
+        <tag>LaTeX</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Go 语言软件包下载</title>
     <url>/2020/05/download-go-package/</url>
     <content><![CDATA[<p>作为一个刚入门的 Go 小白来说，下载第三方包就成为了第一道坎 :( 。本文简要介绍一下如何下载 Go 软件包，尤其是 Google 系列的包。</p>
@@ -971,28 +993,6 @@
       </categories>
       <tags>
         <tag>Go</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>LaTeX 自定义封面</title>
-    <url>/2019/04/customize-latex-title-page/</url>
-    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
-<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
-<p style="text-align:center">图 1 LaTeX 自定义封面</p>
-
-<a id="more"></a>
-
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
-<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;book&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">begin</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line">    <span class="tag">\<span class="name">centering</span></span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.2\textheight&#125;</span></span>  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Huge</span></span> Customize <span class="tag">\<span class="name">LaTeX</span><span class="string">&#123;&#125;</span></span> Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.025\textheight&#125;</span></span>   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;0.83\textwidth&#125;</span><span class="string">&#123;0.4pt&#125;</span></span>  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">Large</span></span> Author: <span class="tag">\<span class="name">textsc</span><span class="string">&#123;Japin Li&#125;</span></span>&#125;</span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">vfill</span></span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="tag">\<span class="name">large</span></span> <span class="tag">\<span class="name">today</span></span>&#125;</span><br><span class="line">    <span class="tag">\<span class="name">vspace</span><span class="string">&#123;0.1\textheight&#125;</span></span>  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">\<span class="name">rule</span><span class="string">&#123;\textwidth&#125;</span><span class="string">&#123;1pt&#125;</span></span>  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="tag">\<span class="name">end</span><span class="string">&#123;titlepage&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
-
-<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -1353,26 +1353,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Git 跳过 SSL 验证</title>
-    <url>/2019/08/git-skip-ssl-verify/</url>
-    <content><![CDATA[<p>有时，我们在克隆代码或者拉取代码时想要跳过 SSL 验证（至于为什么有这么奇葩的需求就不多说了，自行体会），git 提供了多种方式可供用户选择。</p>
-<p>首先，我们看来看看克隆代码时如何跳过 SSL 验证。如下，我们可以使用 <code>GIT_NO_SSL_VERIFY</code> 环境变量来设置是否采用 SSL 验证。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> GIT_SSL_NO_VERIFY=<span class="literal">true</span> git <span class="built_in">clone</span> https://github.com/xxx/xxx</span></span><br></pre></td></tr></table></figure>
-
-<p>如果是仓库已经采用 SSL 验证克隆下来，但是在随后的拉取过程中想要取消 SSL 验证，我们可以通过修改配置来完成，例如：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
-
-<p>如果您想后续的仓库都跳过 SSL 验证，可以设置全局的 <code>http.sslVerify</code>，如下所示：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config --global http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Git 撤销已经修改的文件</title>
     <url>/2019/12/git-discard-changes/</url>
     <content><![CDATA[<p>Git 中可以通过 <code>git checkout -- &lt;file&gt;...</code> 来撤销当前工作空间的修改。例如，我们有以下文件已经做出了修改：</p>
@@ -1418,6 +1398,26 @@ table th:nth-of-type(2) {
 </tr>
 </tbody></table>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://git-scm.com/docs/git-checkout">https://git-scm.com/docs/git-checkout</a><br>[2] <a href="https://public-inbox.org/git/xmqqy2zszuz7.fsf@gitster-ct.c.googlers.com/">https://public-inbox.org/git/xmqqy2zszuz7.fsf@gitster-ct.c.googlers.com/</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git 跳过 SSL 验证</title>
+    <url>/2019/08/git-skip-ssl-verify/</url>
+    <content><![CDATA[<p>有时，我们在克隆代码或者拉取代码时想要跳过 SSL 验证（至于为什么有这么奇葩的需求就不多说了，自行体会），git 提供了多种方式可供用户选择。</p>
+<p>首先，我们看来看看克隆代码时如何跳过 SSL 验证。如下，我们可以使用 <code>GIT_NO_SSL_VERIFY</code> 环境变量来设置是否采用 SSL 验证。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> GIT_SSL_NO_VERIFY=<span class="literal">true</span> git <span class="built_in">clone</span> https://github.com/xxx/xxx</span></span><br></pre></td></tr></table></figure>
+
+<p>如果是仓库已经采用 SSL 验证克隆下来，但是在随后的拉取过程中想要取消 SSL 验证，我们可以通过修改配置来完成，例如：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
+
+<p>如果您想后续的仓库都跳过 SSL 验证，可以设置全局的 <code>http.sslVerify</code>，如下所示：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config --global http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
         <category>杂项</category>
@@ -1488,6 +1488,42 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>Go 语言实战</title>
+    <url>/2021/05/go-in-action/</url>
+    <content><![CDATA[<p>最近由于需要从事 Go 语言相关的工作，为此花了约一个星期的时间将《Go 语言实战》这本书过了一遍，对 Go 语言有了一个基本的认识。这本书短小精悍，全书 200 多页，详细介绍了 Go 语言的数组、切片的底层原理，Go 语言的类型系统、并发、通道以及测试。当然部分内容也没有深入的讲解，如映射，其底层的实现介绍的不是很充分。《Go 语言实战》这本书适合有一定语言编程经验的读者。</p>
+<a id="more"></a>
+
+<ol>
+<li><p>之前只是知道在 <code>import</code> 包的时候可以使用 <code>_</code> 来避免对于没有使用的包产生的编译时错误。但其实它还能做其他的处理，调用包提供的 <code>init()</code> 函数进行初始化动作。所有的 <code>init()</code> 函数都在 <code>main()</code> 函数之前执行。</p>
+</li>
+<li><p>深入理解了数组和切片之间的关系。切片的底层依然是数组，但是在 Go 语言中数组的大小是不变的，但切片就相对灵活多了，我们可以将切片看作是 <code>(pointer, length, capacity)</code> 的三元组，其中 <code>pointer</code> 指向了底层数组的位置（当前切片在数组中的位置），<code>length</code> 则是当前切片中元素的个数，<code>capacity</code> 是切片的容量。我们可以在同一个数组上创建多个切片，但是要注意多个切片之前的操作可能导致数据错乱。例如：</p>
+ <figure class="highlight go"><table><tr><td class="code"><pre><span class="line">arr := []<span class="keyword">int</span>&#123;<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>&#125;</span><br><span class="line">arr1 := arr[:<span class="number">4</span>]</span><br><span class="line">arr2 := arr[<span class="number">2</span>:]</span><br></pre></td></tr></table></figure>
+
+<p> 当我们修改 <code>arr2[0]</code> 的时候，<code>arr1[2]</code> 的值也会相应的改变，这是因为他们底层共享同一个数组。切片在传递参数的时候要比数组的效率高很多。</p>
+</li>
+<li><p>Go 语言通过接口来实现多态。</p>
+</li>
+<li><p>嵌入类型，这里涉及到嵌入类型方法的提升以及公开和未公开属性的相关内容。</p>
+ <figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> entities</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> user <span class="keyword">struct</span> &#123;</span><br><span class="line">    Name  <span class="keyword">string</span></span><br><span class="line">	Email <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Admin <span class="keyword">struct</span> &#123;</span><br><span class="line">    user            <span class="comment">// 这是一个嵌入类型</span></span><br><span class="line">	Level <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">-----------------------------</span><br><span class="line"></span><br><span class="line"><span class="keyword">package</span> main</span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;path/to/user/entities&quot;</span></span><br><span class="line">)</span><br><span class="line">a := entities.Admin&#123;</span><br><span class="line">    Level: <span class="string">&quot;0&quot;</span>,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 设置未公开的内部类型的公开字段的值</span></span><br><span class="line">a.Name = <span class="string">&quot;Bill&quot;</span></span><br><span class="line">a.Email = <span class="string">&quot;bill@example.com&quot;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>测试。测试部分包含单元测试、表组测试、模仿调用、测试服务端点。这些都给出来示例，指导我们如何编写可测试的代码。我们还可以通过 <code>godoc</code> 来为我们的包提供文档。后续还需要深入了解 <code>go test</code> 相关的功能。</p>
+</li>
+</ol>
+<p>整本书的内容蛮多的，关于并发和并发模式，这部分只做了大概的了解，还没有深入的理解，尤其是第 7 章并发模式。</p>
+<div class="just-for-fun">
+笑林广记 - 先后
+
+<p>有人剃头于铺，其人剃发极草率，既毕，特倍与之钱而行。<br>异日复往，其人竭力为主剃发，加倍工夫，事事周到，既已，乃少给其资。<br>其人不服曰：“前次剃头草率，尚蒙厚赐，此番格外用心，何可如此？”<br>此人谓曰：“今之资，前已给过。今日所给乃前次之资也。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>Go</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hello World</title>
     <url>/2018/08/hello-world/</url>
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
@@ -1524,6 +1560,50 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>Emacs</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Eclipse 导入证书文件</title>
+    <url>/2019/01/import-certificate-into-eclipse/</url>
+    <content><![CDATA[<p>现在越来越多的网站采用 HTTPS 协议，今天就遇到一个关于 HTTPS 证书的问题，服务器端采用 HTTPS 加密传输，而证书是使用的自签名证书，因此客户端开发时需要将其导入到 Eclipse 中才能通过验证（客户端采用 Java 开发）。Eclipse 采用 keystore 来管理证书，可以利用工具 <code>keytool</code> 来管理证书文件，本文主要记录 Eclipse 证书管理的基本使用，以及使用自签名证书的格式问题。</p>
+<a id="more"></a>
+
+<h3 id="导入-SSL-证书"><a href="#导入-SSL-证书" class="headerlink" title="导入 SSL 证书"></a>导入 SSL 证书</h3><p>我登陆到服务器取下了服务端使用的 SSL 证书（一个名为 ssl.pem 的文件），随后通过 <code>keytool</code> 将其导入到 Eclipse 中，命令如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ keytool -import -alias &lt;provide_an_alias&gt; -file &lt;certificate_file&gt; -keysotre &lt;your_path_to_jre&gt;&#x2F;lib&#x2F;security&#x2F;cacerts</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> <code>&lt; &gt;</code> 中的内容需要根据实际情况填写。</p>
+<p>然而我执行时出现了如下错误：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">keytool error: java.lang.Exception: Input not an X.509 certificate</span><br><span class="line">java.lang.Exception: Input not an X.509 certificate</span><br><span class="line">        at sun.security.tools.KeyTool.addTrustedCert(KeyTool.java:1913)</span><br><span class="line">        at sun.security.tools.KeyTool.doCommands(KeyTool.java:818)</span><br><span class="line">        at sun.security.tools.KeyTool.run(KeyTool.java:172)</span><br><span class="line">        at sun.security.tools.KeyTool.main(KeyTool.java:166)</span><br></pre></td></tr></table></figure>
+
+<h3 id="证书格式转换"><a href="#证书格式转换" class="headerlink" title="证书格式转换"></a>证书格式转换</h3><p>从上面的错误结果可以看到证书格式不是标准的 X.509 格式，于是我查看了一下 ssl.pem 文件的内容，其格式如下:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">-----BEGIN PRIVATE KEY-----</span><br><span class="line">BASE64 ENCODING INFORMATION</span><br><span class="line">-----END PRIVATE KEY-----</span><br><span class="line">-----BEGIN CERTIFICATE-----</span><br><span class="line">BASE64 ENCODING INFORMATION</span><br><span class="line">-----END CERTIFICATE-----</span><br></pre></td></tr></table></figure>
+
+<p>这与 X.509 的证书格式不同，因此出现上述问题。X.509 证书的格式如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">-----BEGIN CERTIFICATE-----</span><br><span class="line">BASE64 ENCODING CERTIFICATE INFORMATION</span><br><span class="line">-----END CERTIFICATE-----</span><br></pre></td></tr></table></figure>
+
+<p>因此，我们需要将 ssl.pem 格式的证书转换为 X.509 格式，我们利用 openssl 来实现，其命令如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ openssl x509 -in ssl.pem -text</span><br></pre></td></tr></table></figure>
+
+<p>此外，我们可以直接将 ssl.pem 文件中的 <code>-----BEGIN CERTIFICATE-----</code> 到 <code>-----END CERTIFICATE-----</code> 之间的内容拷贝出来即可。</p>
+<p>现在我们再次使用 <code>keytool -import</code> 命令导入证书即可。</p>
+<p><strong>备注：</strong></p>
+<ol>
+<li>当 <code>keytool</code> 提示输入密码时，请输入：<code>changeit</code>。这应该是默认的。</li>
+<li>当 <code>keytool</code> 询问是否信任该证书时，请输入：<code>yes</code>。默认为 <code>on</code>。</li>
+</ol>
+<h3 id="删除证书"><a href="#删除证书" class="headerlink" title="删除证书"></a>删除证书</h3><p>当我们不再需要这个自签名证书时，可以通过如下命令将其从 keystore 中删除。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ keytool -delete -alias &lt;cert_alias&gt; -keystore &lt;your_path_to_jre&gt;&#x2F;lib&#x2F;security&#x2F;cacerts</span><br></pre></td></tr></table></figure>
+
+<p>我们也可以使用下面的命令查看 keystore 中证书的详细信息。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ keytool -list -v -keystore &lt;your_path_to_jre&gt;&#x2F;lib&#x2F;security&#x2F;cacerts</span><br></pre></td></tr></table></figure>
+
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://stackoverflow.com/questions/684081/importing-ssl-certificate-into-eclipse">Importing SSL certificate into eclipse</a><br>[2] <a href="https://stackoverflow.com/questions/9889669/error-importing-ssl-certificate-not-an-x-509-certificate">Error importing SSL certificate not an X509 certificate</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Eclipse</tag>
       </tags>
   </entry>
   <entry>
@@ -1603,86 +1683,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Eclipse 导入证书文件</title>
-    <url>/2019/01/import-certificate-into-eclipse/</url>
-    <content><![CDATA[<p>现在越来越多的网站采用 HTTPS 协议，今天就遇到一个关于 HTTPS 证书的问题，服务器端采用 HTTPS 加密传输，而证书是使用的自签名证书，因此客户端开发时需要将其导入到 Eclipse 中才能通过验证（客户端采用 Java 开发）。Eclipse 采用 keystore 来管理证书，可以利用工具 <code>keytool</code> 来管理证书文件，本文主要记录 Eclipse 证书管理的基本使用，以及使用自签名证书的格式问题。</p>
-<a id="more"></a>
-
-<h3 id="导入-SSL-证书"><a href="#导入-SSL-证书" class="headerlink" title="导入 SSL 证书"></a>导入 SSL 证书</h3><p>我登陆到服务器取下了服务端使用的 SSL 证书（一个名为 ssl.pem 的文件），随后通过 <code>keytool</code> 将其导入到 Eclipse 中，命令如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ keytool -import -alias &lt;provide_an_alias&gt; -file &lt;certificate_file&gt; -keysotre &lt;your_path_to_jre&gt;&#x2F;lib&#x2F;security&#x2F;cacerts</span><br></pre></td></tr></table></figure>
-
-<p><strong>备注：</strong> <code>&lt; &gt;</code> 中的内容需要根据实际情况填写。</p>
-<p>然而我执行时出现了如下错误：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">keytool error: java.lang.Exception: Input not an X.509 certificate</span><br><span class="line">java.lang.Exception: Input not an X.509 certificate</span><br><span class="line">        at sun.security.tools.KeyTool.addTrustedCert(KeyTool.java:1913)</span><br><span class="line">        at sun.security.tools.KeyTool.doCommands(KeyTool.java:818)</span><br><span class="line">        at sun.security.tools.KeyTool.run(KeyTool.java:172)</span><br><span class="line">        at sun.security.tools.KeyTool.main(KeyTool.java:166)</span><br></pre></td></tr></table></figure>
-
-<h3 id="证书格式转换"><a href="#证书格式转换" class="headerlink" title="证书格式转换"></a>证书格式转换</h3><p>从上面的错误结果可以看到证书格式不是标准的 X.509 格式，于是我查看了一下 ssl.pem 文件的内容，其格式如下:</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">-----BEGIN PRIVATE KEY-----</span><br><span class="line">BASE64 ENCODING INFORMATION</span><br><span class="line">-----END PRIVATE KEY-----</span><br><span class="line">-----BEGIN CERTIFICATE-----</span><br><span class="line">BASE64 ENCODING INFORMATION</span><br><span class="line">-----END CERTIFICATE-----</span><br></pre></td></tr></table></figure>
-
-<p>这与 X.509 的证书格式不同，因此出现上述问题。X.509 证书的格式如下所示：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">-----BEGIN CERTIFICATE-----</span><br><span class="line">BASE64 ENCODING CERTIFICATE INFORMATION</span><br><span class="line">-----END CERTIFICATE-----</span><br></pre></td></tr></table></figure>
-
-<p>因此，我们需要将 ssl.pem 格式的证书转换为 X.509 格式，我们利用 openssl 来实现，其命令如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ openssl x509 -in ssl.pem -text</span><br></pre></td></tr></table></figure>
-
-<p>此外，我们可以直接将 ssl.pem 文件中的 <code>-----BEGIN CERTIFICATE-----</code> 到 <code>-----END CERTIFICATE-----</code> 之间的内容拷贝出来即可。</p>
-<p>现在我们再次使用 <code>keytool -import</code> 命令导入证书即可。</p>
-<p><strong>备注：</strong></p>
-<ol>
-<li>当 <code>keytool</code> 提示输入密码时，请输入：<code>changeit</code>。这应该是默认的。</li>
-<li>当 <code>keytool</code> 询问是否信任该证书时，请输入：<code>yes</code>。默认为 <code>on</code>。</li>
-</ol>
-<h3 id="删除证书"><a href="#删除证书" class="headerlink" title="删除证书"></a>删除证书</h3><p>当我们不再需要这个自签名证书时，可以通过如下命令将其从 keystore 中删除。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ keytool -delete -alias &lt;cert_alias&gt; -keystore &lt;your_path_to_jre&gt;&#x2F;lib&#x2F;security&#x2F;cacerts</span><br></pre></td></tr></table></figure>
-
-<p>我们也可以使用下面的命令查看 keystore 中证书的详细信息。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ keytool -list -v -keystore &lt;your_path_to_jre&gt;&#x2F;lib&#x2F;security&#x2F;cacerts</span><br></pre></td></tr></table></figure>
-
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://stackoverflow.com/questions/684081/importing-ssl-certificate-into-eclipse">Importing SSL certificate into eclipse</a><br>[2] <a href="https://stackoverflow.com/questions/9889669/error-importing-ssl-certificate-not-an-x-509-certificate">Error importing SSL certificate not an X509 certificate</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Eclipse</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Go 语言实战</title>
-    <url>/2021/05/go-in-action/</url>
-    <content><![CDATA[<p>最近由于需要从事 Go 语言相关的工作，为此花了约一个星期的时间将《Go 语言实战》这本书过了一遍，对 Go 语言有了一个基本的认识。这本书短小精悍，全书 200 多页，详细介绍了 Go 语言的数组、切片的底层原理，Go 语言的类型系统、并发、通道以及测试。当然部分内容也没有深入的讲解，如映射，其底层的实现介绍的不是很充分。《Go 语言实战》这本书适合有一定语言编程经验的读者。</p>
-<a id="more"></a>
-
-<ol>
-<li><p>之前只是知道在 <code>import</code> 包的时候可以使用 <code>_</code> 来避免对于没有使用的包产生的编译时错误。但其实它还能做其他的处理，调用包提供的 <code>init()</code> 函数进行初始化动作。所有的 <code>init()</code> 函数都在 <code>main()</code> 函数之前执行。</p>
-</li>
-<li><p>深入理解了数组和切片之间的关系。切片的底层依然是数组，但是在 Go 语言中数组的大小是不变的，但切片就相对灵活多了，我们可以将切片看作是 <code>(pointer, length, capacity)</code> 的三元组，其中 <code>pointer</code> 指向了底层数组的位置（当前切片在数组中的位置），<code>length</code> 则是当前切片中元素的个数，<code>capacity</code> 是切片的容量。我们可以在同一个数组上创建多个切片，但是要注意多个切片之前的操作可能导致数据错乱。例如：</p>
- <figure class="highlight go"><table><tr><td class="code"><pre><span class="line">arr := []<span class="keyword">int</span>&#123;<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>&#125;</span><br><span class="line">arr1 := arr[:<span class="number">4</span>]</span><br><span class="line">arr2 := arr[<span class="number">2</span>:]</span><br></pre></td></tr></table></figure>
-
-<p> 当我们修改 <code>arr2[0]</code> 的时候，<code>arr1[2]</code> 的值也会相应的改变，这是因为他们底层共享同一个数组。切片在传递参数的时候要比数组的效率高很多。</p>
-</li>
-<li><p>Go 语言通过接口来实现多态。</p>
-</li>
-<li><p>嵌入类型，这里涉及到嵌入类型方法的提升以及公开和未公开属性的相关内容。</p>
- <figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> entities</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> user <span class="keyword">struct</span> &#123;</span><br><span class="line">    Name  <span class="keyword">string</span></span><br><span class="line">	Email <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Admin <span class="keyword">struct</span> &#123;</span><br><span class="line">    user            <span class="comment">// 这是一个嵌入类型</span></span><br><span class="line">	Level <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">-----------------------------</span><br><span class="line"></span><br><span class="line"><span class="keyword">package</span> main</span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;path/to/user/entities&quot;</span></span><br><span class="line">)</span><br><span class="line">a := entities.Admin&#123;</span><br><span class="line">    Level: <span class="string">&quot;0&quot;</span>,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 设置未公开的内部类型的公开字段的值</span></span><br><span class="line">a.Name = <span class="string">&quot;Bill&quot;</span></span><br><span class="line">a.Email = <span class="string">&quot;bill@example.com&quot;</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>测试。测试部分包含单元测试、表组测试、模仿调用、测试服务端点。这些都给出来示例，指导我们如何编写可测试的代码。我们还可以通过 <code>godoc</code> 来为我们的包提供文档。后续还需要深入了解 <code>go test</code> 相关的功能。</p>
-</li>
-</ol>
-<p>整本书的内容蛮多的，关于并发和并发模式，这部分只做了大概的了解，还没有深入的理解，尤其是第 7 章并发模式。</p>
-<div class="just-for-fun">
-笑林广记 - 先后
-
-<p>有人剃头于铺，其人剃发极草率，既毕，特倍与之钱而行。<br>异日复往，其人竭力为主剃发，加倍工夫，事事周到，既已，乃少给其资。<br>其人不服曰：“前次剃头草率，尚蒙厚赐，此番格外用心，何可如此？”<br>此人谓曰：“今之资，前已给过。今日所给乃前次之资也。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>Go</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>LaTeX 页码设置</title>
     <url>/2019/03/latex-page-numbering/</url>
     <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
@@ -1712,6 +1712,57 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>LaTeX</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>小米路由器刷 Breed 和 Padavan 固件</title>
+    <url>/2020/07/miwifi-breed-padavan/</url>
+    <content><![CDATA[<p>本文主要记录一下小米路由器 3G 刷 breed 和 padavan 的过程。</p>
+<ul>
+<li><a href="https://openwrt.org/docs/techref/bootloader/breed">Breed</a> 是嵌入式设备的引导和恢复环境的简称。</li>
+<li>Padavan 是由俄罗斯人基于华硕源码开发的针对 mtk 芯片的固件。</li>
+</ul>
+<p>我将整个过程分为分为 5 个步骤，更新 ROM、开启 SSH、备份路由器、刷 breed、刷 padavan。</p>
+<a id="more"></a>
+
+<h2 id="更新路由器-ROM"><a href="#更新路由器-ROM" class="headerlink" title="更新路由器 ROM"></a>更新路由器 ROM</h2><p>首先，我们需要将小米路由器的 ROM 更新为开发版，在小米的 <a href="http://miwifi.com/miwifi_download.html">miwifi 下载页面</a>找到路由器对应的开发版 ROM（<a href="http://bigota.miwifi.com/xiaoqiang/rom/r3g/miwifi_r3g_firmware_12f97_2.25.124.bin">R3G ROM 开发版</a>）。</p>
+<p>ROM 的升级有两种方式：</p>
+<ol>
+<li><p>登陆路由器后台在线升级，我采用的这种方式，简单快捷。</p>
+</li>
+<li><p>如果不行的话，可以将其拷贝到 U 盘根目录，并命名为 miwifi.bin。<strong>随后断开电源，插上 U 盘，并按住 reset 按钮后插入电源，等到指示灯变为黄色闪烁状态后松开 reset 键，之后路由器将更新 ROM 并重启进入正常状态（指示灯变为蓝色常亮）。</strong></p>
+</li>
+</ol>
+<h2 id="开启-SSH"><a href="#开启-SSH" class="headerlink" title="开启 SSH"></a>开启 SSH</h2><p>接下来，我们开启路由器的 ssh 功能，在 <a href="http://miwifi.com/miwifi_open.html">miwifi 开放</a> 找到__开启 SSH 工具__下载 miwifi_ssh.bin，这里需要使用小米账号对路由器进行绑定，绑定了之后小米会给出一个 root 用户的密码。</p>
+<p>接着将下载的 miwifi_ssh.bin 拷贝到 U 盘根目录（__名称必须为 miwifi_ssh.bin__），如果之前是用 U 盘升级的 ROM，建议将 miwifi.bin 删除。</p>
+<p>最后，将路由器断电，插上 U 盘，并按住 reset 按钮后插入电源，等到指示灯变为黄色闪烁状态后松开 reset 键，待蓝灯亮起时表示 ssh 开启完成。我们便可以使用 <code>ssh root@192.168.1.1</code> 登陆路由器了。</p>
+<h2 id="备份路由器"><a href="#备份路由器" class="headerlink" title="备份路由器"></a>备份路由器</h2><p>这个步骤我其实是没有做的，一开始我是按照<a href="https://blog.csdn.net/z619193774/article/details/81507917">参考文献 [1]</a> 来做的，现在想想还是挺后怕的，这就是所谓的无知者无谓吧！登陆路由器后，我们使用下面的命令对路由器进行备份。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> ls /dev/sd*</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> mount /dev/sda1 /mnt <span class="comment"># 找到属于你的 U 盘</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="keyword">for</span> name <span class="keyword">in</span> $(grep -v <span class="string">&#x27;dev&#x27;</span> /proc/mtd | awk -F <span class="string">&#x27;:&#x27;</span> <span class="string">&#x27;&#123;print $1&#125;&#x27;</span>); <span class="keyword">do</span> dd <span class="keyword">if</span>=/dev/<span class="variable">$name</span> of=/mnt/<span class="variable">$name</span>.bin; <span class="keyword">done</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="刷-Breed"><a href="#刷-Breed" class="headerlink" title="刷 Breed"></a>刷 Breed</h2><p>在 <a href="https://breed.hackpascal.net/">Breed</a> 网址上找到对应的版本，小米路由器 R3G 对应的 breed 为 <a href="https://breed.hackpascal.net/breed-mt7621-xiaomi-r3g.bin">breed-mt7621-xiaomi-r3g.bin</a>。然后将其通过 <code>scp</code> 拷贝到路由器上。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> scp breed-mt7621-xiaomi-r3g.bin root@192.168.1.1:/tmp/</span></span><br></pre></td></tr></table></figure>
+
+<p>随后登陆到小米路由器，执行下面的命令刷入 breed：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> mtd -r write /tmp/breed-mt7621-xiaomi-r3g.bin Bootloader</span></span><br></pre></td></tr></table></figure>
+
+<p>刷入成功后，路由器将会重启，等到重启完成之后，拔掉电源，按住 reset 按钮，插电开机，等到路由器蓝灯闪烁时，在浏览器中输入 192.168.1.1，就可以进入 breed 的控制台了。</p>
+<p>在 breed 控制台中，选择__固件备份__，备份 EEPRO 和编程固件，这样我们可以在之后刷回原来的系统。</p>
+<h2 id="刷-Padavan-固件"><a href="#刷-Padavan-固件" class="headerlink" title="刷 Padavan 固件"></a>刷 Padavan 固件</h2><p>在 <a href="http://opt.cn2qq.com/padavan/">Padavan</a> 下载页面下载小米路由器 R3G 版本 <a href="http://opt.cn2qq.com/padavan/MI-R3G_3.4.3.9-099.trx">MI-R3G_3.4.3.9-099.trx</a>。登陆 breed，在__固件更新__中选择__固件__，随后浏览本地文件选择我们下载的 MI-R3G_3.4.3.9-099.trx 文件，点击上传，上传成功之后将自动更新固件，最后完成之后，我们可以通过访问 192.168.123.1 来登陆 padavan，用户名和密码默均为 <code>admin</code>，初始化的 wifi 名称为 <code>PCDN</code> 和 <code>PCDN_5G</code>，密码为 <code>1234567890</code>。</p>
+<img src="/2020/07/miwifi-breed-padavan/padavan.jpg" class="" title="Padavan 管理界面">
+
+<h2 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h2><ul>
+<li>在上文中使用的 U 盘需为 FAT/FTA32 格式化的。</li>
+<li>可能需要使用网线连接路由器进行配置。</li>
+</ul>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>[1] <a href="https://blog.csdn.net/z619193774/article/details/81507917">https://blog.csdn.net/z619193774/article/details/81507917</a><br>[2] <a href="https://schaepher.github.io/2019/10/12/xiaomi-router-r3-openwrt/">https://schaepher.github.io/2019/10/12/xiaomi-router-r3-openwrt/</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>R3G</tag>
+        <tag>breed</tag>
+        <tag>padavan</tag>
       </tags>
   </entry>
   <entry>
@@ -1765,57 +1816,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>小米路由器刷 Breed 和 Padavan 固件</title>
-    <url>/2020/07/miwifi-breed-padavan/</url>
-    <content><![CDATA[<p>本文主要记录一下小米路由器 3G 刷 breed 和 padavan 的过程。</p>
-<ul>
-<li><a href="https://openwrt.org/docs/techref/bootloader/breed">Breed</a> 是嵌入式设备的引导和恢复环境的简称。</li>
-<li>Padavan 是由俄罗斯人基于华硕源码开发的针对 mtk 芯片的固件。</li>
-</ul>
-<p>我将整个过程分为分为 5 个步骤，更新 ROM、开启 SSH、备份路由器、刷 breed、刷 padavan。</p>
-<a id="more"></a>
-
-<h2 id="更新路由器-ROM"><a href="#更新路由器-ROM" class="headerlink" title="更新路由器 ROM"></a>更新路由器 ROM</h2><p>首先，我们需要将小米路由器的 ROM 更新为开发版，在小米的 <a href="http://miwifi.com/miwifi_download.html">miwifi 下载页面</a>找到路由器对应的开发版 ROM（<a href="http://bigota.miwifi.com/xiaoqiang/rom/r3g/miwifi_r3g_firmware_12f97_2.25.124.bin">R3G ROM 开发版</a>）。</p>
-<p>ROM 的升级有两种方式：</p>
-<ol>
-<li><p>登陆路由器后台在线升级，我采用的这种方式，简单快捷。</p>
-</li>
-<li><p>如果不行的话，可以将其拷贝到 U 盘根目录，并命名为 miwifi.bin。<strong>随后断开电源，插上 U 盘，并按住 reset 按钮后插入电源，等到指示灯变为黄色闪烁状态后松开 reset 键，之后路由器将更新 ROM 并重启进入正常状态（指示灯变为蓝色常亮）。</strong></p>
-</li>
-</ol>
-<h2 id="开启-SSH"><a href="#开启-SSH" class="headerlink" title="开启 SSH"></a>开启 SSH</h2><p>接下来，我们开启路由器的 ssh 功能，在 <a href="http://miwifi.com/miwifi_open.html">miwifi 开放</a> 找到__开启 SSH 工具__下载 miwifi_ssh.bin，这里需要使用小米账号对路由器进行绑定，绑定了之后小米会给出一个 root 用户的密码。</p>
-<p>接着将下载的 miwifi_ssh.bin 拷贝到 U 盘根目录（__名称必须为 miwifi_ssh.bin__），如果之前是用 U 盘升级的 ROM，建议将 miwifi.bin 删除。</p>
-<p>最后，将路由器断电，插上 U 盘，并按住 reset 按钮后插入电源，等到指示灯变为黄色闪烁状态后松开 reset 键，待蓝灯亮起时表示 ssh 开启完成。我们便可以使用 <code>ssh root@192.168.1.1</code> 登陆路由器了。</p>
-<h2 id="备份路由器"><a href="#备份路由器" class="headerlink" title="备份路由器"></a>备份路由器</h2><p>这个步骤我其实是没有做的，一开始我是按照<a href="https://blog.csdn.net/z619193774/article/details/81507917">参考文献 [1]</a> 来做的，现在想想还是挺后怕的，这就是所谓的无知者无谓吧！登陆路由器后，我们使用下面的命令对路由器进行备份。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> ls /dev/sd*</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> mount /dev/sda1 /mnt <span class="comment"># 找到属于你的 U 盘</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="keyword">for</span> name <span class="keyword">in</span> $(grep -v <span class="string">&#x27;dev&#x27;</span> /proc/mtd | awk -F <span class="string">&#x27;:&#x27;</span> <span class="string">&#x27;&#123;print $1&#125;&#x27;</span>); <span class="keyword">do</span> dd <span class="keyword">if</span>=/dev/<span class="variable">$name</span> of=/mnt/<span class="variable">$name</span>.bin; <span class="keyword">done</span></span></span><br></pre></td></tr></table></figure>
-
-<h2 id="刷-Breed"><a href="#刷-Breed" class="headerlink" title="刷 Breed"></a>刷 Breed</h2><p>在 <a href="https://breed.hackpascal.net/">Breed</a> 网址上找到对应的版本，小米路由器 R3G 对应的 breed 为 <a href="https://breed.hackpascal.net/breed-mt7621-xiaomi-r3g.bin">breed-mt7621-xiaomi-r3g.bin</a>。然后将其通过 <code>scp</code> 拷贝到路由器上。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> scp breed-mt7621-xiaomi-r3g.bin root@192.168.1.1:/tmp/</span></span><br></pre></td></tr></table></figure>
-
-<p>随后登陆到小米路由器，执行下面的命令刷入 breed：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> mtd -r write /tmp/breed-mt7621-xiaomi-r3g.bin Bootloader</span></span><br></pre></td></tr></table></figure>
-
-<p>刷入成功后，路由器将会重启，等到重启完成之后，拔掉电源，按住 reset 按钮，插电开机，等到路由器蓝灯闪烁时，在浏览器中输入 192.168.1.1，就可以进入 breed 的控制台了。</p>
-<p>在 breed 控制台中，选择__固件备份__，备份 EEPRO 和编程固件，这样我们可以在之后刷回原来的系统。</p>
-<h2 id="刷-Padavan-固件"><a href="#刷-Padavan-固件" class="headerlink" title="刷 Padavan 固件"></a>刷 Padavan 固件</h2><p>在 <a href="http://opt.cn2qq.com/padavan/">Padavan</a> 下载页面下载小米路由器 R3G 版本 <a href="http://opt.cn2qq.com/padavan/MI-R3G_3.4.3.9-099.trx">MI-R3G_3.4.3.9-099.trx</a>。登陆 breed，在__固件更新__中选择__固件__，随后浏览本地文件选择我们下载的 MI-R3G_3.4.3.9-099.trx 文件，点击上传，上传成功之后将自动更新固件，最后完成之后，我们可以通过访问 192.168.123.1 来登陆 padavan，用户名和密码默均为 <code>admin</code>，初始化的 wifi 名称为 <code>PCDN</code> 和 <code>PCDN_5G</code>，密码为 <code>1234567890</code>。</p>
-<img src="/2020/07/miwifi-breed-padavan/padavan.jpg" class="" title="Padavan 管理界面">
-
-<h2 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h2><ul>
-<li>在上文中使用的 U 盘需为 FAT/FTA32 格式化的。</li>
-<li>可能需要使用网线连接路由器进行配置。</li>
-</ul>
-<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><p>[1] <a href="https://blog.csdn.net/z619193774/article/details/81507917">https://blog.csdn.net/z619193774/article/details/81507917</a><br>[2] <a href="https://schaepher.github.io/2019/10/12/xiaomi-router-r3-openwrt/">https://schaepher.github.io/2019/10/12/xiaomi-router-r3-openwrt/</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>R3G</tag>
-        <tag>breed</tag>
-        <tag>padavan</tag>
       </tags>
   </entry>
   <entry>
@@ -1924,6 +1924,53 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 13 - backtrace 功能预览</title>
+    <url>/2020/08/postgresql-backtrace/</url>
+    <content><![CDATA[<p>目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。</p>
+<img src="/2020/08/postgresql-backtrace/backtrace.png" class="" title="Backtrace 提交记录">
+
+<p>本文将对该功能进行简要介绍。</p>
+<a id="more"></a>
+
+<h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>PostgreSQL 13 数据库提供了一个参数 <code>backtrace_functions</code> 来控制堆栈信息的生成，该参数是包含C函数名称的逗号分隔列表。如果出现错误，并且该错误是由 <code>backtrace_functions</code> 中的 C 函数引发的，那么将会把堆栈信息记录到服务器日志文件中。这个选项可以方便我们调试特定区域的源代码。</p>
+<p>目前并非所有平台都支持 backtrace 功能，并且其堆栈信息的质量也取决于编译选项。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">SET backtrace_functions TO &#39;ProcessUtility,ExecutorStart&#39;;</span><br></pre></td></tr></table></figure>
+
+<p>该参数仅超级用户可以设置，它可以在 postgresql.conf 中进行全局设置，也可以针对某个会话进行设置。</p>
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>在这里我们通过创建一个不存在的类型来演示如何使用 backtrace 功能。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，我们输入的数据类型不存在，下面是服务器端的日志信息。总的来说信息是很有限的，我们无法得知更多的细节。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:03:35.857 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:03:35.857 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
+
+<p>现在我们来试试 backtrace 大法。首先我们可以通过搜索源码的方法确定当前错误是来自那个内部的 C 函数。这里我们确定它是由 <code>typenameType()</code> 函数抱出来的。那么我们可以按如下方式进行操作。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# SET backtrace_functions TO &#39;typenameType&#39;;</span><br><span class="line">SET</span><br><span class="line">postgres&#x3D;# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
+
+<p>虽然在用户看来并没有什么区别，但是服务器日志里面多出了一下内容：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:09:25.079 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] BACKTRACE:</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(typenameType+0xb9) [0x563456c5f509]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x1dcbbc) [0x563456c60bbc]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(transformCreateStmt+0x4da) [0x563456c6412a]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d88c8) [0x563456e5c8c8]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(standard_ProcessUtility+0x230) [0x563456e5b7e0]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5012) [0x563456e59012]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5a93) [0x563456e59a93]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PortalRun+0x161) [0x563456e5a611]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d2017) [0x563456e56017]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostgresMain+0x1ede) [0x563456e5842e]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x355cda) [0x563456dd9cda]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostmasterMain+0xeff) [0x563456ddadef]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(main+0x4a4) [0x563456b45e94]</span><br><span class="line">        &#x2F;lib&#x2F;x86_64-linux-gnu&#x2F;libc.so.6(__libc_start_main+0xe7) [0x7f5502994b97]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(_start+0x2a) [0x563456b45f5a]</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
+
+<p>从上面的 backtrace 可以看到整个流程是如何一步一步走到 <code>typenameType()</code> 函数的。Backtrace 的每一行都包含函数的名称，函数内的偏移位置，以及栈帧的返回地址。在某些栈帧上，函数名称并没有出现，取而代之的是一个地址，这些函数是静态函数，它们的名字不会被导出，不过我们也可能通过它们的地址来获取其对应的函数名称。例如，<code>typenameType()</code> 函数的上层函数只是一个地址，我们并不知道其对应的函数是什么，这时我们可以使用下面的命令来进行转换：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line 0x1dcbbc -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000001dcbbc</span><br><span class="line">transformColumnDefinition</span><br><span class="line">parse_utilcmd.c:?</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 <code>0x1dcbbc</code> 这个地址对应的是 <code>transformColumnDefinition()</code> 函数，它位于 <code>parse_utilcmd.c</code> 文件中。由于这里是采用的 <code>-O2</code> 优化，没能查看到更多的信息，如果我们使用 <code>-O0</code>，那么其查询的信息将更为丰富，如下所示：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line +0x2525e6 -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000002525e6</span><br><span class="line">transformColumnDefinition</span><br><span class="line">/home/japin/Codes/postgresql/Debug/../src/backend/parser/parse_utilcmd.c:568</span><br></pre></td></tr></table></figure>
+
+<p>上面两次查看的地址不一致是因为重新编译生成的文件不同导致的。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>现在我们对于 backtrace 的功能有了基本的了解，接下来我们来看看它是如何实现的。</p>
+<p>该功能是通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 这两个简单的函数来生成堆栈信息，<code>backtrace()</code> 函数仅返回所有栈帧的返回地址，接着调用 <code>backtrace_symbols()</code> 函数来将这些地址转换为描述这个函数的字符串，PostgreSQL backtrace功能的其核心代码主要集中在 <code>set_backtrace()</code> 函数中，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Compute backtrace data and add it to the supplied ErrorData.  num_skip</span></span><br><span class="line"><span class="comment"> * specifies how many inner frames to skip.  Use this to avoid showing the</span></span><br><span class="line"><span class="comment"> * internal backtrace support functions in the backtrace.  This requires that</span></span><br><span class="line"><span class="comment"> * this and related functions are not inlined.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span></span><br><span class="line">set_backtrace(ErrorData *edata, <span class="keyword">int</span> num_skip)</span><br><span class="line">&#123;</span><br><span class="line">	StringInfoData errtrace;</span><br><span class="line"></span><br><span class="line">	initStringInfo(&amp;errtrace);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> HAVE_BACKTRACE_SYMBOLS</span></span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">void</span>	   *buf[<span class="number">100</span>];</span><br><span class="line">		<span class="keyword">int</span>			nframes;</span><br><span class="line">		<span class="keyword">char</span>	  **strfrms;</span><br><span class="line"></span><br><span class="line">		nframes = backtrace(buf, lengthof(buf));</span><br><span class="line">		strfrms = backtrace_symbols(buf, nframes);</span><br><span class="line">		<span class="keyword">if</span> (strfrms == <span class="literal">NULL</span>)</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = num_skip; i &lt; nframes; i++)</span><br><span class="line">			appendStringInfo(&amp;errtrace, <span class="string">&quot;\n%s&quot;</span>, strfrms[i]);</span><br><span class="line">		<span class="built_in">free</span>(strfrms);</span><br><span class="line">	&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	appendStringInfoString(&amp;errtrace,</span><br><span class="line">						   <span class="string">&quot;backtrace generation is not supported by this installation&quot;</span>);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	edata-&gt;backtrace = errtrace.data;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>set_backtrace()</code> 函数通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 函数来获取堆栈信息，并将其添加到 <code>edata-&gt;backtrace</code> 字段中（方便后续处理），<code>num_skip</code> 参数指定了需要跳过的内部栈的数量，这是由于我们报错的地方实际上并不是 <code>set_backtrace()</code> 函数位置，而是在调用该函数的位置（可能是一层或多层），因此，我们需要定位到真实报错的地方，从这个地方开始输出堆栈信息。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html">https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html</a><br>[2] <a href="https://www.postgresql.org/docs/devel/runtime-config-developer.html">https://www.postgresql.org/docs/devel/runtime-config-developer.html</a><br>[3] <a href="https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190">https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 聚簇索引</title>
     <url>/2019/11/postgresql-cluster-index/</url>
     <content><![CDATA[<p>聚簇索引是按照数据存放的物理位置为顺序的，每个表仅有一个聚簇索引。</p>
@@ -2006,95 +2053,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>CTE</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 持续归档</title>
-    <url>/2018/10/postgresql-continuous-archiving/</url>
-    <content><![CDATA[<p>无论何时，PostgreSQL 总是在集群的数据目录 pg_wal 下面维护一个 <em>Write Ahead Log</em> 日志记录。该日志记录了数据文件的所有变化。当数据库系统发生崩溃时，数据库系统可以通过重放最新检查点之后的 WAL 日志条目来恢复数据库的一致性。在 PostgreSQL 中，我们通过将文件系统级的备份与 WAL 日志的备份相结合可以实现三种策略的数据库备份。当需要进行数据库恢复时，我们先恢复文件系统的备份，随后通过重放备份的 WAL 日志使得数据库进入到当前状态。尽管该方法过于复杂，但是它拥有以下好处：</p>
-<ul>
-<li>我们不需要完全一致的文件系统备份作为起点。备份中的任何内部不一致都将通过日志重放进行更正 (这与崩溃恢复期间发生的情况没有显着差异)。因此，我们不需要文件系统快照功能，只需要 tar 或类似的归档工具。</li>
-<li>没有必要一直重放 WAL 条目到最后。我们可以在任何时候停止重放并拥有当时数据库的一致快照。因此，该技术支持时间点恢复 (Point-in-Time Recovery, PITR)。为此，我们可以将数据库还原到自从进行基本备份以后的任何状态。</li>
-<li>如果我们持续地将一系列 WAL 日志文件提供给另一台已加载相同基本备份文件的计算机，此时，我们就拥有了一个热备系统：在任何时候我们都可以启动这台机器，它将拥有与原数据库几乎一致的状态。</li>
-</ul>
-<p>与普通文件系统备份技术一样，该方法只能支持恢复整个数据库集群，而不能用于恢复其子集。同时，它也需要更多的归档空间：基本的文件系统备份可能很庞大，繁忙的系统将生成许多必须归档的 WAL 流量。尽管如此，在多数情况下，它仍然是需要高可靠性的首选备份技术。</p>
-<p>我们需要一系列连续归档 WAL 日志文件，这些文件至少可以延伸到备份的开始时间，从而确保连续归档 (许多数据库供应商也称为“在线备份”) 成功恢复。</p>
-<a id="more"></a>
-
-<h2 id="WAL-日志归档"><a href="#WAL-日志归档" class="headerlink" title="WAL 日志归档"></a>WAL 日志归档</h2><p>从抽象的意义上说，PostgreSQL 数据库系统会产生无限长的 WAL 日志记录序列。PostgreSQL 数据库该序列划分 WAL 段文件，通常每个段文件为 16MB (在构建 PostgreSQL 时可以更改段大小)。段文件的数字名称反映了它们在抽象 WAL 序列中的位置。当不使用 WAL 归档时，PostgreSQL 通常只需要创建几个段文件，然后通过将不再需要的段文件重命名为更高的段号来“回收”它们。</p>
-<p>当使用 WAL 日志归档时，我们需要在每个段文件填充后捕获它们的内容，并在段文件被回收再利用之前将该数据保存在其他某处。PostgreSQL 允许管理员指定要执行的 shell 命令，以将已完成的段文件复制到需要的位置。该命令可以简单的 cp 命令，也可以是复杂的 shell 脚步，一切都取决于用户。</p>
-<p>我们需要设置三个选项以便启用 WAL 日志归档： wal_level，archive_mode 和 archive_command。</p>
-<p><strong>wal_level__ - 必须为 replica 或者更高的级别。<br>__archive_mode</strong> - 设置为 on。<br>__archive_command__ - 通常为归档命令，其中 <code>%p</code> 被替换为要归档的文件的路径名，<code>%f</code> 被替换为要归档的文件的文件名。如果需要在命令中嵌入实际的 <code>％</code> 字符，请使用 <code>%%</code>。</p>
-<p>接下来我们尝试配置 WAL 日志归档，首先进行相关的准备工作，编译 PostgreSQL 10.4，初始化数据库，建立归档日志存储路径 (本例旨在使用 WAL 日志归档，因此就在本地建立目录来存储备份的 WAL 日志，通常的做法时备份到其他主机)，</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ pwd</span><br><span class="line">&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4</span><br><span class="line">$ ls</span><br><span class="line">drwxr-xr-x  2 postgres postgres 4096 Oct 24 13:36 bin</span><br><span class="line">drwx------ 19 postgres postgres 4096 Oct 24 13:49 data</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 include</span><br><span class="line">drwxr-xr-x  4 postgres postgres 4096 Oct 24 13:36 lib</span><br><span class="line">-rw-rw-r--  1 postgres postgres  177 Oct 24 13:39 pg-env.sh</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 share</span><br><span class="line">$ cat pg-env.sh</span><br><span class="line">export PGHOME&#x3D;&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4</span><br><span class="line">export PGDATA&#x3D;&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;data</span><br><span class="line">export PATH&#x3D;$PGHOME&#x2F;bin:$PATH</span><br><span class="line">export LD_LIBRARY_PATH&#x3D;$PGHOME&#x2F;lib:$LD_LIBRARY_PATH</span><br><span class="line">$ mkdir wals            # 建立 WAL 日志备份目录</span><br><span class="line">$ . pg-env.sh           # 初始化环境变量</span><br><span class="line">$ initdb -D data        # 初始化数据库集群</span><br></pre></td></tr></table></figure>
-
-<p>接着修改 data/postgresql.conf 文件中的 wal_level，archive_mode 和 archive_command 参数。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">wal_level &#x3D; replica</span><br><span class="line">archive_mode &#x3D; on</span><br><span class="line">archive_command &#x3D; &#39;test ! -f &#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;wals&#x2F;%f &amp;&amp; cp %p &#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;wals&#x2F;%f&#39;</span><br></pre></td></tr></table></figure>
-
-<p>按照上述操作进行，我们目前已经配置好了 WAL 日志归档，接下来我们运行数据库并创建一个基本备份 (即文件系统级备份) 并保存在当前目录。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ pg_ctl -D data -l logfile start</span><br><span class="line">$ psql -c &quot;SELECT pg_start_backup(&#39;label&#39;);&quot; postgres</span><br><span class="line">$ tar -C data -czvf pg_basebackup_backup.tar.gz .</span><br><span class="line">$ psql -c &quot;SELECT pg_stop_backup();&quot; postgres</span><br></pre></td></tr></table></figure>
-
-<p>此时，我们创建好了数据库集群的基本备份，之后我们便可以通过该基本备份并结合 WAL 日志备份进行恢复。紧接着，我们对数据库做一些修改，并停止数据库然后删除 data 目录。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# create table test (id int, name varchar(10));</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres&#x3D;# insert into test values (1, &#39;postgres&#39;);</span><br><span class="line">INSERT 0 1</span><br><span class="line">postgres&#x3D;# select * from test ;</span><br><span class="line"> id |   name</span><br><span class="line"> ----+----------</span><br><span class="line">   1 | postgres</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# \q</span><br><span class="line">$ pg_ctl -D data -l logfile stop</span><br><span class="line">$ rm -rf data</span><br></pre></td></tr></table></figure>
-
-<p>下面将演示如何使用基础备份及 WAL 日志备份恢复数据库。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> initdb -D data1                    <span class="comment"># 重新初始化一个数据库集群</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar -C data1 -xvf pg_basebackup_backup.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> cat &lt;&lt;END &gt; data1/recovery.conf    <span class="comment"># 创建恢复脚步</span></span></span><br><span class="line">restore_command = &#x27;cp /home/postgres/postgresql-10.4/wals/%f %p&#x27;</span><br><span class="line">END</span><br><span class="line"><span class="meta">$</span><span class="bash"> pg_ctl -D data1 -l logfile start   <span class="comment"># 恢复</span></span></span><br></pre></td></tr></table></figure>
-
-<p>在恢复完成之后，PostgreSQL 将把 recovery.conf 文件重命名为 recovery.done。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/static/continuous-archiving.html">https://www.postgresql.org/docs/10/static/continuous-archiving.html</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 13 - backtrace 功能预览</title>
-    <url>/2020/08/postgresql-backtrace/</url>
-    <content><![CDATA[<p>目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。</p>
-<img src="/2020/08/postgresql-backtrace/backtrace.png" class="" title="Backtrace 提交记录">
-
-<p>本文将对该功能进行简要介绍。</p>
-<a id="more"></a>
-
-<h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>PostgreSQL 13 数据库提供了一个参数 <code>backtrace_functions</code> 来控制堆栈信息的生成，该参数是包含C函数名称的逗号分隔列表。如果出现错误，并且该错误是由 <code>backtrace_functions</code> 中的 C 函数引发的，那么将会把堆栈信息记录到服务器日志文件中。这个选项可以方便我们调试特定区域的源代码。</p>
-<p>目前并非所有平台都支持 backtrace 功能，并且其堆栈信息的质量也取决于编译选项。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">SET backtrace_functions TO &#39;ProcessUtility,ExecutorStart&#39;;</span><br></pre></td></tr></table></figure>
-
-<p>该参数仅超级用户可以设置，它可以在 postgresql.conf 中进行全局设置，也可以针对某个会话进行设置。</p>
-<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>在这里我们通过创建一个不存在的类型来演示如何使用 backtrace 功能。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到，我们输入的数据类型不存在，下面是服务器端的日志信息。总的来说信息是很有限的，我们无法得知更多的细节。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:03:35.857 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:03:35.857 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
-
-<p>现在我们来试试 backtrace 大法。首先我们可以通过搜索源码的方法确定当前错误是来自那个内部的 C 函数。这里我们确定它是由 <code>typenameType()</code> 函数抱出来的。那么我们可以按如下方式进行操作。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# SET backtrace_functions TO &#39;typenameType&#39;;</span><br><span class="line">SET</span><br><span class="line">postgres&#x3D;# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
-
-<p>虽然在用户看来并没有什么区别，但是服务器日志里面多出了一下内容：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:09:25.079 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] BACKTRACE:</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(typenameType+0xb9) [0x563456c5f509]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x1dcbbc) [0x563456c60bbc]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(transformCreateStmt+0x4da) [0x563456c6412a]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d88c8) [0x563456e5c8c8]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(standard_ProcessUtility+0x230) [0x563456e5b7e0]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5012) [0x563456e59012]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5a93) [0x563456e59a93]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PortalRun+0x161) [0x563456e5a611]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d2017) [0x563456e56017]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostgresMain+0x1ede) [0x563456e5842e]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x355cda) [0x563456dd9cda]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostmasterMain+0xeff) [0x563456ddadef]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(main+0x4a4) [0x563456b45e94]</span><br><span class="line">        &#x2F;lib&#x2F;x86_64-linux-gnu&#x2F;libc.so.6(__libc_start_main+0xe7) [0x7f5502994b97]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(_start+0x2a) [0x563456b45f5a]</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
-
-<p>从上面的 backtrace 可以看到整个流程是如何一步一步走到 <code>typenameType()</code> 函数的。Backtrace 的每一行都包含函数的名称，函数内的偏移位置，以及栈帧的返回地址。在某些栈帧上，函数名称并没有出现，取而代之的是一个地址，这些函数是静态函数，它们的名字不会被导出，不过我们也可能通过它们的地址来获取其对应的函数名称。例如，<code>typenameType()</code> 函数的上层函数只是一个地址，我们并不知道其对应的函数是什么，这时我们可以使用下面的命令来进行转换：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line 0x1dcbbc -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000001dcbbc</span><br><span class="line">transformColumnDefinition</span><br><span class="line">parse_utilcmd.c:?</span><br></pre></td></tr></table></figure>
-
-<p>可以看到 <code>0x1dcbbc</code> 这个地址对应的是 <code>transformColumnDefinition()</code> 函数，它位于 <code>parse_utilcmd.c</code> 文件中。由于这里是采用的 <code>-O2</code> 优化，没能查看到更多的信息，如果我们使用 <code>-O0</code>，那么其查询的信息将更为丰富，如下所示：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line +0x2525e6 -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000002525e6</span><br><span class="line">transformColumnDefinition</span><br><span class="line">/home/japin/Codes/postgresql/Debug/../src/backend/parser/parse_utilcmd.c:568</span><br></pre></td></tr></table></figure>
-
-<p>上面两次查看的地址不一致是因为重新编译生成的文件不同导致的。</p>
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>现在我们对于 backtrace 的功能有了基本的了解，接下来我们来看看它是如何实现的。</p>
-<p>该功能是通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 这两个简单的函数来生成堆栈信息，<code>backtrace()</code> 函数仅返回所有栈帧的返回地址，接着调用 <code>backtrace_symbols()</code> 函数来将这些地址转换为描述这个函数的字符串，PostgreSQL backtrace功能的其核心代码主要集中在 <code>set_backtrace()</code> 函数中，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Compute backtrace data and add it to the supplied ErrorData.  num_skip</span></span><br><span class="line"><span class="comment"> * specifies how many inner frames to skip.  Use this to avoid showing the</span></span><br><span class="line"><span class="comment"> * internal backtrace support functions in the backtrace.  This requires that</span></span><br><span class="line"><span class="comment"> * this and related functions are not inlined.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span></span><br><span class="line">set_backtrace(ErrorData *edata, <span class="keyword">int</span> num_skip)</span><br><span class="line">&#123;</span><br><span class="line">	StringInfoData errtrace;</span><br><span class="line"></span><br><span class="line">	initStringInfo(&amp;errtrace);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> HAVE_BACKTRACE_SYMBOLS</span></span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">void</span>	   *buf[<span class="number">100</span>];</span><br><span class="line">		<span class="keyword">int</span>			nframes;</span><br><span class="line">		<span class="keyword">char</span>	  **strfrms;</span><br><span class="line"></span><br><span class="line">		nframes = backtrace(buf, lengthof(buf));</span><br><span class="line">		strfrms = backtrace_symbols(buf, nframes);</span><br><span class="line">		<span class="keyword">if</span> (strfrms == <span class="literal">NULL</span>)</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = num_skip; i &lt; nframes; i++)</span><br><span class="line">			appendStringInfo(&amp;errtrace, <span class="string">&quot;\n%s&quot;</span>, strfrms[i]);</span><br><span class="line">		<span class="built_in">free</span>(strfrms);</span><br><span class="line">	&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	appendStringInfoString(&amp;errtrace,</span><br><span class="line">						   <span class="string">&quot;backtrace generation is not supported by this installation&quot;</span>);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	edata-&gt;backtrace = errtrace.data;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>set_backtrace()</code> 函数通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 函数来获取堆栈信息，并将其添加到 <code>edata-&gt;backtrace</code> 字段中（方便后续处理），<code>num_skip</code> 参数指定了需要跳过的内部栈的数量，这是由于我们报错的地方实际上并不是 <code>set_backtrace()</code> 函数位置，而是在调用该函数的位置（可能是一层或多层），因此，我们需要定位到真实报错的地方，从这个地方开始输出堆栈信息。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html">https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html</a><br>[2] <a href="https://www.postgresql.org/docs/devel/runtime-config-developer.html">https://www.postgresql.org/docs/devel/runtime-config-developer.html</a><br>[3] <a href="https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190">https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -2219,6 +2177,61 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 数据库大小监控</title>
+    <url>/2019/09/postgresql-database-size-monitor/</url>
+    <content><![CDATA[<p>最近在客户那边了解到一个需求，想要监控 PostgreSQL 数据库每天的大小变化。其实这个功能挺简单的，PostgreSQL 可以通过函数 <code>pg_database_size()</code> 来获取数据库的大小，而客户需要做的就是每天去执行一下，并与上次的结果进行比较就可以得到了。当然，手动执行的效率不是很高，因此，我利用业余时间整理了一下，将这个需求通过 PostgreSQL 插件的形式提供出来。本文主要介绍一下如何实现这个功能。</p>
+<a id="more"></a>
+
+<h2 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h2><p>其实这个功能的思路挺简单的，首先记录数据库大小，然后定期获取数据库大小，并与上一次数据库的大小相减获取这个数据库的增量，就这么简单。那么，我们需要通过什么技术来实现这个功能呢？当然，我们需要一个定时器；其次，我们需要一个结构来维护数据库的大小历史变更。</p>
+<p>当然我们可以通过 shell 来实现这个功能，利用 crontab 添加一个定时器，然后将数据库的大小保存下来，再次获取时数据库大小时减去保存下来的数据库大小值便能获取增量。这里有一个问题就是数据库的大小历史如何来维护？</p>
+<p>如果是通过数据库插件来实现，我们可以直接将这些历史变更记录在数据表中，这样做也可以方便后续查询。那么定时器如何实现了？这个其实 PostgreSQL 已经为我们提供了。我们可以通过创建一个后台进程来定期获取数据库的大小，并维护数据库增量信息。</p>
+<h2 id="后台进程"><a href="#后台进程" class="headerlink" title="后台进程"></a>后台进程</h2><p>PostgreSQL 扩展可以在单独的进程中运行用户提供的代码。这些进程由 postgres 启动、停止和监控，这使得它们的生命周期与服务器的状态紧密相关。这些进程可以选择附加到 PostgreSQL 的共享内存区域并在内部连接到数据库。PostgreSQL 后台工作进程由 <code>BackgroundWorker</code> 结构来定义（如下所示），它需要在 <code>_PG_init()</code> 函数中通过 <code>RegisterBackgroundWorker()</code> 来注册。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">typedef</span> <span class="title">void</span> <span class="params">(*bgworker_main_type)</span><span class="params">(Datum main_arg)</span></span>;</span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">BackgroundWorker</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">char</span>        bgw_name[BGW_MAXLEN];</span><br><span class="line">    <span class="keyword">char</span>        bgw_type[BGW_MAXLEN];</span><br><span class="line">    <span class="keyword">int</span>         bgw_flags;</span><br><span class="line">    BgWorkerStartTime bgw_start_time;</span><br><span class="line">    <span class="keyword">int</span>         bgw_restart_time;       <span class="comment">/* in seconds, or BGW_NEVER_RESTART */</span></span><br><span class="line">    <span class="keyword">char</span>        bgw_library_name[BGW_MAXLEN];</span><br><span class="line">    <span class="keyword">char</span>        bgw_function_name[BGW_MAXLEN];</span><br><span class="line">    Datum       bgw_main_arg;</span><br><span class="line">    <span class="keyword">char</span>        bgw_extra[BGW_EXTRALEN];</span><br><span class="line">    <span class="keyword">int</span>         bgw_notify_pid;</span><br><span class="line">&#125; BackgroundWorker;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 该结构在不同的版本之间可能有所不同，请以<a href="https://www.postgresql.org/docs/11/bgworker.html">官网文档</a>为准，本文基于 PostgreSQL 11 版本。</p>
+<ul>
+<li><code>bgw_name</code> 和 <code>bgw_type</code> 是在日志消息，进程列表和类似上下文中使用的字符串。</li>
+<li><code>bgw_flags</code> 是一个按位或位掩码，表示模块想要的功能。目前该域有两个值：<code>BGWORKER_SHMEM_ACCESS</code> - 请求共享内存访问；<code>BGWORKER_BACKEND_DATABASE_CONNECTION</code> - 请求能够建立数据库连接，以便以后可以运行事务和查询(需要与 <code>BGWORKER_SHMEM_ACCESS</code> 联合使用)。</li>
+<li><code>bgw_start_time</code> 是 postgres 启动进程的服务器状态。目前该域有三个值：<code>BgWorkerStart_PostmasterStart</code> - postgres 本身完成自己的初始化后立即开始，请求此进程的进程不符合数据库连接的条件；<code>BgWorkerStart_ConsistentState</code> - 在热备用数据库中达到一致状态后立即启动，允许进程以只读的方式连接到数据库；<code>BgWorkerStart_RecoveryFinished</code> - 系统进入正常读写状态后立即启动。最后两个值在不是热备用的服务器中是等效的。此设置仅指示何时启动进程；当达到不同的状态时，它们不会停止。</li>
+<li><code>bgw_restart_time</code> 是 postgres 在重新启动进程之前应该等待的时间间隔（以秒为单位）。当设置为 <code>BGW_NEVER_RESTART</code> 则表示崩溃后不重新启动进程。</li>
+<li><code>bgw_library_name</code> - 是库的名称，在该库中应该包含后台工作进程的入口点。如果是从核心代码中加载函数，需要将其设置为 “postgres”。</li>
+<li><code>bgw_function_name</code> 是动态加载库中函数的名称，该函数是新后台工作进程的入口点。</li>
+<li><code>bgw_main_arg</code> 是后台进程入口函数的参数，参数类型为 <code>Datum</code>。</li>
+</ul>
+<p>更多关于该结构的介绍请看官方文档，任何时候您都应该以官方文档为主。</p>
+<p>我们可以在后台进程中通过定时器来定时执行相应的 SQL 来查询数据库大小并计算数据库的增量。PostgreSQL 提供了 Latch 机制，我们可以利用它很方便地实现定时器功能。</p>
+<h2 id="扩展插件"><a href="#扩展插件" class="headerlink" title="扩展插件"></a>扩展插件</h2><p>关于如何编写 PostgreSQL 可以参考<a href="/2018/12/write-postgresql-extension/" title="这里">这里</a>，当然第一手资料还是<a href="https://www.postgresql.org/docs/11/extend-pgxs.html">官方文档</a>。我们首先新建一个 <code>pg_dbsm</code> 目录用于存放该插件源码，其内容如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">➜  pg_dbsm ls -l</span><br><span class="line">total 48</span><br><span class="line">-rw-r--r--  1 japinli  staff   277 Sep  4 22:32 Makefile</span><br><span class="line">-rw-r--r--  1 japinli  staff   244 Sep  4 22:29 README.md</span><br><span class="line">-rw-r--r--  1 japinli  staff   402 Sep  4 22:24 pg_dbsm--0.0.1.sql</span><br><span class="line">-rw-r--r--  1 japinli  staff  7785 Sep  4 22:38 pg_dbsm.c</span><br><span class="line">-rw-r--r--  1 japinli  staff    98 Sep  4 22:23 pg_dbsm.control</span><br></pre></td></tr></table></figure>
+
+<p>为了方便配置定时器的时间，我们将定时器的值以参数的形式给出，与此同时，我们需要连接一个数据库用于创建需要存储数据库大小历史记录，为此，我们增加了一个数据库参数，我们将在该数据库中建立一个名为 <code>dbsm</code> 的数据表，其定义如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# \d+ dbsm</span><br><span class="line">                                            Table &quot;public.dbsm&quot;</span><br><span class="line"> Column  |           Type           | Collation | Nullable | Default | Storage | Stats target | Description</span><br><span class="line">---------+--------------------------+-----------+----------+---------+---------+--------------+-------------</span><br><span class="line"> datname | name                     |           | not null |         | plain   |              |</span><br><span class="line"> created | timestamp with time zone |           |          | now()   | plain   |              |</span><br><span class="line"> datsize | bigint                   |           | not null |         | plain   |              |</span><br><span class="line"> incsize | bigint                   |           |          |         | plain   |              |</span><br><span class="line">Indexes:</span><br><span class="line">    &quot;idx_datname_created&quot; btree (datname, created)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>后台进程的处理流程如下：</p>
+<ol>
+<li>设置信号处理函数；</li>
+<li>连接 <code>dbsm_database</code> 指定的数据库，默认为 <code>postgres</code>；</li>
+<li>初始化数据库表对象，即 <code>dbsm</code>，并建立索引；</li>
+<li>构建查询 SQL 语句；</li>
+<li>循环执行查询 SQL 语句并更新 <code>dbsm</code> 表。</li>
+</ol>
+<p>上面的流程主要在函数 <code>dbsm_main()</code> 中体现，其代码如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">dbsm_main()</span><br><span class="line">&#123;</span><br><span class="line">    StringInfoData    buf;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Establish signal handlers before unblocking signals. */</span></span><br><span class="line">    pqsignal(SIGHUP, dbsm_sighup);</span><br><span class="line">    pqsignal(SIGTERM, dbsm_sigterm);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* We&#x27;re now ready to receive signals */</span></span><br><span class="line">    BackgroundWorkerUnblockSignals();</span><br><span class="line"></span><br><span class="line">    BackgroundWorkerInitializeConnection(dbsm_database, <span class="literal">NULL</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    initialize_dbsm_object();</span><br><span class="line"></span><br><span class="line">    initStringInfo(&amp;buf);</span><br><span class="line">    appendStringInfo(&amp;buf,</span><br><span class="line">                     <span class="string">&quot;WITH m AS (SELECT DISTINCT ON (datname) datname, &quot;</span></span><br><span class="line">                     <span class="string">&quot;datsize FROM dbsm ORDER BY datname, created DESC) &quot;</span></span><br><span class="line">                     <span class="string">&quot;INSERT INTO dbsm SELECT d.datname, now(), &quot;</span></span><br><span class="line">                     <span class="string">&quot;pg_database_size(d.datname) AS datsize, &quot;</span></span><br><span class="line">                     <span class="string">&quot;CASE WHEN m.datsize = NULL THEN 0 &quot;</span></span><br><span class="line">                     <span class="string">&quot;ELSE pg_database_size(d.datname) - m.datsize END AS incsize &quot;</span></span><br><span class="line">                     <span class="string">&quot;FROM pg_database d LEFT JOIN m ON m.datname = d.datname;&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Main loop: do this until the SIGTERM handler tells us to terminate</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">while</span> (!got_sigterm)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">int</span>    ret;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Background workers mustn&#x27;t call usleep() or any direct equivalent:</span></span><br><span class="line"><span class="comment">         * instead, they may wait on their process latch, which sleeps as</span></span><br><span class="line"><span class="comment">         * necessary, but is awakened if postmaster dies.  That way the</span></span><br><span class="line"><span class="comment">         * background process goes away immediately in an emergency.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        (<span class="keyword">void</span>) WaitLatch(MyLatch,</span><br><span class="line">                         WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,</span><br><span class="line">                         dbsm_naptime * <span class="number">1000L</span>,</span><br><span class="line">                         PG_WAIT_EXTENSION);</span><br><span class="line">        ResetLatch(MyLatch);</span><br><span class="line"></span><br><span class="line">        CHECK_FOR_INTERRUPTS();</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * In case of a SIGHUP, just reload the configuration.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">if</span> (got_sighup)</span><br><span class="line">        &#123;</span><br><span class="line">            got_sighup = <span class="literal">false</span>;</span><br><span class="line">            ProcessConfigFile(PGC_SIGHUP);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Start a transaction on which we can run queries.  Note that each</span></span><br><span class="line"><span class="comment">         * StartTransactionCommand() call should be preceded by a</span></span><br><span class="line"><span class="comment">         * SetCurrentStatementStartTimestamp() call, which sets both the time</span></span><br><span class="line"><span class="comment">         * for the statement we&#x27;re about the run, and also the transaction</span></span><br><span class="line"><span class="comment">         * start time.  Also, each other query sent to SPI should probably be</span></span><br><span class="line"><span class="comment">         * preceded by SetCurrentStatementStartTimestamp(), so that statement</span></span><br><span class="line"><span class="comment">         * start time is always up to date.</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         * The SPI_connect() call lets us run queries through the SPI manager,</span></span><br><span class="line"><span class="comment">         * and the PushActiveSnapshot() call creates an &quot;active&quot; snapshot</span></span><br><span class="line"><span class="comment">         * which is necessary for queries to have MVCC data to work on.</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         * The pgstat_report_activity() call makes our activity visible</span></span><br><span class="line"><span class="comment">         * through the pgstat views.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        SetCurrentStatementStartTimestamp();</span><br><span class="line">        StartTransactionCommand();</span><br><span class="line">        SPI_connect();</span><br><span class="line">        PushActiveSnapshot(GetTransactionSnapshot());</span><br><span class="line">        pgstat_report_activity(STATE_RUNNING, buf.data);</span><br><span class="line"></span><br><span class="line">        ret = SPI_execute(buf.data, <span class="literal">false</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (ret != SPI_OK_INSERT)</span><br><span class="line">            elog(FATAL, <span class="string">&quot;execute: \&quot;%s\&quot; failed&quot;</span>, buf.data);</span><br><span class="line"></span><br><span class="line">        SPI_finish();</span><br><span class="line">        PopActiveSnapshot();</span><br><span class="line">        CommitTransactionCommand();</span><br><span class="line">        pgstat_report_stat(<span class="literal">false</span>);</span><br><span class="line">        pgstat_report_activity(STATE_IDLE, <span class="literal">NULL</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    pfree(buf.data);</span><br><span class="line">    proc_exit(<span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当启动数据库后，我们运行一段时间后查询表 <code>dbsm</code> 便可以看到如图所示的结果。</p>
+<img src="/2019/09/postgresql-database-size-monitor/result.png" class="" title="效果图">
+
+<p>完整代码在<a href="https://github.com/japinli/pg_dbsm">这里</a>。当然，这个代码目前还不完善，可能存在一些问题。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/11/bgworker.html">https://www.postgresql.org/docs/11/bgworker.html</a><br>[2] <a href="https://www.postgresql.org/docs/11/extend-pgxs.html">https://www.postgresql.org/docs/11/extend-pgxs.html</a><br>[3] <a href="https://tapoueh.org/images/confs/extension-tutoriel.pdf">https://tapoueh.org/images/confs/extension-tutoriel.pdf</a><br>[4] <a href="https://github.com/postgres/postgres/blob/REL_11_STABLE/src/test/modules/worker_spi/worker_spi.c">https://github.com/postgres/postgres/blob/REL_11_STABLE/src/test/modules/worker_spi/worker_spi.c</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 编辑查询缓冲区</title>
     <url>/2020/05/postgresql-edit-query-buffer/</url>
     <content><![CDATA[<p>我们经常需要在 psql 中修改查询语句，例如，我们编辑了几行查询语句，然后需要修改之前的内容，我之前额做法就是 Ctrl-C 然后在重新输入。其实，我们可以不必这么复杂。我们可以使用 <code>\e</code> 命令来编辑查询缓冲区。如下所示：</p>
@@ -2272,58 +2285,45 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 数据库大小监控</title>
-    <url>/2019/09/postgresql-database-size-monitor/</url>
-    <content><![CDATA[<p>最近在客户那边了解到一个需求，想要监控 PostgreSQL 数据库每天的大小变化。其实这个功能挺简单的，PostgreSQL 可以通过函数 <code>pg_database_size()</code> 来获取数据库的大小，而客户需要做的就是每天去执行一下，并与上次的结果进行比较就可以得到了。当然，手动执行的效率不是很高，因此，我利用业余时间整理了一下，将这个需求通过 PostgreSQL 插件的形式提供出来。本文主要介绍一下如何实现这个功能。</p>
+    <title>PostgreSQL 持续归档</title>
+    <url>/2018/10/postgresql-continuous-archiving/</url>
+    <content><![CDATA[<p>无论何时，PostgreSQL 总是在集群的数据目录 pg_wal 下面维护一个 <em>Write Ahead Log</em> 日志记录。该日志记录了数据文件的所有变化。当数据库系统发生崩溃时，数据库系统可以通过重放最新检查点之后的 WAL 日志条目来恢复数据库的一致性。在 PostgreSQL 中，我们通过将文件系统级的备份与 WAL 日志的备份相结合可以实现三种策略的数据库备份。当需要进行数据库恢复时，我们先恢复文件系统的备份，随后通过重放备份的 WAL 日志使得数据库进入到当前状态。尽管该方法过于复杂，但是它拥有以下好处：</p>
+<ul>
+<li>我们不需要完全一致的文件系统备份作为起点。备份中的任何内部不一致都将通过日志重放进行更正 (这与崩溃恢复期间发生的情况没有显着差异)。因此，我们不需要文件系统快照功能，只需要 tar 或类似的归档工具。</li>
+<li>没有必要一直重放 WAL 条目到最后。我们可以在任何时候停止重放并拥有当时数据库的一致快照。因此，该技术支持时间点恢复 (Point-in-Time Recovery, PITR)。为此，我们可以将数据库还原到自从进行基本备份以后的任何状态。</li>
+<li>如果我们持续地将一系列 WAL 日志文件提供给另一台已加载相同基本备份文件的计算机，此时，我们就拥有了一个热备系统：在任何时候我们都可以启动这台机器，它将拥有与原数据库几乎一致的状态。</li>
+</ul>
+<p>与普通文件系统备份技术一样，该方法只能支持恢复整个数据库集群，而不能用于恢复其子集。同时，它也需要更多的归档空间：基本的文件系统备份可能很庞大，繁忙的系统将生成许多必须归档的 WAL 流量。尽管如此，在多数情况下，它仍然是需要高可靠性的首选备份技术。</p>
+<p>我们需要一系列连续归档 WAL 日志文件，这些文件至少可以延伸到备份的开始时间，从而确保连续归档 (许多数据库供应商也称为“在线备份”) 成功恢复。</p>
 <a id="more"></a>
 
-<h2 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h2><p>其实这个功能的思路挺简单的，首先记录数据库大小，然后定期获取数据库大小，并与上一次数据库的大小相减获取这个数据库的增量，就这么简单。那么，我们需要通过什么技术来实现这个功能呢？当然，我们需要一个定时器；其次，我们需要一个结构来维护数据库的大小历史变更。</p>
-<p>当然我们可以通过 shell 来实现这个功能，利用 crontab 添加一个定时器，然后将数据库的大小保存下来，再次获取时数据库大小时减去保存下来的数据库大小值便能获取增量。这里有一个问题就是数据库的大小历史如何来维护？</p>
-<p>如果是通过数据库插件来实现，我们可以直接将这些历史变更记录在数据表中，这样做也可以方便后续查询。那么定时器如何实现了？这个其实 PostgreSQL 已经为我们提供了。我们可以通过创建一个后台进程来定期获取数据库的大小，并维护数据库增量信息。</p>
-<h2 id="后台进程"><a href="#后台进程" class="headerlink" title="后台进程"></a>后台进程</h2><p>PostgreSQL 扩展可以在单独的进程中运行用户提供的代码。这些进程由 postgres 启动、停止和监控，这使得它们的生命周期与服务器的状态紧密相关。这些进程可以选择附加到 PostgreSQL 的共享内存区域并在内部连接到数据库。PostgreSQL 后台工作进程由 <code>BackgroundWorker</code> 结构来定义（如下所示），它需要在 <code>_PG_init()</code> 函数中通过 <code>RegisterBackgroundWorker()</code> 来注册。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">typedef</span> <span class="title">void</span> <span class="params">(*bgworker_main_type)</span><span class="params">(Datum main_arg)</span></span>;</span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">BackgroundWorker</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">char</span>        bgw_name[BGW_MAXLEN];</span><br><span class="line">    <span class="keyword">char</span>        bgw_type[BGW_MAXLEN];</span><br><span class="line">    <span class="keyword">int</span>         bgw_flags;</span><br><span class="line">    BgWorkerStartTime bgw_start_time;</span><br><span class="line">    <span class="keyword">int</span>         bgw_restart_time;       <span class="comment">/* in seconds, or BGW_NEVER_RESTART */</span></span><br><span class="line">    <span class="keyword">char</span>        bgw_library_name[BGW_MAXLEN];</span><br><span class="line">    <span class="keyword">char</span>        bgw_function_name[BGW_MAXLEN];</span><br><span class="line">    Datum       bgw_main_arg;</span><br><span class="line">    <span class="keyword">char</span>        bgw_extra[BGW_EXTRALEN];</span><br><span class="line">    <span class="keyword">int</span>         bgw_notify_pid;</span><br><span class="line">&#125; BackgroundWorker;</span><br></pre></td></tr></table></figure>
+<h2 id="WAL-日志归档"><a href="#WAL-日志归档" class="headerlink" title="WAL 日志归档"></a>WAL 日志归档</h2><p>从抽象的意义上说，PostgreSQL 数据库系统会产生无限长的 WAL 日志记录序列。PostgreSQL 数据库该序列划分 WAL 段文件，通常每个段文件为 16MB (在构建 PostgreSQL 时可以更改段大小)。段文件的数字名称反映了它们在抽象 WAL 序列中的位置。当不使用 WAL 归档时，PostgreSQL 通常只需要创建几个段文件，然后通过将不再需要的段文件重命名为更高的段号来“回收”它们。</p>
+<p>当使用 WAL 日志归档时，我们需要在每个段文件填充后捕获它们的内容，并在段文件被回收再利用之前将该数据保存在其他某处。PostgreSQL 允许管理员指定要执行的 shell 命令，以将已完成的段文件复制到需要的位置。该命令可以简单的 cp 命令，也可以是复杂的 shell 脚步，一切都取决于用户。</p>
+<p>我们需要设置三个选项以便启用 WAL 日志归档： wal_level，archive_mode 和 archive_command。</p>
+<p><strong>wal_level__ - 必须为 replica 或者更高的级别。<br>__archive_mode</strong> - 设置为 on。<br>__archive_command__ - 通常为归档命令，其中 <code>%p</code> 被替换为要归档的文件的路径名，<code>%f</code> 被替换为要归档的文件的文件名。如果需要在命令中嵌入实际的 <code>％</code> 字符，请使用 <code>%%</code>。</p>
+<p>接下来我们尝试配置 WAL 日志归档，首先进行相关的准备工作，编译 PostgreSQL 10.4，初始化数据库，建立归档日志存储路径 (本例旨在使用 WAL 日志归档，因此就在本地建立目录来存储备份的 WAL 日志，通常的做法时备份到其他主机)，</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ pwd</span><br><span class="line">&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4</span><br><span class="line">$ ls</span><br><span class="line">drwxr-xr-x  2 postgres postgres 4096 Oct 24 13:36 bin</span><br><span class="line">drwx------ 19 postgres postgres 4096 Oct 24 13:49 data</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 include</span><br><span class="line">drwxr-xr-x  4 postgres postgres 4096 Oct 24 13:36 lib</span><br><span class="line">-rw-rw-r--  1 postgres postgres  177 Oct 24 13:39 pg-env.sh</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 share</span><br><span class="line">$ cat pg-env.sh</span><br><span class="line">export PGHOME&#x3D;&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4</span><br><span class="line">export PGDATA&#x3D;&#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;data</span><br><span class="line">export PATH&#x3D;$PGHOME&#x2F;bin:$PATH</span><br><span class="line">export LD_LIBRARY_PATH&#x3D;$PGHOME&#x2F;lib:$LD_LIBRARY_PATH</span><br><span class="line">$ mkdir wals            # 建立 WAL 日志备份目录</span><br><span class="line">$ . pg-env.sh           # 初始化环境变量</span><br><span class="line">$ initdb -D data        # 初始化数据库集群</span><br></pre></td></tr></table></figure>
 
-<p><strong>备注：</strong> 该结构在不同的版本之间可能有所不同，请以<a href="https://www.postgresql.org/docs/11/bgworker.html">官网文档</a>为准，本文基于 PostgreSQL 11 版本。</p>
-<ul>
-<li><code>bgw_name</code> 和 <code>bgw_type</code> 是在日志消息，进程列表和类似上下文中使用的字符串。</li>
-<li><code>bgw_flags</code> 是一个按位或位掩码，表示模块想要的功能。目前该域有两个值：<code>BGWORKER_SHMEM_ACCESS</code> - 请求共享内存访问；<code>BGWORKER_BACKEND_DATABASE_CONNECTION</code> - 请求能够建立数据库连接，以便以后可以运行事务和查询(需要与 <code>BGWORKER_SHMEM_ACCESS</code> 联合使用)。</li>
-<li><code>bgw_start_time</code> 是 postgres 启动进程的服务器状态。目前该域有三个值：<code>BgWorkerStart_PostmasterStart</code> - postgres 本身完成自己的初始化后立即开始，请求此进程的进程不符合数据库连接的条件；<code>BgWorkerStart_ConsistentState</code> - 在热备用数据库中达到一致状态后立即启动，允许进程以只读的方式连接到数据库；<code>BgWorkerStart_RecoveryFinished</code> - 系统进入正常读写状态后立即启动。最后两个值在不是热备用的服务器中是等效的。此设置仅指示何时启动进程；当达到不同的状态时，它们不会停止。</li>
-<li><code>bgw_restart_time</code> 是 postgres 在重新启动进程之前应该等待的时间间隔（以秒为单位）。当设置为 <code>BGW_NEVER_RESTART</code> 则表示崩溃后不重新启动进程。</li>
-<li><code>bgw_library_name</code> - 是库的名称，在该库中应该包含后台工作进程的入口点。如果是从核心代码中加载函数，需要将其设置为 “postgres”。</li>
-<li><code>bgw_function_name</code> 是动态加载库中函数的名称，该函数是新后台工作进程的入口点。</li>
-<li><code>bgw_main_arg</code> 是后台进程入口函数的参数，参数类型为 <code>Datum</code>。</li>
-</ul>
-<p>更多关于该结构的介绍请看官方文档，任何时候您都应该以官方文档为主。</p>
-<p>我们可以在后台进程中通过定时器来定时执行相应的 SQL 来查询数据库大小并计算数据库的增量。PostgreSQL 提供了 Latch 机制，我们可以利用它很方便地实现定时器功能。</p>
-<h2 id="扩展插件"><a href="#扩展插件" class="headerlink" title="扩展插件"></a>扩展插件</h2><p>关于如何编写 PostgreSQL 可以参考<a href="/2018/12/write-postgresql-extension/" title="这里">这里</a>，当然第一手资料还是<a href="https://www.postgresql.org/docs/11/extend-pgxs.html">官方文档</a>。我们首先新建一个 <code>pg_dbsm</code> 目录用于存放该插件源码，其内容如下：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">➜  pg_dbsm ls -l</span><br><span class="line">total 48</span><br><span class="line">-rw-r--r--  1 japinli  staff   277 Sep  4 22:32 Makefile</span><br><span class="line">-rw-r--r--  1 japinli  staff   244 Sep  4 22:29 README.md</span><br><span class="line">-rw-r--r--  1 japinli  staff   402 Sep  4 22:24 pg_dbsm--0.0.1.sql</span><br><span class="line">-rw-r--r--  1 japinli  staff  7785 Sep  4 22:38 pg_dbsm.c</span><br><span class="line">-rw-r--r--  1 japinli  staff    98 Sep  4 22:23 pg_dbsm.control</span><br></pre></td></tr></table></figure>
+<p>接着修改 data/postgresql.conf 文件中的 wal_level，archive_mode 和 archive_command 参数。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">wal_level &#x3D; replica</span><br><span class="line">archive_mode &#x3D; on</span><br><span class="line">archive_command &#x3D; &#39;test ! -f &#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;wals&#x2F;%f &amp;&amp; cp %p &#x2F;home&#x2F;postgres&#x2F;postgresql-10.4&#x2F;wals&#x2F;%f&#39;</span><br></pre></td></tr></table></figure>
 
-<p>为了方便配置定时器的时间，我们将定时器的值以参数的形式给出，与此同时，我们需要连接一个数据库用于创建需要存储数据库大小历史记录，为此，我们增加了一个数据库参数，我们将在该数据库中建立一个名为 <code>dbsm</code> 的数据表，其定义如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# \d+ dbsm</span><br><span class="line">                                            Table &quot;public.dbsm&quot;</span><br><span class="line"> Column  |           Type           | Collation | Nullable | Default | Storage | Stats target | Description</span><br><span class="line">---------+--------------------------+-----------+----------+---------+---------+--------------+-------------</span><br><span class="line"> datname | name                     |           | not null |         | plain   |              |</span><br><span class="line"> created | timestamp with time zone |           |          | now()   | plain   |              |</span><br><span class="line"> datsize | bigint                   |           | not null |         | plain   |              |</span><br><span class="line"> incsize | bigint                   |           |          |         | plain   |              |</span><br><span class="line">Indexes:</span><br><span class="line">    &quot;idx_datname_created&quot; btree (datname, created)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>按照上述操作进行，我们目前已经配置好了 WAL 日志归档，接下来我们运行数据库并创建一个基本备份 (即文件系统级备份) 并保存在当前目录。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ pg_ctl -D data -l logfile start</span><br><span class="line">$ psql -c &quot;SELECT pg_start_backup(&#39;label&#39;);&quot; postgres</span><br><span class="line">$ tar -C data -czvf pg_basebackup_backup.tar.gz .</span><br><span class="line">$ psql -c &quot;SELECT pg_stop_backup();&quot; postgres</span><br></pre></td></tr></table></figure>
 
-<p>后台进程的处理流程如下：</p>
-<ol>
-<li>设置信号处理函数；</li>
-<li>连接 <code>dbsm_database</code> 指定的数据库，默认为 <code>postgres</code>；</li>
-<li>初始化数据库表对象，即 <code>dbsm</code>，并建立索引；</li>
-<li>构建查询 SQL 语句；</li>
-<li>循环执行查询 SQL 语句并更新 <code>dbsm</code> 表。</li>
-</ol>
-<p>上面的流程主要在函数 <code>dbsm_main()</code> 中体现，其代码如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">dbsm_main()</span><br><span class="line">&#123;</span><br><span class="line">    StringInfoData    buf;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Establish signal handlers before unblocking signals. */</span></span><br><span class="line">    pqsignal(SIGHUP, dbsm_sighup);</span><br><span class="line">    pqsignal(SIGTERM, dbsm_sigterm);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* We&#x27;re now ready to receive signals */</span></span><br><span class="line">    BackgroundWorkerUnblockSignals();</span><br><span class="line"></span><br><span class="line">    BackgroundWorkerInitializeConnection(dbsm_database, <span class="literal">NULL</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    initialize_dbsm_object();</span><br><span class="line"></span><br><span class="line">    initStringInfo(&amp;buf);</span><br><span class="line">    appendStringInfo(&amp;buf,</span><br><span class="line">                     <span class="string">&quot;WITH m AS (SELECT DISTINCT ON (datname) datname, &quot;</span></span><br><span class="line">                     <span class="string">&quot;datsize FROM dbsm ORDER BY datname, created DESC) &quot;</span></span><br><span class="line">                     <span class="string">&quot;INSERT INTO dbsm SELECT d.datname, now(), &quot;</span></span><br><span class="line">                     <span class="string">&quot;pg_database_size(d.datname) AS datsize, &quot;</span></span><br><span class="line">                     <span class="string">&quot;CASE WHEN m.datsize = NULL THEN 0 &quot;</span></span><br><span class="line">                     <span class="string">&quot;ELSE pg_database_size(d.datname) - m.datsize END AS incsize &quot;</span></span><br><span class="line">                     <span class="string">&quot;FROM pg_database d LEFT JOIN m ON m.datname = d.datname;&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Main loop: do this until the SIGTERM handler tells us to terminate</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">while</span> (!got_sigterm)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">int</span>    ret;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Background workers mustn&#x27;t call usleep() or any direct equivalent:</span></span><br><span class="line"><span class="comment">         * instead, they may wait on their process latch, which sleeps as</span></span><br><span class="line"><span class="comment">         * necessary, but is awakened if postmaster dies.  That way the</span></span><br><span class="line"><span class="comment">         * background process goes away immediately in an emergency.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        (<span class="keyword">void</span>) WaitLatch(MyLatch,</span><br><span class="line">                         WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,</span><br><span class="line">                         dbsm_naptime * <span class="number">1000L</span>,</span><br><span class="line">                         PG_WAIT_EXTENSION);</span><br><span class="line">        ResetLatch(MyLatch);</span><br><span class="line"></span><br><span class="line">        CHECK_FOR_INTERRUPTS();</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * In case of a SIGHUP, just reload the configuration.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">if</span> (got_sighup)</span><br><span class="line">        &#123;</span><br><span class="line">            got_sighup = <span class="literal">false</span>;</span><br><span class="line">            ProcessConfigFile(PGC_SIGHUP);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Start a transaction on which we can run queries.  Note that each</span></span><br><span class="line"><span class="comment">         * StartTransactionCommand() call should be preceded by a</span></span><br><span class="line"><span class="comment">         * SetCurrentStatementStartTimestamp() call, which sets both the time</span></span><br><span class="line"><span class="comment">         * for the statement we&#x27;re about the run, and also the transaction</span></span><br><span class="line"><span class="comment">         * start time.  Also, each other query sent to SPI should probably be</span></span><br><span class="line"><span class="comment">         * preceded by SetCurrentStatementStartTimestamp(), so that statement</span></span><br><span class="line"><span class="comment">         * start time is always up to date.</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         * The SPI_connect() call lets us run queries through the SPI manager,</span></span><br><span class="line"><span class="comment">         * and the PushActiveSnapshot() call creates an &quot;active&quot; snapshot</span></span><br><span class="line"><span class="comment">         * which is necessary for queries to have MVCC data to work on.</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         * The pgstat_report_activity() call makes our activity visible</span></span><br><span class="line"><span class="comment">         * through the pgstat views.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        SetCurrentStatementStartTimestamp();</span><br><span class="line">        StartTransactionCommand();</span><br><span class="line">        SPI_connect();</span><br><span class="line">        PushActiveSnapshot(GetTransactionSnapshot());</span><br><span class="line">        pgstat_report_activity(STATE_RUNNING, buf.data);</span><br><span class="line"></span><br><span class="line">        ret = SPI_execute(buf.data, <span class="literal">false</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (ret != SPI_OK_INSERT)</span><br><span class="line">            elog(FATAL, <span class="string">&quot;execute: \&quot;%s\&quot; failed&quot;</span>, buf.data);</span><br><span class="line"></span><br><span class="line">        SPI_finish();</span><br><span class="line">        PopActiveSnapshot();</span><br><span class="line">        CommitTransactionCommand();</span><br><span class="line">        pgstat_report_stat(<span class="literal">false</span>);</span><br><span class="line">        pgstat_report_activity(STATE_IDLE, <span class="literal">NULL</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    pfree(buf.data);</span><br><span class="line">    proc_exit(<span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>此时，我们创建好了数据库集群的基本备份，之后我们便可以通过该基本备份并结合 WAL 日志备份进行恢复。紧接着，我们对数据库做一些修改，并停止数据库然后删除 data 目录。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# create table test (id int, name varchar(10));</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres&#x3D;# insert into test values (1, &#39;postgres&#39;);</span><br><span class="line">INSERT 0 1</span><br><span class="line">postgres&#x3D;# select * from test ;</span><br><span class="line"> id |   name</span><br><span class="line"> ----+----------</span><br><span class="line">   1 | postgres</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres&#x3D;# \q</span><br><span class="line">$ pg_ctl -D data -l logfile stop</span><br><span class="line">$ rm -rf data</span><br></pre></td></tr></table></figure>
 
-<p>当启动数据库后，我们运行一段时间后查询表 <code>dbsm</code> 便可以看到如图所示的结果。</p>
-<img src="/2019/09/postgresql-database-size-monitor/result.png" class="" title="效果图">
+<p>下面将演示如何使用基础备份及 WAL 日志备份恢复数据库。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> initdb -D data1                    <span class="comment"># 重新初始化一个数据库集群</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar -C data1 -xvf pg_basebackup_backup.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> cat &lt;&lt;END &gt; data1/recovery.conf    <span class="comment"># 创建恢复脚步</span></span></span><br><span class="line">restore_command = &#x27;cp /home/postgres/postgresql-10.4/wals/%f %p&#x27;</span><br><span class="line">END</span><br><span class="line"><span class="meta">$</span><span class="bash"> pg_ctl -D data1 -l logfile start   <span class="comment"># 恢复</span></span></span><br></pre></td></tr></table></figure>
 
-<p>完整代码在<a href="https://github.com/japinli/pg_dbsm">这里</a>。当然，这个代码目前还不完善，可能存在一些问题。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/11/bgworker.html">https://www.postgresql.org/docs/11/bgworker.html</a><br>[2] <a href="https://www.postgresql.org/docs/11/extend-pgxs.html">https://www.postgresql.org/docs/11/extend-pgxs.html</a><br>[3] <a href="https://tapoueh.org/images/confs/extension-tutoriel.pdf">https://tapoueh.org/images/confs/extension-tutoriel.pdf</a><br>[4] <a href="https://github.com/postgres/postgres/blob/REL_11_STABLE/src/test/modules/worker_spi/worker_spi.c">https://github.com/postgres/postgres/blob/REL_11_STABLE/src/test/modules/worker_spi/worker_spi.c</a></p>
+<p>在恢复完成之后，PostgreSQL 将把 recovery.conf 文件重命名为 recovery.done。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/static/continuous-archiving.html">https://www.postgresql.org/docs/10/static/continuous-archiving.html</a></p>
 ]]></content>
       <categories>
         <category>数据库</category>
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
-        <tag>源码分析</tag>
       </tags>
   </entry>
   <entry>
@@ -3327,29 +3327,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 数据库系统标识符</title>
-    <url>/2020/06/postgresql-system-identifier/</url>
-    <content><![CDATA[<p>我们都知道 PostgreSQL 针对每个数据库集群实例，都会有一个唯一的标识符 - __system identifier__。那么这个标识符是如何生成的呢？本文将对其进行简要的分析。</p>
-<a id="more"></a>
-
-<p>通过分析 initdb 的源码，我们并不能找到相关的信息，但是我们发现 initdb 是通过 postgres 来进行数据库相关的初始化工作的，在函数 <code>bootstrap_template1()</code> 中有如下代码：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * run the BKI script in bootstrap mode to create template1</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span></span><br><span class="line">bootstrap_template1(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Also ensure backend isn&#x27;t confused by this environment var: */</span></span><br><span class="line">    unsetenv(<span class="string">&quot;PGCLIENTENCODING&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">snprintf</span>(cmd, <span class="keyword">sizeof</span>(cmd),</span><br><span class="line">             <span class="string">&quot;\&quot;%s\&quot; --boot -x1 -X %u %s %s %s&quot;</span>,</span><br><span class="line">             backend_exec,</span><br><span class="line">             wal_segment_size_mb * (<span class="number">1024</span> * <span class="number">1024</span>),</span><br><span class="line">             data_checksums ? <span class="string">&quot;-k&quot;</span> : <span class="string">&quot;&quot;</span>,</span><br><span class="line">             boot_options,</span><br><span class="line">             debug ? <span class="string">&quot;-d 5&quot;</span> : <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    PG_CMD_OPEN;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (line = bki_lines; *line != <span class="literal">NULL</span>; line++)</span><br><span class="line">    &#123;</span><br><span class="line">        PG_CMD_PUTS(*line);</span><br><span class="line">        <span class="built_in">free</span>(*line);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    PG_CMD_CLOSE;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">free</span>(bki_lines);</span><br><span class="line"></span><br><span class="line">    check_ok();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果我们仅使用 <code>initdb -D pgdata</code> 来初始化数据库实例，那么它实际上会调用 <code>postgres --boot -x1 -X 16777216  -F</code> 来进行初始化。</p>
-<p>接下来我们对 postgres 进行分析发现，它将在 <code>BootStrapXLOG()</code> 函数中初始化数据库标识符，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">BootStrapXLOG(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    CheckPoint  checkPoint;</span><br><span class="line">    <span class="keyword">char</span>       *buffer;</span><br><span class="line">    XLogPageHeader page;</span><br><span class="line">    XLogLongPageHeader longpage;</span><br><span class="line">    XLogRecord *record;</span><br><span class="line">    <span class="keyword">char</span>       *recptr;</span><br><span class="line">    <span class="keyword">bool</span>        use_existent;</span><br><span class="line">    uint64      sysidentifier;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">tv</span>;</span></span><br><span class="line">    pg_crc32c   crc;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Select a hopefully-unique system identifier code for this installation.</span></span><br><span class="line"><span class="comment">     * We use the result of gettimeofday(), including the fractional seconds</span></span><br><span class="line"><span class="comment">     * field, as being about as unique as we can easily get.  (Think not to</span></span><br><span class="line"><span class="comment">     * use random(), since it hasn&#x27;t been seeded and there&#x27;s no portable way</span></span><br><span class="line"><span class="comment">     * to seed it other than the system clock value...)  The upper half of the</span></span><br><span class="line"><span class="comment">     * uint64 value is just the tv_sec part, while the lower half contains the</span></span><br><span class="line"><span class="comment">     * tv_usec part (which must fit in 20 bits), plus 12 bits from our current</span></span><br><span class="line"><span class="comment">     * PID for a little extra uniqueness.  A person knowing this encoding can</span></span><br><span class="line"><span class="comment">     * determine the initialization time of the installation, which could</span></span><br><span class="line"><span class="comment">     * perhaps be useful sometimes.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    gettimeofday(&amp;tv, <span class="literal">NULL</span>);</span><br><span class="line">    sysidentifier = ((uint64) tv.tv_sec) &lt;&lt; <span class="number">32</span>;</span><br><span class="line">    sysidentifier |= ((uint64) tv.tv_usec) &lt;&lt; <span class="number">12</span>;</span><br><span class="line">    sysidentifier |= getpid() &amp; <span class="number">0xFFF</span>;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从上面的代码中可以看到，PostgreSQL 通过 <code>gettimeofday()</code> 函数来获取当前的时间，随后将 <code>tv.tv_sec</code><br>作为标识符的高 32 位，将 <code>tv.tv_usec</code> 作为标识符的低 32 位中的高 20 位，最后将当前进程的 ID 作为标识符的低 12 位，从而构造一个唯一的数据库实例标识符。这样我们就可以通过下面的方式获取到实例的初始化时间。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# select to_timestamp(system_identifier &gt;&gt; 32) from pg_control_system();</span><br><span class="line">      to_timestamp</span><br><span class="line">------------------------</span><br><span class="line"> 2019-12-12 22:20:59+08</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 临时表</title>
     <url>/2019/08/postgresql-temporary-table/</url>
     <content><![CDATA[<p>本文主要介绍 PostgreSQL 数据库中的临时表 (Temporary Table)。临时表将在会话结束或者当前事务结束时被删除。PostgreSQL 支持临时表和永久存储表 (Permanent Table) 具有相同的名称，如果出现这种情况，那么只有在临时表被删除之后才能看到永久表或者你可以指定 schema 来明确需要查询的是永久表。此外，在临时表上建立的索引同样也是临时的。</p>
@@ -3579,6 +3556,29 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 数据库系统标识符</title>
+    <url>/2020/06/postgresql-system-identifier/</url>
+    <content><![CDATA[<p>我们都知道 PostgreSQL 针对每个数据库集群实例，都会有一个唯一的标识符 - __system identifier__。那么这个标识符是如何生成的呢？本文将对其进行简要的分析。</p>
+<a id="more"></a>
+
+<p>通过分析 initdb 的源码，我们并不能找到相关的信息，但是我们发现 initdb 是通过 postgres 来进行数据库相关的初始化工作的，在函数 <code>bootstrap_template1()</code> 中有如下代码：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * run the BKI script in bootstrap mode to create template1</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span></span><br><span class="line">bootstrap_template1(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Also ensure backend isn&#x27;t confused by this environment var: */</span></span><br><span class="line">    unsetenv(<span class="string">&quot;PGCLIENTENCODING&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">snprintf</span>(cmd, <span class="keyword">sizeof</span>(cmd),</span><br><span class="line">             <span class="string">&quot;\&quot;%s\&quot; --boot -x1 -X %u %s %s %s&quot;</span>,</span><br><span class="line">             backend_exec,</span><br><span class="line">             wal_segment_size_mb * (<span class="number">1024</span> * <span class="number">1024</span>),</span><br><span class="line">             data_checksums ? <span class="string">&quot;-k&quot;</span> : <span class="string">&quot;&quot;</span>,</span><br><span class="line">             boot_options,</span><br><span class="line">             debug ? <span class="string">&quot;-d 5&quot;</span> : <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    PG_CMD_OPEN;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (line = bki_lines; *line != <span class="literal">NULL</span>; line++)</span><br><span class="line">    &#123;</span><br><span class="line">        PG_CMD_PUTS(*line);</span><br><span class="line">        <span class="built_in">free</span>(*line);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    PG_CMD_CLOSE;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">free</span>(bki_lines);</span><br><span class="line"></span><br><span class="line">    check_ok();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果我们仅使用 <code>initdb -D pgdata</code> 来初始化数据库实例，那么它实际上会调用 <code>postgres --boot -x1 -X 16777216  -F</code> 来进行初始化。</p>
+<p>接下来我们对 postgres 进行分析发现，它将在 <code>BootStrapXLOG()</code> 函数中初始化数据库标识符，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">void</span></span><br><span class="line">BootStrapXLOG(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">    CheckPoint  checkPoint;</span><br><span class="line">    <span class="keyword">char</span>       *buffer;</span><br><span class="line">    XLogPageHeader page;</span><br><span class="line">    XLogLongPageHeader longpage;</span><br><span class="line">    XLogRecord *record;</span><br><span class="line">    <span class="keyword">char</span>       *recptr;</span><br><span class="line">    <span class="keyword">bool</span>        use_existent;</span><br><span class="line">    uint64      sysidentifier;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">tv</span>;</span></span><br><span class="line">    pg_crc32c   crc;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Select a hopefully-unique system identifier code for this installation.</span></span><br><span class="line"><span class="comment">     * We use the result of gettimeofday(), including the fractional seconds</span></span><br><span class="line"><span class="comment">     * field, as being about as unique as we can easily get.  (Think not to</span></span><br><span class="line"><span class="comment">     * use random(), since it hasn&#x27;t been seeded and there&#x27;s no portable way</span></span><br><span class="line"><span class="comment">     * to seed it other than the system clock value...)  The upper half of the</span></span><br><span class="line"><span class="comment">     * uint64 value is just the tv_sec part, while the lower half contains the</span></span><br><span class="line"><span class="comment">     * tv_usec part (which must fit in 20 bits), plus 12 bits from our current</span></span><br><span class="line"><span class="comment">     * PID for a little extra uniqueness.  A person knowing this encoding can</span></span><br><span class="line"><span class="comment">     * determine the initialization time of the installation, which could</span></span><br><span class="line"><span class="comment">     * perhaps be useful sometimes.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    gettimeofday(&amp;tv, <span class="literal">NULL</span>);</span><br><span class="line">    sysidentifier = ((uint64) tv.tv_sec) &lt;&lt; <span class="number">32</span>;</span><br><span class="line">    sysidentifier |= ((uint64) tv.tv_usec) &lt;&lt; <span class="number">12</span>;</span><br><span class="line">    sysidentifier |= getpid() &amp; <span class="number">0xFFF</span>;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的代码中可以看到，PostgreSQL 通过 <code>gettimeofday()</code> 函数来获取当前的时间，随后将 <code>tv.tv_sec</code><br>作为标识符的高 32 位，将 <code>tv.tv_usec</code> 作为标识符的低 32 位中的高 20 位，最后将当前进程的 ID 作为标识符的低 12 位，从而构造一个唯一的数据库实例标识符。这样我们就可以通过下面的方式获取到实例的初始化时间。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">postgres&#x3D;# select to_timestamp(system_identifier &gt;&gt; 32) from pg_control_system();</span><br><span class="line">      to_timestamp</span><br><span class="line">------------------------</span><br><span class="line"> 2019-12-12 22:20:59+08</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Seafile 与 OnlyOffice 在线预览 Office 文档</title>
     <url>/2020/05/seafile-with-onlyoffice/</url>
     <content><![CDATA[<p>最近，在公司采用 Seafile 搭建了一个文件服务器，并结合 OnlyOffice 实现在线预览功能。本文简要记录一下这个过程中所遇到的问题。</p>
@@ -3655,27 +3655,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </tags>
   </entry>
   <entry>
-    <title>Ubuntu 笔记本盖住不挂机</title>
-    <url>/2020/03/ubuntu-lid-switch-action/</url>
-    <content><![CDATA[<p>我有一台旧笔记本装有 Ubuntu 18.04 系统，希望把它当作一个服务器，这时我就需要在盖住笔记本时系统不休眠。</p>
-<p>Ubuntu 系统中提供了 Login Manager 来管理这些行为，它的配置文件为 /etc/systemd/logind.conf。通过<br><code>man logind.conf</code> 我们可以看到其详细说明。</p>
-<p>其中有一项 <code>HandleLidSwitch</code>，它控制了笔记本盖住的行为，默认情况下是 <code>suspend</code>，我们可以将其修改为 <code>ignore</code> 即可以实现我们的目的。例如，我们修改 /etc/system/logind.conf 文件中的</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">#HandleLidSwitch&#x3D;suspend</span><br></pre></td></tr></table></figure>
-
-<p>行修改为</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">HandleLidSwitch&#x3D;ignore</span><br></pre></td></tr></table></figure>
-
-<p>然后重启 systemd-logind 服务即可。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo service systemd-logind restart</span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Ubuntu</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 中 ROUND 函数的使用</title>
     <url>/2019/03/sql-rounding/</url>
     <content><![CDATA[<p>在某些情况下我们可能需要对实数进行四舍五入，在 SQL 中我们可以通过 <code>ROUND</code> 函数来实现。</p>
@@ -3721,6 +3700,27 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       <tags>
         <tag>PostgreSQL</tag>
         <tag>翻译</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Ubuntu 笔记本盖住不挂机</title>
+    <url>/2020/03/ubuntu-lid-switch-action/</url>
+    <content><![CDATA[<p>我有一台旧笔记本装有 Ubuntu 18.04 系统，希望把它当作一个服务器，这时我就需要在盖住笔记本时系统不休眠。</p>
+<p>Ubuntu 系统中提供了 Login Manager 来管理这些行为，它的配置文件为 /etc/systemd/logind.conf。通过<br><code>man logind.conf</code> 我们可以看到其详细说明。</p>
+<p>其中有一项 <code>HandleLidSwitch</code>，它控制了笔记本盖住的行为，默认情况下是 <code>suspend</code>，我们可以将其修改为 <code>ignore</code> 即可以实现我们的目的。例如，我们修改 /etc/system/logind.conf 文件中的</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">#HandleLidSwitch&#x3D;suspend</span><br></pre></td></tr></table></figure>
+
+<p>行修改为</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">HandleLidSwitch&#x3D;ignore</span><br></pre></td></tr></table></figure>
+
+<p>然后重启 systemd-logind 服务即可。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo service systemd-logind restart</span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Ubuntu</tag>
       </tags>
   </entry>
   <entry>
