@@ -6,7 +6,7 @@
   <link href="https://blog.japinli.top/atom.xml" rel="self"/>
   
   <link href="https://blog.japinli.top/"/>
-  <updated>2021-05-23T00:43:02.090Z</updated>
+  <updated>2021-06-05T15:31:53.182Z</updated>
   <id>https://blog.japinli.top/</id>
   
   <author>
@@ -15,6 +15,25 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Gtags 忽略不相关的目录</title>
+    <link href="https://blog.japinli.top/2021/06/gtags-exclude-some-directories/"/>
+    <id>https://blog.japinli.top/2021/06/gtags-exclude-some-directories/</id>
+    <published>2021-06-05T09:09:59.000Z</published>
+    <updated>2021-06-05T15:31:53.182Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;我在 Emacs 中使用 gtags (GNU global source code tag system) 来作为代码导航的基本工具，它默认标记根目录及其子目录，但是有一些子目录其实我并不想要被标记。本文简要记录一下如何告知 gtags 忽略某些目录或文件。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="杂项" scheme="https://blog.japinli.top/categories/%E6%9D%82%E9%A1%B9/"/>
+    
+    
+    <category term="gtags" scheme="https://blog.japinli.top/tags/gtags/"/>
+    
+  </entry>
   
   <entry>
     <title>MongoDB 数据库分片集群入门</title>
@@ -408,34 +427,6 @@
     
     
     <category term="MacOS" scheme="https://blog.japinli.top/tags/MacOS/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>小米路由器刷 Breed 和 Padavan 固件</title>
-    <link href="https://blog.japinli.top/2020/07/miwifi-breed-padavan/"/>
-    <id>https://blog.japinli.top/2020/07/miwifi-breed-padavan/</id>
-    <published>2020-07-12T06:06:41.000Z</published>
-    <updated>2021-04-16T03:51:06.615Z</updated>
-    
-    
-    <summary type="html">&lt;p&gt;本文主要记录一下小米路由器 3G 刷 breed 和 padavan 的过程。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;https://openwrt.org/docs/techref/bootloader/breed&quot;&gt;Breed&lt;/a&gt; 是嵌入式设备的引导和恢复环境的简称。&lt;/li&gt;
-&lt;li&gt;Padavan 是由俄罗斯人基于华硕源码开发的针对 mtk 芯片的固件。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;我将整个过程分为分为 5 个步骤，更新 ROM、开启 SSH、备份路由器、刷 breed、刷 padavan。&lt;/p&gt;</summary>
-    
-    
-    
-    <category term="杂项" scheme="https://blog.japinli.top/categories/%E6%9D%82%E9%A1%B9/"/>
-    
-    
-    <category term="R3G" scheme="https://blog.japinli.top/tags/R3G/"/>
-    
-    <category term="breed" scheme="https://blog.japinli.top/tags/breed/"/>
-    
-    <category term="padavan" scheme="https://blog.japinli.top/tags/padavan/"/>
     
   </entry>
   
