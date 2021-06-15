@@ -141,6 +141,38 @@
       </tags>
   </entry>
   <entry>
+    <title>C 程序结构和范围</title>
+    <url>/2020/01/C-program-structure-and-scope/</url>
+    <content><![CDATA[<p>在之前的几篇关于 C 语言的文章中，我们以及掌握了 C 语言的基本要素，本文主要介绍 C 语言的程序结构和范围。</p>
+<a id="more"></a>
+
+<h2 id="程序结构"><a href="#程序结构" class="headerlink" title="程序结构"></a>程序结构</h2><p>我们可以将 C 程序写在一个源文件中，然而，更为常见的是将其按照功能模块将其划分到不同的源文件中。</p>
+<p>通常，头文件（即以 <code>.h</code> 结尾的文件）包含函数和变量的声明；源文件（即以 <code>.c</code> 结尾的文件）包含相应的定义。如果我们不想某些声明被外部文件访问，那么也可以将声明放在源文件中。</p>
+<p>例如，如果我们编写一个求平方根的函数，我们希望可以在定义该函数以外的文件访问，那么我们需要将函数的声明放在头文件中（即以 <code>.h</code> 结尾的文件）。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.h */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x);</span><br></pre></td></tr></table></figure>
+
+<p>该头文件可能包含其它我们需要使用的函数但其定义在不同的源文件中，我们可能不需要知道这些函数的实现。</p>
+<p>This header file could be included by other source files which need to use your function, but do not need to know how it was implemented.</p>
+<p>上述函数的定义应该在相应的源文件中出现（即以 <code>.c</code> 结尾的文件）。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.c */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;sqrt.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">double</span> result;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="范围"><a href="#范围" class="headerlink" title="范围"></a>范围</h2><p>范围是指程序的哪些部分可以“看到”声明的对象。声明的对象可以只在特定的函数中可见、或者是特定的文件、亦或者是包含这个声明的头文件的一系列源文件中（需要使用 <code>extern</code> 声明）。</p>
+<p>除非特定说明，在文件的顶层（即不在函数内）进行的声明对整个文件都是可见的，包括从函数内部，但在文件外部不可见；在函数内进行的声明仅在这些函数内可见；此外，声明对之前的声明不可见，例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">10</span>;</span><br><span class="line"><span class="keyword">int</span> y = x + <span class="number">5</span>;</span><br></pre></td></tr></table></figure>
+
+<p>这样是可以的，但是如下方式则是不行的。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = y + <span class="number">5</span>;</span><br><span class="line"><span class="keyword">int</span> y = <span class="number">10</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope</a></p>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>C 语言</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>C 语言词法元素</title>
     <url>/2019/06/C-lexical-elements/</url>
     <content><![CDATA[<p>本文主要介绍 C 语言的词法元素，包括标识符、关键字、常量、操作符以及分隔符。其中关于操作符的一些更为详细的信息将在后续进行介绍。</p>
@@ -313,38 +345,6 @@
 <h2 id="操作符"><a href="#操作符" class="headerlink" title="操作符"></a>操作符</h2><p>操作符（运算符）是一个特殊标记，它对一个，两个或三个操作数执行操作，例如加法或减法。后续将给出更为详细的介绍。</p>
 <h2 id="分隔符"><a href="#分隔符" class="headerlink" title="分隔符"></a>分隔符</h2><p>分隔符用于分割标记（<code>tokens</code>）。分隔符本身也是一种标记。它们由单个字符组成并代表其自身，C 语言中的分隔符标记包括 <code>(</code>, <code>)</code>, <code>[</code>, <code>]</code>, <code>&#123;</code>, <code>&#125;</code>, <code>;</code>, <code>,</code>, <code>.</code>, <code>:</code>。空白也是一种分隔符，但它不属于标记。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Lexical-Elements">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Lexical-Elements</a></p>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>C 语言</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>C 程序结构和范围</title>
-    <url>/2020/01/C-program-structure-and-scope/</url>
-    <content><![CDATA[<p>在之前的几篇关于 C 语言的文章中，我们以及掌握了 C 语言的基本要素，本文主要介绍 C 语言的程序结构和范围。</p>
-<a id="more"></a>
-
-<h2 id="程序结构"><a href="#程序结构" class="headerlink" title="程序结构"></a>程序结构</h2><p>我们可以将 C 程序写在一个源文件中，然而，更为常见的是将其按照功能模块将其划分到不同的源文件中。</p>
-<p>通常，头文件（即以 <code>.h</code> 结尾的文件）包含函数和变量的声明；源文件（即以 <code>.c</code> 结尾的文件）包含相应的定义。如果我们不想某些声明被外部文件访问，那么也可以将声明放在源文件中。</p>
-<p>例如，如果我们编写一个求平方根的函数，我们希望可以在定义该函数以外的文件访问，那么我们需要将函数的声明放在头文件中（即以 <code>.h</code> 结尾的文件）。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.h */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x);</span><br></pre></td></tr></table></figure>
-
-<p>该头文件可能包含其它我们需要使用的函数但其定义在不同的源文件中，我们可能不需要知道这些函数的实现。</p>
-<p>This header file could be included by other source files which need to use your function, but do not need to know how it was implemented.</p>
-<p>上述函数的定义应该在相应的源文件中出现（即以 <code>.c</code> 结尾的文件）。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.c */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;sqrt.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">double</span></span><br><span class="line">computeSqrt(<span class="keyword">double</span> x)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">double</span> result;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="范围"><a href="#范围" class="headerlink" title="范围"></a>范围</h2><p>范围是指程序的哪些部分可以“看到”声明的对象。声明的对象可以只在特定的函数中可见、或者是特定的文件、亦或者是包含这个声明的头文件的一系列源文件中（需要使用 <code>extern</code> 声明）。</p>
-<p>除非特定说明，在文件的顶层（即不在函数内）进行的声明对整个文件都是可见的，包括从函数内部，但在文件外部不可见；在函数内进行的声明仅在这些函数内可见；此外，声明对之前的声明不可见，例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">10</span>;</span><br><span class="line"><span class="keyword">int</span> y = x + <span class="number">5</span>;</span><br></pre></td></tr></table></figure>
-
-<p>这样是可以的，但是如下方式则是不行的。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = y + <span class="number">5</span>;</span><br><span class="line"><span class="keyword">int</span> y = <span class="number">10</span>;</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope</a></p>
 ]]></content>
       <categories>
         <category>编程</category>
@@ -1524,30 +1524,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Hello World</title>
-    <url>/2018/08/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/deployment.html">Deployment</a></p>
-]]></content>
-      <categories>
-        <category>博客</category>
-      </categories>
-      <tags>
-        <tag>hexo</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Gtags 忽略不相关的目录</title>
     <url>/2021/06/gtags-exclude-some-directories/</url>
     <content><![CDATA[<p>我在 Emacs 中使用 gtags (GNU global source code tag system) 来作为代码导航的基本工具，它默认标记根目录及其子目录，但是有一些子目录其实我并不想要被标记。本文简要记录一下如何告知 gtags 忽略某些目录或文件。</p>
@@ -1576,18 +1552,27 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>如何学习 Emacs</title>
-    <url>/2019/03/how-to-learn-emacs/</url>
-    <content><![CDATA[<img src="/2019/03/how-to-learn-emacs/How-to-Learn-Emacs-v2-Large.png" class="" title="How to Learn Emacs">
+    <title>Hello World</title>
+    <url>/2018/08/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
 
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
 
-<p><a href="http://sachachua.com/blog/2013/05/how-to-learn-emacs-a-hand-drawn-one-pager-for-beginners/">上图</a>来自于 <a href="http://sachachua.com/blog/">Sacha Chua</a> 的博客。她的博客记录许多关于学习 Emacs 的资源。</p>
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/deployment.html">Deployment</a></p>
 ]]></content>
       <categories>
-        <category>杂项</category>
+        <category>博客</category>
       </categories>
       <tags>
-        <tag>Emacs</tag>
+        <tag>hexo</tag>
       </tags>
   </entry>
   <entry>
@@ -1632,6 +1617,53 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>Eclipse</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何学习 Emacs</title>
+    <url>/2019/03/how-to-learn-emacs/</url>
+    <content><![CDATA[<img src="/2019/03/how-to-learn-emacs/How-to-Learn-Emacs-v2-Large.png" class="" title="How to Learn Emacs">
+
+
+<p><a href="http://sachachua.com/blog/2013/05/how-to-learn-emacs-a-hand-drawn-one-pager-for-beginners/">上图</a>来自于 <a href="http://sachachua.com/blog/">Sacha Chua</a> 的博客。她的博客记录许多关于学习 Emacs 的资源。</p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Emacs</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>LaTeX 页码设置</title>
+    <url>/2019/03/latex-page-numbering/</url>
+    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
+<a id="more"></a>
+
+<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
+<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
+<ul>
+<li><strong>empty</strong> - 没有页眉和页脚</li>
+<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
+<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
+<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
+</ul>
+<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
+<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
+<ul>
+<li><strong>arabic</strong> - 阿拉伯数字</li>
+<li><strong>roman</strong> - 小写的罗马数字</li>
+<li><strong>Roman</strong> - 大写的罗马数字</li>
+<li><strong>alph</strong> - 小写的字符形式</li>
+<li><strong>Alph</strong> - 大写的字符形式</li>
+</ul>
+<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight latex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;article&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;fontspec, xunicode, xlextra&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;xeCJK&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">title</span><span class="string">&#123;\LaTeX 页码设置&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">author</span><span class="string">&#123;Japinli&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">maketitle</span></span></span><br><span class="line"><span class="tag">\<span class="name">thispagestyle</span><span class="string">&#123;empty&#125;</span></span> <span class="comment">% 当前页不显示页码</span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">pagestyle</span><span class="string">&#123;headings&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;Roman&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section*</span><span class="string">&#123;前言&#125;</span></span></span><br><span class="line">学习如何在<span class="tag">\<span class="name">LaTeX</span></span> 中设置页码。</span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">tableofcontents</span></span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;arabic&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">LaTeX</span></span> 中包含五种页码风格，分别是<span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>，</span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>和<span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格说明&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>代表小写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>代表大写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格设置&#125;</span></span></span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用<span class="tag">\<span class="name">emph</span><span class="string">&#123;\textbackslash pagenumbering\&#123;sytle\&#125;</span></span>&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>排版</category>
+      </categories>
+      <tags>
+        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -1711,38 +1743,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>LaTeX 页码设置</title>
-    <url>/2019/03/latex-page-numbering/</url>
-    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
-<a id="more"></a>
-
-<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
-<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
-<ul>
-<li><strong>empty</strong> - 没有页眉和页脚</li>
-<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
-<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
-<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
-</ul>
-<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
-<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
-<ul>
-<li><strong>arabic</strong> - 阿拉伯数字</li>
-<li><strong>roman</strong> - 小写的罗马数字</li>
-<li><strong>Roman</strong> - 大写的罗马数字</li>
-<li><strong>alph</strong> - 小写的字符形式</li>
-<li><strong>Alph</strong> - 大写的字符形式</li>
-</ul>
-<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight latex"><table><tr><td class="code"><pre><span class="line"><span class="tag">\<span class="name">documentclass</span><span class="string">&#123;article&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;fontspec, xunicode, xlextra&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">usepackage</span><span class="string">&#123;xeCJK&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">title</span><span class="string">&#123;\LaTeX 页码设置&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">author</span><span class="string">&#123;Japinli&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">begin</span><span class="string">&#123;document&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">maketitle</span></span></span><br><span class="line"><span class="tag">\<span class="name">thispagestyle</span><span class="string">&#123;empty&#125;</span></span> <span class="comment">% 当前页不显示页码</span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">pagestyle</span><span class="string">&#123;headings&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;Roman&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section*</span><span class="string">&#123;前言&#125;</span></span></span><br><span class="line">学习如何在<span class="tag">\<span class="name">LaTeX</span></span> 中设置页码。</span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">tableofcontents</span></span></span><br><span class="line"><span class="tag">\<span class="name">newpage</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">setcounter</span><span class="string">&#123;page&#125;</span><span class="string">&#123;1&#125;</span></span></span><br><span class="line"><span class="tag">\<span class="name">pagenumbering</span><span class="string">&#123;arabic&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">LaTeX</span></span> 中包含五种页码风格，分别是<span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>，<span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>，</span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>和<span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格说明&#125;</span></span></span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;arabic&#125;</span></span>代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;roman&#125;</span></span>代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Roman&#125;</span></span>代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;alph&#125;</span></span>代表小写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">emph</span><span class="string">&#123;Alph&#125;</span></span>代表大写的字符类型。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">section</span><span class="string">&#123;页码风格设置&#125;</span></span></span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用<span class="tag">\<span class="name">emph</span><span class="string">&#123;\textbackslash pagenumbering\&#123;sytle\&#125;</span></span>&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line"><span class="tag">\<span class="name">end</span><span class="string">&#123;document&#125;</span></span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>小米路由器刷 Breed 和 Padavan 固件</title>
     <url>/2020/07/miwifi-breed-padavan/</url>
     <content><![CDATA[<p>本文主要记录一下小米路由器 3G 刷 breed 和 padavan 的过程。</p>
@@ -1815,6 +1815,60 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Oracle 迁移 PostgreSQL - DESDecrypt 函数</title>
+    <url>/2021/06/oracle-desdecrypt-to-postgresql/</url>
+    <content><![CDATA[<p>最近在工作中越到 Oracle DES 加解密迁移到 PostgreSQL 中的问题，本文简要记录一下这个问题的解决过程。</p>
+<!-- more ->
+
+## 问题
+
+在客户环境中，被加密的内容来自于一个数据中心，而在迁移的数据库中有一个名为 `fn_decrypt_base64()` 的函数对其进行解密。函数定义如下：
+
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> fn_decrypt_base64(input_str  <span class="keyword">IN</span> <span class="built_in">VARCHAR2</span>,</span><br><span class="line">                                             encode_key <span class="keyword">IN</span> <span class="built_in">VARCHAR2</span>)</span><br><span class="line"><span class="keyword">RETURN</span> <span class="built_in">VARCHAR2</span></span><br><span class="line"><span class="keyword">IS</span></span><br><span class="line">  output_string    <span class="built_in">varchar2</span>(<span class="number">4000</span>);</span><br><span class="line">  encrypted_string varchar2(256);</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">SELECT</span> utl_raw.cast_to_varchar2(utl_encode.base64_decode(utl_raw.cast_to_raw(input_str)))</span><br><span class="line">    <span class="keyword">INTO</span> encrypted_string</span><br><span class="line">    <span class="keyword">FROM</span> dual;</span><br><span class="line"></span><br><span class="line">  <span class="comment">-- dbms_output.put_line(utl_raw.cast_to_raw(encrypted_string));</span></span><br><span class="line">  dbms_obfuscation_toolkit.DESDecrypt(input_string     =&gt; encrypted_string,</span><br><span class="line">                                      key_string       =&gt; encode_key,</span><br><span class="line">                                      decrypted_string =&gt; output_string);</span><br><span class="line">  RETURN output_string;</span><br><span class="line"><span class="keyword">END</span>;</span><br></pre></td></tr></table></figure>
+
+<p>其执行结果如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>) <span class="keyword">AS</span> plaintext <span class="keyword">FROM</span> dual;</span><br><span class="line">     PLAINTEXT</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line"> 340104198809053015</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>既然是加解密，那么迁移到 PostgreSQL 中来很自然的就想到了 <a href="">pgcrypto</a> 扩展。然而并没有那么简单。</p>
+<p>下面是我迁移到 PostgreSQL 中对 <code>fn_decrypt_base64()</code> 函数的实现。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION <span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> pgcrypto;</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> fn_decrypt_base64(input_str <span class="built_in">text</span>,</span><br><span class="line">                                             encode_key bytea)</span><br><span class="line"><span class="keyword">RETURNS</span> <span class="built_in">varchar</span></span><br><span class="line"><span class="keyword">AS</span> $<span class="keyword">body</span>$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">  output_string <span class="built_in">varchar</span>(<span class="number">4000</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  <span class="keyword">SELECT</span> <span class="keyword">decrypt</span>(<span class="keyword">decode</span>(input_str, <span class="string">&#x27;base64&#x27;</span>), encode_key, <span class="string">&#x27;des&#x27;</span>)</span><br><span class="line">  <span class="keyword">INTO</span> output_string;</span><br><span class="line"></span><br><span class="line">  RETURN output_string;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$body$ LANGUAGE &#x27;plpgsql&#x27; VOLATILE;</span><br></pre></td></tr></table></figure>
+
+<p>其执行结果如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">                     plaintext</span><br><span class="line"><span class="comment">----------------------------------------------------</span></span><br><span class="line"> \x333430313034313938383039303533303135000000000000</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>这并不是我们想要的结果，但是已经非常接近了，可以看到其二进制格式实际上就是我们解密后的原文，但是后面附加了一些内容，当我们尝试将其转换为可读的字符串时，会遇到如下错误。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> convert_from(fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>)::bytea, <span class="string">&#x27;SQL_ASCII&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">ERROR:  invalid byte sequence for encoding &quot;SQL_ASCII&quot;: 0x00</span><br></pre></td></tr></table></figure>
+
+<p>在 Oracle 的 <code>fn_decrypt_base64</code> 中加入 <code>dbms_output.put_line(utl_raw.cast_to_raw(encrypted_string));</code> 语句，可以看到两个数据库中解密后的数据的区别，如下所示。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Oracle      D0C80537528268D7AD2F3DA40867ECB0B16B1820B61E96B0</span><br><span class="line">plain text   3 4 0 1 0 4 1 9 8 8 0 9 0 5 3 0 1 5</span><br><span class="line">PostgreSQL  333430313034313938383039303533303135000000000000</span><br></pre></td></tr></table></figure>
+
+<p>其长度都是一致的，但是在 Oracle 中，我看不出有什么规律，而在 PostgreSQL 中，可以发现非零部分就是我们解密后的明文的二进制形式。在 PostgreSQL 中，我们可以使用如下语句来达到与 Oracle 中类似的效果。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> convert_from(<span class="keyword">trim</span>(fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>)::bytea, <span class="string">&#x27;\x00&#x27;</span>), <span class="string">&#x27;SQL_ASCII&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">     plaintext</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line"> 340104198809053015</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>这只是 Oracle 中 <code>DESDecrypt</code> 迁移到 PostgreSQL 数据库中的一种临时解决方案，至于为什么 Oracle 和 PostgreSQL 中解密后的明文二进制表现不同，或许这个 Oracle 中 varchar2 类型的存储格式有关。</p>
+<p>我们可以对 <code>fn_decrypt_base64</code> 函数进行封装，使其表现得更像 Oracle 一点。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> fn_decrypt_base64(input_str <span class="built_in">text</span>,</span><br><span class="line">                                             encode_key bytea)</span><br><span class="line"><span class="keyword">RETURNS</span> <span class="built_in">varchar</span></span><br><span class="line"><span class="keyword">AS</span> $<span class="keyword">body</span>$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">  output_string <span class="built_in">varchar</span>(<span class="number">4000</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  <span class="keyword">SELECT</span> convert_from(<span class="keyword">trim</span>(<span class="keyword">decrypt</span>(<span class="keyword">decode</span>(input_str, <span class="string">&#x27;base64&#x27;</span>), encode_key, <span class="string">&#x27;des&#x27;</span>), <span class="string">&#x27;\x00&#x27;</span>), <span class="string">&#x27;SQL_ASCII&#x27;</span>)</span><br><span class="line">  <span class="keyword">INTO</span> output_string;</span><br><span class="line"></span><br><span class="line">  RETURN output_string;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$body$ LANGUAGE &#x27;plpgsql&#x27; VOLATILE;</span><br></pre></td></tr></table></figure>
+
+<p>其结果如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">     plaintext</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line"> 340104198809053015</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/12/pgcrypto.html">https://www.postgresql.org/docs/12/pgcrypto.html</a><br>[2] <a href="https://asktom.oracle.com/pls/apex/f?p=100:11:0::::P11_QUESTION_ID:13889233036637">https://asktom.oracle.com/pls/apex/f?p=100:11:0::::P11_QUESTION_ID:13889233036637</a></p>
+<div class="just-for-fun">
+笑林广记 - 仙女凡身
+
+<p>董永行孝，上帝命一仙女嫁之。<br>众仙女送行，皆嘱咐曰：“去下方，若更有行孝者，千万寄个信来。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Oracle</tag>
+        <tag>PostgreSQL</tag>
+        <tag>迁移</tag>
       </tags>
   </entry>
   <entry>
@@ -2457,6 +2511,43 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 优化 setitimer 系统调用</title>
+    <url>/2020/08/postgresql-optimize-setitimer-system-calls/</url>
+    <content><![CDATA[<p>当我们在使用 PostgreSQL 数据库并启用 <code>statement_timeout</code> 时，可以看到 <code>setitimer()</code> 函数的调用次数明显偏多。本文分析了 <a href="https://www.postgresql.org/message-id/CA%2BhUKG%2Bo6pbuHBJSGnud%3DTadsuXySWA7CCcPgCt2QE9F6_4iHQ%40mail.gmail.com">Thomas Munro 给出的关于 <code>setitimer()</code> 函数的优化</a>。</p>
+<a id="more"></a>
+
+<h2 id="基准测试"><a href="#基准测试" class="headerlink" title="基准测试"></a>基准测试</h2><p>为了方便分析，我们首先需要有一个基本的基准测试。我们使用下面的命令初始化数据库：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ initdb -D pgdata</span><br><span class="line">$ pg_ctl -l log -D pgdata start</span><br><span class="line">$ createdb testdb</span><br><span class="line">$ pgbench -i -s 10 testdb</span><br></pre></td></tr></table></figure>
+
+<p>接着修改配置 <code>statement_timeout</code>，将其设置为 <code>10s</code>，可以使用如下命令：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql postgres -c &quot;ALTER SYSTEM SET statement_timeout TO &#39;10s&#39;&quot;</span><br><span class="line">$ pg_ctl -l log -D pgdata start</span><br></pre></td></tr></table></figure>
+
+<p>接着我们使用 <code>pgbench -T60 -Mprepared -S testdb</code> 来进行测试，我们在另一个终端中通过 <code>strace</code> 来分析系统调用，可以得到如下结果：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ strace -c -p 31561</span><br><span class="line">strace: Process 31561 attached</span><br><span class="line">% time     seconds  usecs&#x2F;call     calls    errors syscall</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line"> 41.11    0.334739           1    424545           sendto</span><br><span class="line"> 26.54    0.216100           1    424449           recvfrom</span><br><span class="line"> 24.33    0.198094           0    424448           setitimer</span><br><span class="line">  8.02    0.065268           1     71339           pread64</span><br><span class="line">  0.00    0.000000           0         1           epoll_ctl</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line">100.00    0.814201               1344782           total</span><br></pre></td></tr></table></figure>
+
+<p>从结果可以看到，整个测试过程中 <code>setitimer()</code> 系统调用调用了 424448 次。</p>
+<h2 id="补丁测试"><a href="#补丁测试" class="headerlink" title="补丁测试"></a>补丁测试</h2><p>接下来，我们将 patch 应用到 PostgreSQL 中，重新编译，并进行测试，其结果如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ strace -c -p 1375</span><br><span class="line">% time     seconds  usecs&#x2F;call     calls    errors syscall</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line"> 54.16    0.351467           1    520065           sendto</span><br><span class="line"> 35.17    0.228279           0    519963           recvfrom</span><br><span class="line"> 10.67    0.069251           1     88036           pread64</span><br><span class="line">  0.00    0.000001           0         6           rt_sigreturn</span><br><span class="line">  0.00    0.000000           0         5           setitimer</span><br><span class="line">  0.00    0.000000           0         1           epoll_ctl</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line">100.00    0.648998               1128076           total</span><br></pre></td></tr></table></figure>
+
+<p>从结果可以看到，此时的 <code>setitimer()</code> 系统调用仅调用了 5 次，远比之前的次数低。从最终的统计结果来看，应用了补丁程序的 PostgreSQL 整个测试过程中的系统调用比原有的系统调用降低了约 16%。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>这个补丁程序的思路其实非常简单，实现起来也不复杂，整个 diff 文件不足 100 行。</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line">diff --git a/src/backend/utils/misc/timeout.c b/src/backend/utils/misc/timeout.c</span><br><span class="line">index f1c9518b0c..b5027815db 100644</span><br><span class="line"><span class="comment">--- a/src/backend/utils/misc/timeout.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/misc/timeout.c</span></span><br><span class="line">@@ -51,6 +51,13 @@ static bool all_timeouts_initialized = false;</span><br><span class="line"> static volatile int num_active_timeouts = 0;</span><br><span class="line"> static timeout_params *volatile active_timeouts[MAX_TIMEOUTS];</span><br><span class="line"></span><br><span class="line"><span class="addition">+/*</span></span><br><span class="line"><span class="addition">+ * State used to avoid installing a new timer interrupt when the previous one</span></span><br><span class="line"><span class="addition">+ * hasn&#x27;t fired yet, but isn&#x27;t too late.</span></span><br><span class="line"><span class="addition">+ */</span></span><br><span class="line"><span class="addition">+static TimestampTz sigalrm_due_at = PG_INT64_MAX;</span></span><br><span class="line"><span class="addition">+static volatile sig_atomic_t sigalrm_delivered = false;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> /*</span><br><span class="line">  * Flag controlling whether the signal handler is allowed to do anything.</span><br><span class="line">  * We leave this &quot;false&quot; when we&#x27;re not expecting interrupts, just in case.</span><br><span class="line">@@ -195,12 +202,13 @@ schedule_alarm(TimestampTz now)</span><br><span class="line"> 		struct itimerval timeval;</span><br><span class="line"> 		long		secs;</span><br><span class="line"> 		int			usecs;</span><br><span class="line"><span class="addition">+		TimestampTz	nearest_timeout;</span></span><br><span class="line"></span><br><span class="line"> 		MemSet(&amp;timeval, 0, sizeof(struct itimerval));</span><br><span class="line"></span><br><span class="line"> 		/* Get the time remaining till the nearest pending timeout */</span><br><span class="line"><span class="deletion">-		TimestampDifference(now, active_timeouts[0]-&gt;fin_time,</span></span><br><span class="line"><span class="deletion">-							&amp;secs, &amp;usecs);</span></span><br><span class="line"><span class="addition">+		nearest_timeout = active_timeouts[0]-&gt;fin_time;</span></span><br><span class="line"><span class="addition">+		TimestampDifference(now, nearest_timeout, &amp;secs, &amp;usecs);</span></span><br><span class="line"></span><br><span class="line"> 		/*</span><br><span class="line"> 		 * It&#x27;s possible that the difference is less than a microsecond;</span><br><span class="line">@@ -244,9 +252,18 @@ schedule_alarm(TimestampTz now)</span><br><span class="line"> 		 */</span><br><span class="line"> 		enable_alarm();</span><br><span class="line"></span><br><span class="line"><span class="addition">+		/*</span></span><br><span class="line"><span class="addition">+		 * Try to avoid having to set the interval timer, if we already know</span></span><br><span class="line"><span class="addition">+		 * that there is an undelivered signal due at the same time or sooner.</span></span><br><span class="line"><span class="addition">+		 */</span></span><br><span class="line"><span class="addition">+		if (nearest_timeout &gt;= sigalrm_due_at &amp;&amp; !sigalrm_delivered)</span></span><br><span class="line"><span class="addition">+			return;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 		/* Set the alarm timer */</span><br><span class="line"> 		if (setitimer(ITIMER_REAL, &amp;timeval, NULL) != 0)</span><br><span class="line"> 			elog(FATAL, &quot;could not enable SIGALRM timer: %m&quot;);</span><br><span class="line"><span class="addition">+		sigalrm_due_at = nearest_timeout;</span></span><br><span class="line"><span class="addition">+		sigalrm_delivered = false;</span></span><br><span class="line"> 	&#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line">@@ -266,6 +283,8 @@ handle_sig_alarm(SIGNAL_ARGS)</span><br><span class="line"> &#123;</span><br><span class="line"> 	int			save_errno = errno;</span><br><span class="line"></span><br><span class="line"><span class="addition">+	sigalrm_delivered = true;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 	/*</span><br><span class="line"> 	 * Bump the holdoff counter, to make sure nothing we call will process</span><br><span class="line"> 	 * interrupts directly. No timeout handler should do that, but these</span><br><span class="line">@@ -591,8 +610,9 @@ disable_timeouts(const DisableTimeoutParams *timeouts, int count)</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> /*</span><br><span class="line"><span class="deletion">- * Disable SIGALRM and remove all timeouts from the active list,</span></span><br><span class="line"><span class="deletion">- * and optionally reset their timeout indicators.</span></span><br><span class="line"><span class="addition">+ * Remove all timeouts from the active list, and optionally reset their timeout</span></span><br><span class="line"><span class="addition">+ * indicators.  Leave any existing itimer installed, because it may allow us to</span></span><br><span class="line"><span class="addition">+ * avoid having to set it again soon.</span></span><br><span class="line">  */</span><br><span class="line"> void</span><br><span class="line"> disable_all_timeouts(bool keep_indicators)</span><br><span class="line">@@ -601,20 +621,6 @@ disable_all_timeouts(bool keep_indicators)</span><br><span class="line"></span><br><span class="line"> 	disable_alarm();</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	/*</span></span><br><span class="line"><span class="deletion">-	 * Only bother to reset the timer if we think it&#x27;s active.  We could just</span></span><br><span class="line"><span class="deletion">-	 * let the interrupt happen anyway, but it&#x27;s probably a bit cheaper to do</span></span><br><span class="line"><span class="deletion">-	 * setitimer() than to let the useless interrupt happen.</span></span><br><span class="line"><span class="deletion">-	 */</span></span><br><span class="line"><span class="deletion">-	if (num_active_timeouts &gt; 0)</span></span><br><span class="line"><span class="deletion">-	&#123;</span></span><br><span class="line"><span class="deletion">-		struct itimerval timeval;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-		MemSet(&amp;timeval, 0, sizeof(struct itimerval));</span></span><br><span class="line"><span class="deletion">-		if (setitimer(ITIMER_REAL, &amp;timeval, NULL) != 0)</span></span><br><span class="line"><span class="deletion">-			elog(FATAL, &quot;could not disable SIGALRM timer: %m&quot;);</span></span><br><span class="line"><span class="deletion">-	&#125;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"> 	num_active_timeouts = 0;</span><br><span class="line"></span><br><span class="line"> 	for (i = 0; i &lt; MAX_TIMEOUTS; i++)</span><br></pre></td></tr></table></figure>
+
+<p>其基本思想是通过 alarm 来取代频繁地调用 <code>setitimer()</code> 函数，而不是针对每个 timeout 都去调用 <code>setitimer()</code> 函数，这真的是将性能挖掘到了极限啊！</p>
+<p>变量 <code>sigalrm_due_at</code> 记录了最近一个定时器的到期时间，<code>sigalrm_delivered</code> 则记录是否已经触发了 sigalrm 信号。当最近的定时器的超时时间大于或等于 <code>sigalrm_due_at</code> 并且不存在没有交付的定时器时，它将不会对其调用 <code>setitimer()</code> 来设置定时器。</p>
+<h2 id="更新"><a href="#更新" class="headerlink" title="更新"></a>更新</h2><ul>
+<li><strong>2020-11-21</strong> - 最近该功能在被 Review 的时候发现一个问题，由于我们仅设置了最近的一个 timeout，那么当 <code>handle_sig_alarm()</code> 被中断时，可能出现后续的 timeout 无法正常工作，因此我们需要在故障恢复的时候重新调用 <code>setitimer()</code> 函数设置 timeout，<a href="https://www.postgresql.org/message-id/2B9BB40C-DDEA-4CDB-B37E-C2738E739416%40hotmail.com">详细实现</a>。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 添加系统表</title>
     <url>/2019/08/postgresql-new-catalog/</url>
     <content><![CDATA[<p>本文将介绍如何在 PostgreSQL 中创建一个新的系统表。PostgreSQL 将系统表都存放在 <code>src/include/catalog</code> 目录下，如下图所示：</p>
@@ -2487,43 +2578,6 @@ table th:nth-of-type(2) {
 <h2 id="备注"><a href="#备注" class="headerlink" title="备注"></a>备注</h2><ol>
 <li>该方法适合于 PostgreSQL 11 以及后续版本，PostgreSQL 10 及之前的版本可能存在略微差异，但大致相同。</li>
 </ol>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 优化 setitimer 系统调用</title>
-    <url>/2020/08/postgresql-optimize-setitimer-system-calls/</url>
-    <content><![CDATA[<p>当我们在使用 PostgreSQL 数据库并启用 <code>statement_timeout</code> 时，可以看到 <code>setitimer()</code> 函数的调用次数明显偏多。本文分析了 <a href="https://www.postgresql.org/message-id/CA%2BhUKG%2Bo6pbuHBJSGnud%3DTadsuXySWA7CCcPgCt2QE9F6_4iHQ%40mail.gmail.com">Thomas Munro 给出的关于 <code>setitimer()</code> 函数的优化</a>。</p>
-<a id="more"></a>
-
-<h2 id="基准测试"><a href="#基准测试" class="headerlink" title="基准测试"></a>基准测试</h2><p>为了方便分析，我们首先需要有一个基本的基准测试。我们使用下面的命令初始化数据库：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ initdb -D pgdata</span><br><span class="line">$ pg_ctl -l log -D pgdata start</span><br><span class="line">$ createdb testdb</span><br><span class="line">$ pgbench -i -s 10 testdb</span><br></pre></td></tr></table></figure>
-
-<p>接着修改配置 <code>statement_timeout</code>，将其设置为 <code>10s</code>，可以使用如下命令：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ psql postgres -c &quot;ALTER SYSTEM SET statement_timeout TO &#39;10s&#39;&quot;</span><br><span class="line">$ pg_ctl -l log -D pgdata start</span><br></pre></td></tr></table></figure>
-
-<p>接着我们使用 <code>pgbench -T60 -Mprepared -S testdb</code> 来进行测试，我们在另一个终端中通过 <code>strace</code> 来分析系统调用，可以得到如下结果：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ strace -c -p 31561</span><br><span class="line">strace: Process 31561 attached</span><br><span class="line">% time     seconds  usecs&#x2F;call     calls    errors syscall</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line"> 41.11    0.334739           1    424545           sendto</span><br><span class="line"> 26.54    0.216100           1    424449           recvfrom</span><br><span class="line"> 24.33    0.198094           0    424448           setitimer</span><br><span class="line">  8.02    0.065268           1     71339           pread64</span><br><span class="line">  0.00    0.000000           0         1           epoll_ctl</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line">100.00    0.814201               1344782           total</span><br></pre></td></tr></table></figure>
-
-<p>从结果可以看到，整个测试过程中 <code>setitimer()</code> 系统调用调用了 424448 次。</p>
-<h2 id="补丁测试"><a href="#补丁测试" class="headerlink" title="补丁测试"></a>补丁测试</h2><p>接下来，我们将 patch 应用到 PostgreSQL 中，重新编译，并进行测试，其结果如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$ strace -c -p 1375</span><br><span class="line">% time     seconds  usecs&#x2F;call     calls    errors syscall</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line"> 54.16    0.351467           1    520065           sendto</span><br><span class="line"> 35.17    0.228279           0    519963           recvfrom</span><br><span class="line"> 10.67    0.069251           1     88036           pread64</span><br><span class="line">  0.00    0.000001           0         6           rt_sigreturn</span><br><span class="line">  0.00    0.000000           0         5           setitimer</span><br><span class="line">  0.00    0.000000           0         1           epoll_ctl</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line">100.00    0.648998               1128076           total</span><br></pre></td></tr></table></figure>
-
-<p>从结果可以看到，此时的 <code>setitimer()</code> 系统调用仅调用了 5 次，远比之前的次数低。从最终的统计结果来看，应用了补丁程序的 PostgreSQL 整个测试过程中的系统调用比原有的系统调用降低了约 16%。</p>
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>这个补丁程序的思路其实非常简单，实现起来也不复杂，整个 diff 文件不足 100 行。</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line">diff --git a/src/backend/utils/misc/timeout.c b/src/backend/utils/misc/timeout.c</span><br><span class="line">index f1c9518b0c..b5027815db 100644</span><br><span class="line"><span class="comment">--- a/src/backend/utils/misc/timeout.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/misc/timeout.c</span></span><br><span class="line">@@ -51,6 +51,13 @@ static bool all_timeouts_initialized = false;</span><br><span class="line"> static volatile int num_active_timeouts = 0;</span><br><span class="line"> static timeout_params *volatile active_timeouts[MAX_TIMEOUTS];</span><br><span class="line"></span><br><span class="line"><span class="addition">+/*</span></span><br><span class="line"><span class="addition">+ * State used to avoid installing a new timer interrupt when the previous one</span></span><br><span class="line"><span class="addition">+ * hasn&#x27;t fired yet, but isn&#x27;t too late.</span></span><br><span class="line"><span class="addition">+ */</span></span><br><span class="line"><span class="addition">+static TimestampTz sigalrm_due_at = PG_INT64_MAX;</span></span><br><span class="line"><span class="addition">+static volatile sig_atomic_t sigalrm_delivered = false;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> /*</span><br><span class="line">  * Flag controlling whether the signal handler is allowed to do anything.</span><br><span class="line">  * We leave this &quot;false&quot; when we&#x27;re not expecting interrupts, just in case.</span><br><span class="line">@@ -195,12 +202,13 @@ schedule_alarm(TimestampTz now)</span><br><span class="line"> 		struct itimerval timeval;</span><br><span class="line"> 		long		secs;</span><br><span class="line"> 		int			usecs;</span><br><span class="line"><span class="addition">+		TimestampTz	nearest_timeout;</span></span><br><span class="line"></span><br><span class="line"> 		MemSet(&amp;timeval, 0, sizeof(struct itimerval));</span><br><span class="line"></span><br><span class="line"> 		/* Get the time remaining till the nearest pending timeout */</span><br><span class="line"><span class="deletion">-		TimestampDifference(now, active_timeouts[0]-&gt;fin_time,</span></span><br><span class="line"><span class="deletion">-							&amp;secs, &amp;usecs);</span></span><br><span class="line"><span class="addition">+		nearest_timeout = active_timeouts[0]-&gt;fin_time;</span></span><br><span class="line"><span class="addition">+		TimestampDifference(now, nearest_timeout, &amp;secs, &amp;usecs);</span></span><br><span class="line"></span><br><span class="line"> 		/*</span><br><span class="line"> 		 * It&#x27;s possible that the difference is less than a microsecond;</span><br><span class="line">@@ -244,9 +252,18 @@ schedule_alarm(TimestampTz now)</span><br><span class="line"> 		 */</span><br><span class="line"> 		enable_alarm();</span><br><span class="line"></span><br><span class="line"><span class="addition">+		/*</span></span><br><span class="line"><span class="addition">+		 * Try to avoid having to set the interval timer, if we already know</span></span><br><span class="line"><span class="addition">+		 * that there is an undelivered signal due at the same time or sooner.</span></span><br><span class="line"><span class="addition">+		 */</span></span><br><span class="line"><span class="addition">+		if (nearest_timeout &gt;= sigalrm_due_at &amp;&amp; !sigalrm_delivered)</span></span><br><span class="line"><span class="addition">+			return;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 		/* Set the alarm timer */</span><br><span class="line"> 		if (setitimer(ITIMER_REAL, &amp;timeval, NULL) != 0)</span><br><span class="line"> 			elog(FATAL, &quot;could not enable SIGALRM timer: %m&quot;);</span><br><span class="line"><span class="addition">+		sigalrm_due_at = nearest_timeout;</span></span><br><span class="line"><span class="addition">+		sigalrm_delivered = false;</span></span><br><span class="line"> 	&#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line">@@ -266,6 +283,8 @@ handle_sig_alarm(SIGNAL_ARGS)</span><br><span class="line"> &#123;</span><br><span class="line"> 	int			save_errno = errno;</span><br><span class="line"></span><br><span class="line"><span class="addition">+	sigalrm_delivered = true;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 	/*</span><br><span class="line"> 	 * Bump the holdoff counter, to make sure nothing we call will process</span><br><span class="line"> 	 * interrupts directly. No timeout handler should do that, but these</span><br><span class="line">@@ -591,8 +610,9 @@ disable_timeouts(const DisableTimeoutParams *timeouts, int count)</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> /*</span><br><span class="line"><span class="deletion">- * Disable SIGALRM and remove all timeouts from the active list,</span></span><br><span class="line"><span class="deletion">- * and optionally reset their timeout indicators.</span></span><br><span class="line"><span class="addition">+ * Remove all timeouts from the active list, and optionally reset their timeout</span></span><br><span class="line"><span class="addition">+ * indicators.  Leave any existing itimer installed, because it may allow us to</span></span><br><span class="line"><span class="addition">+ * avoid having to set it again soon.</span></span><br><span class="line">  */</span><br><span class="line"> void</span><br><span class="line"> disable_all_timeouts(bool keep_indicators)</span><br><span class="line">@@ -601,20 +621,6 @@ disable_all_timeouts(bool keep_indicators)</span><br><span class="line"></span><br><span class="line"> 	disable_alarm();</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	/*</span></span><br><span class="line"><span class="deletion">-	 * Only bother to reset the timer if we think it&#x27;s active.  We could just</span></span><br><span class="line"><span class="deletion">-	 * let the interrupt happen anyway, but it&#x27;s probably a bit cheaper to do</span></span><br><span class="line"><span class="deletion">-	 * setitimer() than to let the useless interrupt happen.</span></span><br><span class="line"><span class="deletion">-	 */</span></span><br><span class="line"><span class="deletion">-	if (num_active_timeouts &gt; 0)</span></span><br><span class="line"><span class="deletion">-	&#123;</span></span><br><span class="line"><span class="deletion">-		struct itimerval timeval;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-		MemSet(&amp;timeval, 0, sizeof(struct itimerval));</span></span><br><span class="line"><span class="deletion">-		if (setitimer(ITIMER_REAL, &amp;timeval, NULL) != 0)</span></span><br><span class="line"><span class="deletion">-			elog(FATAL, &quot;could not disable SIGALRM timer: %m&quot;);</span></span><br><span class="line"><span class="deletion">-	&#125;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"> 	num_active_timeouts = 0;</span><br><span class="line"></span><br><span class="line"> 	for (i = 0; i &lt; MAX_TIMEOUTS; i++)</span><br></pre></td></tr></table></figure>
-
-<p>其基本思想是通过 alarm 来取代频繁地调用 <code>setitimer()</code> 函数，而不是针对每个 timeout 都去调用 <code>setitimer()</code> 函数，这真的是将性能挖掘到了极限啊！</p>
-<p>变量 <code>sigalrm_due_at</code> 记录了最近一个定时器的到期时间，<code>sigalrm_delivered</code> 则记录是否已经触发了 sigalrm 信号。当最近的定时器的超时时间大于或等于 <code>sigalrm_due_at</code> 并且不存在没有交付的定时器时，它将不会对其调用 <code>setitimer()</code> 来设置定时器。</p>
-<h2 id="更新"><a href="#更新" class="headerlink" title="更新"></a>更新</h2><ul>
-<li><strong>2020-11-21</strong> - 最近该功能在被 Review 的时候发现一个问题，由于我们仅设置了最近的一个 timeout，那么当 <code>handle_sig_alarm()</code> 被中断时，可能出现后续的 timeout 无法正常工作，因此我们需要在故障恢复的时候重新调用 <code>setitimer()</code> 函数设置 timeout，<a href="https://www.postgresql.org/message-id/2B9BB40C-DDEA-4CDB-B37E-C2738E739416%40hotmail.com">详细实现</a>。</li>
-</ul>
 ]]></content>
       <categories>
         <category>数据库</category>

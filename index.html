@@ -132,7 +132,7 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">32</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">33</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
@@ -142,7 +142,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">78</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">79</span></a>
 
   </li>
         <li class="menu-item menu-item-reading">
@@ -241,7 +241,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">78</span>
+          <span class="site-state-item-count">79</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -254,7 +254,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">32</span>
+        <span class="site-state-item-count">33</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -280,6 +280,11 @@
 	</div>
 	<ul class="links-of-blogroll-list recent-posts-list">
 	        <li class="my-links-of-blogroll-item">
+		    <a href="/2021/06/oracle-desdecrypt-to-postgresql/" title="Oracle 迁移 PostgreSQL - DESDecrypt 函数" target="">
+		    Oracle 迁移 PostgreSQL - DESDecrypt 函数
+		    </a>
+		</li>
+	        <li class="my-links-of-blogroll-item">
 		    <a href="/2021/06/gtags-exclude-some-directories/" title="Gtags 忽略不相关的目录" target="">
 		    Gtags 忽略不相关的目录
 		    </a>
@@ -297,11 +302,6 @@
 	        <li class="my-links-of-blogroll-item">
 		    <a href="/2021/05/postgresql-security/" title="PostgreSQL 安全性配置概要" target="">
 		    PostgreSQL 安全性配置概要
-		    </a>
-		</li>
-	        <li class="my-links-of-blogroll-item">
-		    <a href="/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/" title="PostgreSQL 类型转换时无效的类型输入" target="">
-		    PostgreSQL 类型转换时无效的类型输入
 		    </a>
 		</li>
 	</ul>
@@ -331,6 +331,131 @@
       
 
       
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/06/oracle-desdecrypt-to-postgresql/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.jpg">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+
+    
+    
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/06/oracle-desdecrypt-to-postgresql/" class="post-title-link" itemprop="url">Oracle 迁移 PostgreSQL - DESDecrypt 函数</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2021-06-15 19:13:45" itemprop="dateModified" datetime="2021-06-15T19:13:45+08:00">2021-06-15</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>56</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>最近在工作中越到 Oracle DES 加解密迁移到 PostgreSQL 中的问题，本文简要记录一下这个问题的解决过程。</p>
+<!-- more ->
+
+## 问题
+
+在客户环境中，被加密的内容来自于一个数据中心，而在迁移的数据库中有一个名为 `fn_decrypt_base64()` 的函数对其进行解密。函数定义如下：
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> fn_decrypt_base64(input_str  <span class="keyword">IN</span> <span class="built_in">VARCHAR2</span>,</span><br><span class="line">                                             encode_key <span class="keyword">IN</span> <span class="built_in">VARCHAR2</span>)</span><br><span class="line"><span class="keyword">RETURN</span> <span class="built_in">VARCHAR2</span></span><br><span class="line"><span class="keyword">IS</span></span><br><span class="line">  output_string    <span class="built_in">varchar2</span>(<span class="number">4000</span>);</span><br><span class="line">  encrypted_string varchar2(256);</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">SELECT</span> utl_raw.cast_to_varchar2(utl_encode.base64_decode(utl_raw.cast_to_raw(input_str)))</span><br><span class="line">    <span class="keyword">INTO</span> encrypted_string</span><br><span class="line">    <span class="keyword">FROM</span> dual;</span><br><span class="line"></span><br><span class="line">  <span class="comment">-- dbms_output.put_line(utl_raw.cast_to_raw(encrypted_string));</span></span><br><span class="line">  dbms_obfuscation_toolkit.DESDecrypt(input_string     =&gt; encrypted_string,</span><br><span class="line">                                      key_string       =&gt; encode_key,</span><br><span class="line">                                      decrypted_string =&gt; output_string);</span><br><span class="line">  RETURN output_string;</span><br><span class="line"><span class="keyword">END</span>;</span><br></pre></td></tr></table></figure>
+
+<p>其执行结果如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>) <span class="keyword">AS</span> plaintext <span class="keyword">FROM</span> dual;</span><br><span class="line">     PLAINTEXT</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line"> 340104198809053015</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>既然是加解密，那么迁移到 PostgreSQL 中来很自然的就想到了 <a href="">pgcrypto</a> 扩展。然而并没有那么简单。</p>
+<p>下面是我迁移到 PostgreSQL 中对 <code>fn_decrypt_base64()</code> 函数的实现。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION <span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> pgcrypto;</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> fn_decrypt_base64(input_str <span class="built_in">text</span>,</span><br><span class="line">                                             encode_key bytea)</span><br><span class="line"><span class="keyword">RETURNS</span> <span class="built_in">varchar</span></span><br><span class="line"><span class="keyword">AS</span> $<span class="keyword">body</span>$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">  output_string <span class="built_in">varchar</span>(<span class="number">4000</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  <span class="keyword">SELECT</span> <span class="keyword">decrypt</span>(<span class="keyword">decode</span>(input_str, <span class="string">&#x27;base64&#x27;</span>), encode_key, <span class="string">&#x27;des&#x27;</span>)</span><br><span class="line">  <span class="keyword">INTO</span> output_string;</span><br><span class="line"></span><br><span class="line">  RETURN output_string;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$body$ LANGUAGE &#x27;plpgsql&#x27; VOLATILE;</span><br></pre></td></tr></table></figure>
+
+<p>其执行结果如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">                     plaintext</span><br><span class="line"><span class="comment">----------------------------------------------------</span></span><br><span class="line"> \x333430313034313938383039303533303135000000000000</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>这并不是我们想要的结果，但是已经非常接近了，可以看到其二进制格式实际上就是我们解密后的原文，但是后面附加了一些内容，当我们尝试将其转换为可读的字符串时，会遇到如下错误。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> convert_from(fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>)::bytea, <span class="string">&#x27;SQL_ASCII&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">ERROR:  invalid byte sequence for encoding &quot;SQL_ASCII&quot;: 0x00</span><br></pre></td></tr></table></figure>
+
+<p>在 Oracle 的 <code>fn_decrypt_base64</code> 中加入 <code>dbms_output.put_line(utl_raw.cast_to_raw(encrypted_string));</code> 语句，可以看到两个数据库中解密后的数据的区别，如下所示。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Oracle      D0C80537528268D7AD2F3DA40867ECB0B16B1820B61E96B0</span><br><span class="line">plain text   3 4 0 1 0 4 1 9 8 8 0 9 0 5 3 0 1 5</span><br><span class="line">PostgreSQL  333430313034313938383039303533303135000000000000</span><br></pre></td></tr></table></figure>
+
+<p>其长度都是一致的，但是在 Oracle 中，我看不出有什么规律，而在 PostgreSQL 中，可以发现非零部分就是我们解密后的明文的二进制形式。在 PostgreSQL 中，我们可以使用如下语句来达到与 Oracle 中类似的效果。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> convert_from(<span class="keyword">trim</span>(fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>)::bytea, <span class="string">&#x27;\x00&#x27;</span>), <span class="string">&#x27;SQL_ASCII&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">     plaintext</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line"> 340104198809053015</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>这只是 Oracle 中 <code>DESDecrypt</code> 迁移到 PostgreSQL 数据库中的一种临时解决方案，至于为什么 Oracle 和 PostgreSQL 中解密后的明文二进制表现不同，或许这个 Oracle 中 varchar2 类型的存储格式有关。</p>
+<p>我们可以对 <code>fn_decrypt_base64</code> 函数进行封装，使其表现得更像 Oracle 一点。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> fn_decrypt_base64(input_str <span class="built_in">text</span>,</span><br><span class="line">                                             encode_key bytea)</span><br><span class="line"><span class="keyword">RETURNS</span> <span class="built_in">varchar</span></span><br><span class="line"><span class="keyword">AS</span> $<span class="keyword">body</span>$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">  output_string <span class="built_in">varchar</span>(<span class="number">4000</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  <span class="keyword">SELECT</span> convert_from(<span class="keyword">trim</span>(<span class="keyword">decrypt</span>(<span class="keyword">decode</span>(input_str, <span class="string">&#x27;base64&#x27;</span>), encode_key, <span class="string">&#x27;des&#x27;</span>), <span class="string">&#x27;\x00&#x27;</span>), <span class="string">&#x27;SQL_ASCII&#x27;</span>)</span><br><span class="line">  <span class="keyword">INTO</span> output_string;</span><br><span class="line"></span><br><span class="line">  RETURN output_string;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$body$ LANGUAGE &#x27;plpgsql&#x27; VOLATILE;</span><br></pre></td></tr></table></figure>
+
+<p>其结果如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="keyword">SELECT</span> fn_decrypt_base64(<span class="string">&#x27;0MgFN1KCaNetLz2kCGfssLFrGCC2Hpaw&#x27;</span>, <span class="string">&#x27;identitynumber_com.ffcs.mss@123&#x27;</span>) <span class="keyword">AS</span> plaintext;</span><br><span class="line">     plaintext</span><br><span class="line"><span class="comment">--------------------</span></span><br><span class="line"> 340104198809053015</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/12/pgcrypto.html">https://www.postgresql.org/docs/12/pgcrypto.html</a><br>[2] <a target="_blank" rel="noopener" href="https://asktom.oracle.com/pls/apex/f?p=100:11:0::::P11_QUESTION_ID:13889233036637">https://asktom.oracle.com/pls/apex/f?p=100:11:0::::P11_QUESTION_ID:13889233036637</a></p>
+<div class="just-for-fun">
+笑林广记 - 仙女凡身
+
+<p>董永行孝，上帝命一仙女嫁之。<br>众仙女送行，皆嘱咐曰：“去下方，若更有行孝者，千万寄个信来。”</p>
+</div>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1146,99 +1271,6 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2021/02/postgresql-update-configure-file/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/02/postgresql-auto-explain-memory-leak/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/logo.jpg">
-      <meta itemprop="name" content="Japin Li">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Japin">
-    </span>
-
-    
-    
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/02/postgresql-auto-explain-memory-leak/" class="post-title-link" itemprop="url">PostgreSQL auto_explain 插件内存泄露</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-      <span class="post-meta-item">
-        <span class="post-meta-item-icon">
-          <i class="far fa-calendar-check"></i>
-        </span>
-        <span class="post-meta-item-text">更新于</span>
-        <time title="修改时间：2021-04-16 11:51:06" itemprop="dateModified" datetime="2021-04-16T11:51:06+08:00">2021-04-16</time>
-      </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>3.1k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>3 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>最近看到 PostgreSQL 邮件列表中有人说 auto_explain 插件在特定情况下会导致 OOM 问题，经过一番分析发现原来是由于内存上下文的问题导致的。目前该泄露已经修复，并合并到代码库中。</p>
-<img src="/2021/02/postgresql-auto-explain-memory-leak/fix_memory_leak_in_auto_explain.png" class="">
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/02/postgresql-auto-explain-memory-leak/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>

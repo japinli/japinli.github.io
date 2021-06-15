@@ -6,7 +6,7 @@
   <link href="https://blog.japinli.top/atom.xml" rel="self"/>
   
   <link href="https://blog.japinli.top/"/>
-  <updated>2021-06-05T15:31:53.182Z</updated>
+  <updated>2021-06-15T11:13:45.462Z</updated>
   <id>https://blog.japinli.top/</id>
   
   <author>
@@ -15,6 +15,40 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Oracle 迁移 PostgreSQL - DESDecrypt 函数</title>
+    <link href="https://blog.japinli.top/2021/06/oracle-desdecrypt-to-postgresql/"/>
+    <id>https://blog.japinli.top/2021/06/oracle-desdecrypt-to-postgresql/</id>
+    <published>2021-06-08T10:01:24.000Z</published>
+    <updated>2021-06-15T11:13:45.462Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;最近在工作中越到 Oracle DES 加解密迁移到 PostgreSQL 中的问题，本文简要记录一下这个问题的解决过程。&lt;/p&gt;
+&lt;!-- more -&gt;
+
+## 问题
+
+在客户环境中，被加密的内容来自于一个数据中心，而在迁移的数据库中有一个名为</summary>
+        
+      
+    
+    
+    
+    <category term="数据库" scheme="https://blog.japinli.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="Oracle" scheme="https://blog.japinli.top/tags/Oracle/"/>
+    
+    <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
+    
+    <category term="迁移" scheme="https://blog.japinli.top/tags/%E8%BF%81%E7%A7%BB/"/>
+    
+  </entry>
   
   <entry>
     <title>Gtags 忽略不相关的目录</title>
@@ -408,25 +442,6 @@
     <category term="PostgreSQL" scheme="https://blog.japinli.top/tags/PostgreSQL/"/>
     
     <category term="源码分析" scheme="https://blog.japinli.top/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>MacOS 上创建 U 盘启动器</title>
-    <link href="https://blog.japinli.top/2020/07/create-u-bootloader-on-macos/"/>
-    <id>https://blog.japinli.top/2020/07/create-u-bootloader-on-macos/</id>
-    <published>2020-07-26T09:04:51.000Z</published>
-    <updated>2021-04-16T03:51:06.591Z</updated>
-    
-    
-    <summary type="html">&lt;p&gt;本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。&lt;/p&gt;</summary>
-    
-    
-    
-    <category term="杂项" scheme="https://blog.japinli.top/categories/%E6%9D%82%E9%A1%B9/"/>
-    
-    
-    <category term="MacOS" scheme="https://blog.japinli.top/tags/MacOS/"/>
     
   </entry>
   
