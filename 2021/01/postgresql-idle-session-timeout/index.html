@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="经过约八个月的努力，终于完成了 PostgreSQL 空闲会话超时断开的功能，该功能将在版本 14 中发布。这是我第一次向 PostgreSQL 提供功能，虽然之前也有向社区提供过补丁，但是这次整个功能（相对比较简单）被接受还是比较高兴的，感谢社区各位大佬的帮助和反馈。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 空闲会话超时">
+<meta property="og:url" content="https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="经过约八个月的努力，终于完成了 PostgreSQL 空闲会话超时断开的功能，该功能将在版本 14 中发布。这是我第一次向 PostgreSQL 提供功能，虽然之前也有向社区提供过补丁，但是这次整个功能（相对比较简单）被接受还是比较高兴的，感谢社区各位大佬的帮助和反馈。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/idle_session_timeout-commit-message.png">
+<meta property="article:published_time" content="2021-01-23T14:50:11.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.421Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/idle_session_timeout-commit-message.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/","path":"2021/01/postgresql-idle-session-timeout/","title":"PostgreSQL 空闲会话超时"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 空闲会话超时 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">使用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5"><span class="nav-number">3.</span> <span class="nav-text">链接</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 空闲会话超时
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-01-23 22:50:11" itemprop="dateCreated datePublished" datetime="2021-01-23T22:50:11+08:00">2021-01-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>15k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>14 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>经过约八个月的努力，终于完成了 PostgreSQL 空闲会话超时断开的功能，该功能将在版本 14 中发布。这是我第一次向 PostgreSQL 提供功能，虽然之前也有向社区提供过补丁，但是这次整个功能（相对比较简单）被接受还是比较高兴的，感谢社区各位大佬的帮助和反馈。</p>
+<img src="/2021/01/postgresql-idle-session-timeout/idle_session_timeout-commit-message.png" class="">
+
+<span id="more"></span>
+
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>正如提交日志所描述的，我们可以通过设置 <code>idle_session_timeout</code> 参数来指定空闲会话断开的时机。首先，我们看看该参数的说明。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">postgres=# select * from pg_settings where name = &#x27;idle_session_timeout&#x27; \gx</span><br><span class="line">-[ RECORD 1 ]---+-------------------------------------------------------------------------------</span><br><span class="line">name            | idle_session_timeout</span><br><span class="line">setting         | 0</span><br><span class="line">unit            | ms</span><br><span class="line">category        | Client Connection Defaults / Statement Behavior</span><br><span class="line">short_desc      | Sets the maximum allowed idle time between queries, when not in a transaction.</span><br><span class="line">extra_desc      | A value of 0 turns off the timeout.</span><br><span class="line">context         | user</span><br><span class="line">vartype         | integer</span><br><span class="line">source          | default</span><br><span class="line">min_val         | 0</span><br><span class="line">max_val         | 2147483647</span><br><span class="line">enumvals        |</span><br><span class="line">boot_val        | 0</span><br><span class="line">reset_val       | 0</span><br><span class="line">sourcefile      |</span><br><span class="line">sourceline      |</span><br><span class="line">pending_restart | f</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们修改配置并重新载入，随后查看该功能是否有效。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">postgres=# alter system set idle_session_timeout to 10000;</span><br><span class="line">ALTER SYSTEM</span><br><span class="line">postgres=# select pg_reload_conf();</span><br><span class="line"> pg_reload_conf</span><br><span class="line">----------------</span><br><span class="line"> t</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres=# SELECT 1;</span><br><span class="line"> ?column?</span><br><span class="line">----------</span><br><span class="line">        1</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres=# select * from pg_settings where name = &#x27;idle_session_timeout&#x27; \gx</span><br><span class="line">-[ RECORD 1 ]---+-------------------------------------------------------------------------------</span><br><span class="line">name            | idle_session_timeout</span><br><span class="line">setting         | 10000</span><br><span class="line">unit            | ms</span><br><span class="line">category        | Client Connection Defaults / Statement Behavior</span><br><span class="line">short_desc      | Sets the maximum allowed idle time between queries, when not in a transaction.</span><br><span class="line">extra_desc      | A value of 0 turns off the timeout.</span><br><span class="line">context         | user</span><br><span class="line">vartype         | integer</span><br><span class="line">source          | configuration file</span><br><span class="line">min_val         | 0</span><br><span class="line">max_val         | 2147483647</span><br><span class="line">enumvals        |</span><br><span class="line">boot_val        | 0</span><br><span class="line">reset_val       | 10000</span><br><span class="line">sourcefile      | /Users/japinli/Codes/postgresql/Debug/pg/pgdata/postgresql.auto.conf</span><br><span class="line">sourceline      | 3</span><br><span class="line">pending_restart | f</span><br></pre></td></tr></table></figure>
+
+<p>随后，等待 10s，我们可以从日志中看到如下内容。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">2021-01-23 23:26:38.350 CST [20695] FATAL:  terminating connection due to idle-session timeout</span><br></pre></td></tr></table></figure>
+
+<p>我们再返回之前的 session，确认连接是否已经断开。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">postgres=# SELEC 1;</span><br><span class="line">FATAL:  terminating connection due to idle-session timeout</span><br><span class="line">server closed the connection unexpectedly</span><br><span class="line">	This probably means the server terminated abnormally</span><br><span class="line">	before or while processing the request.</span><br><span class="line">The connection to the server was lost. Attempting reset: Succeeded.</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，之前的 session 已经断开连接，我们可以通过 ps 来查看对应的进程。</p>
+<p>PostgreSQL 数据库是采用的进程模型，因此每个连接都会对应一个后端进程，该后端进程将分配系统资源（例如内存，work_mem），大量的空闲会话将导致内存无法得到有效的使用，有了空闲会话超时功能我们可以设置超时时间来避免空闲会话占用系统资源。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>该功能的实现与 <code>idle_in_transaction_session_timeout</code> 相似。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/doc/src/sgml/config.sgml b/doc/src/sgml/config.sgml</span></span><br><span class="line"><span class="comment">index 425f57901d..15b94c96c0 100644</span></span><br><span class="line"><span class="comment">--- a/doc/src/sgml/config.sgml</span></span><br><span class="line"><span class="comment">+++ b/doc/src/sgml/config.sgml</span></span><br><span class="line"><span class="meta">@@ -8310,15 +8310,52 @@</span> COPY postgres_log FROM &#x27;/full/path/to/logfile.csv&#x27; WITH csv;</span><br><span class="line">       &lt;/term&gt;</span><br><span class="line">       &lt;listitem&gt;</span><br><span class="line">        &lt;para&gt;</span><br><span class="line"><span class="deletion">-       Terminate any session with an open transaction that has been idle for</span></span><br><span class="line"><span class="deletion">-       longer than the specified amount of time. This allows any</span></span><br><span class="line"><span class="deletion">-       locks held by that session to be released and the connection slot to be reused;</span></span><br><span class="line"><span class="deletion">-       it also allows tuples visible only to this transaction to be vacuumed.  See</span></span><br><span class="line"><span class="deletion">-       &lt;xref linkend=&quot;routine-vacuuming&quot;/&gt; for more details about this.</span></span><br><span class="line"><span class="addition">+        Terminate any session that has been idle (that is, waiting for a</span></span><br><span class="line"><span class="addition">+        client query) within an open transaction for longer than the</span></span><br><span class="line"><span class="addition">+        specified amount of time.</span></span><br><span class="line"><span class="addition">+        If this value is specified without units, it is taken as milliseconds.</span></span><br><span class="line"><span class="addition">+        A value of zero (the default) disables the timeout.</span></span><br><span class="line"><span class="addition">+       &lt;/para&gt;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+       &lt;para&gt;</span></span><br><span class="line"><span class="addition">+        This option can be used to ensure that idle sessions do not hold</span></span><br><span class="line"><span class="addition">+        locks for an unreasonable amount of time.  Even when no significant</span></span><br><span class="line"><span class="addition">+        locks are held, an open transaction prevents vacuuming away</span></span><br><span class="line"><span class="addition">+        recently-dead tuples that may be visible only to this transaction;</span></span><br><span class="line"><span class="addition">+        so remaining idle for a long time can contribute to table bloat.</span></span><br><span class="line"><span class="addition">+        See &lt;xref linkend=&quot;routine-vacuuming&quot;/&gt; for more details.</span></span><br><span class="line"><span class="addition">+       &lt;/para&gt;</span></span><br><span class="line"><span class="addition">+      &lt;/listitem&gt;</span></span><br><span class="line"><span class="addition">+     &lt;/varlistentry&gt;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+     &lt;varlistentry id=&quot;guc-idle-session-timeout&quot; xreflabel=&quot;idle_session_timeout&quot;&gt;</span></span><br><span class="line"><span class="addition">+      &lt;term&gt;&lt;varname&gt;idle_session_timeout&lt;/varname&gt; (&lt;type&gt;integer&lt;/type&gt;)</span></span><br><span class="line"><span class="addition">+      &lt;indexterm&gt;</span></span><br><span class="line"><span class="addition">+       &lt;primary&gt;&lt;varname&gt;idle_session_timeout&lt;/varname&gt; configuration parameter&lt;/primary&gt;</span></span><br><span class="line"><span class="addition">+      &lt;/indexterm&gt;</span></span><br><span class="line"><span class="addition">+      &lt;/term&gt;</span></span><br><span class="line"><span class="addition">+      &lt;listitem&gt;</span></span><br><span class="line"><span class="addition">+       &lt;para&gt;</span></span><br><span class="line"><span class="addition">+        Terminate any session that has been idle (that is, waiting for a</span></span><br><span class="line"><span class="addition">+        client query), but not within an open transaction, for longer than</span></span><br><span class="line"><span class="addition">+        the specified amount of time.</span></span><br><span class="line"><span class="addition">+        If this value is specified without units, it is taken as milliseconds.</span></span><br><span class="line"><span class="addition">+        A value of zero (the default) disables the timeout.</span></span><br><span class="line">        &lt;/para&gt;</span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+       &lt;para&gt;</span></span><br><span class="line"><span class="addition">+        Unlike the case with an open transaction, an idle session without a</span></span><br><span class="line"><span class="addition">+        transaction imposes no large costs on the server, so there is less</span></span><br><span class="line"><span class="addition">+        need to enable this timeout</span></span><br><span class="line"><span class="addition">+        than &lt;varname&gt;idle_in_transaction_session_timeout&lt;/varname&gt;.</span></span><br><span class="line"><span class="addition">+       &lt;/para&gt;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line">        &lt;para&gt;</span><br><span class="line"><span class="deletion">-       If this value is specified without units, it is taken as milliseconds.</span></span><br><span class="line"><span class="deletion">-       A value of zero (the default) disables the timeout.</span></span><br><span class="line"><span class="addition">+        Be wary of enforcing this timeout on connections made through</span></span><br><span class="line"><span class="addition">+        connection-pooling software or other middleware, as such a layer</span></span><br><span class="line"><span class="addition">+        may not react well to unexpected connection closure.  It may be</span></span><br><span class="line"><span class="addition">+        helpful to enable this timeout only for interactive sessions,</span></span><br><span class="line"><span class="addition">+        perhaps by applying it only to particular users.</span></span><br><span class="line">        &lt;/para&gt;</span><br><span class="line">       &lt;/listitem&gt;</span><br><span class="line">      &lt;/varlistentry&gt;</span><br><span class="line"><span class="comment">diff --git a/src/backend/storage/lmgr/proc.c b/src/backend/storage/lmgr/proc.c</span></span><br><span class="line"><span class="comment">index 9b6aa2fe0d..0366a7cc00 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/storage/lmgr/proc.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/storage/lmgr/proc.c</span></span><br><span class="line"><span class="meta">@@ -61,6 +61,7 @@</span> int			DeadlockTimeout = 1000;</span><br><span class="line"> int			StatementTimeout = 0;</span><br><span class="line"> int			LockTimeout = 0;</span><br><span class="line"> int			IdleInTransactionSessionTimeout = 0;</span><br><span class="line"><span class="addition">+int			IdleSessionTimeout = 0;</span></span><br><span class="line"> bool		log_lock_waits = false;</span><br><span class="line"></span><br><span class="line"> /* Pointer to this process&#x27;s PGPROC struct, if any */</span><br><span class="line"><span class="comment">diff --git a/src/backend/tcop/postgres.c b/src/backend/tcop/postgres.c</span></span><br><span class="line"><span class="comment">index 9d98c028a2..2b53ebf97d 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/tcop/postgres.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/tcop/postgres.c</span></span><br><span class="line"><span class="meta">@@ -3242,14 +3242,28 @@</span> ProcessInterrupts(void)</span><br><span class="line"></span><br><span class="line"> 	if (IdleInTransactionSessionTimeoutPending)</span><br><span class="line"> 	&#123;</span><br><span class="line"><span class="deletion">-		/* Has the timeout setting changed since last we looked? */</span></span><br><span class="line"><span class="addition">+		/*</span></span><br><span class="line"><span class="addition">+		 * If the GUC has been reset to zero, ignore the signal.  This is</span></span><br><span class="line"><span class="addition">+		 * important because the GUC update itself won&#x27;t disable any pending</span></span><br><span class="line"><span class="addition">+		 * interrupt.</span></span><br><span class="line"><span class="addition">+		 */</span></span><br><span class="line"> 		if (IdleInTransactionSessionTimeout &gt; 0)</span><br><span class="line"> 			ereport(FATAL,</span><br><span class="line"> 					(errcode(ERRCODE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT),</span><br><span class="line"> 					 errmsg(&quot;terminating connection due to idle-in-transaction timeout&quot;)));</span><br><span class="line"> 		else</span><br><span class="line"> 			IdleInTransactionSessionTimeoutPending = false;</span><br><span class="line"><span class="addition">+	&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="addition">+	if (IdleSessionTimeoutPending)</span></span><br><span class="line"><span class="addition">+	&#123;</span></span><br><span class="line"><span class="addition">+		/* As above, ignore the signal if the GUC has been reset to zero. */</span></span><br><span class="line"><span class="addition">+		if (IdleSessionTimeout &gt; 0)</span></span><br><span class="line"><span class="addition">+			ereport(FATAL,</span></span><br><span class="line"><span class="addition">+					(errcode(ERRCODE_IDLE_SESSION_TIMEOUT),</span></span><br><span class="line"><span class="addition">+					 errmsg(&quot;terminating connection due to idle-session timeout&quot;)));</span></span><br><span class="line"><span class="addition">+		else</span></span><br><span class="line"><span class="addition">+			IdleSessionTimeoutPending = false;</span></span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"> 	if (ProcSignalBarrierPending)</span><br><span class="line"><span class="meta">@@ -3826,7 +3840,8 @@</span> PostgresMain(int argc, char *argv[],</span><br><span class="line"> 	StringInfoData input_message;</span><br><span class="line"> 	sigjmp_buf	local_sigjmp_buf;</span><br><span class="line"> 	volatile bool send_ready_for_query = true;</span><br><span class="line"><span class="deletion">-	bool		disable_idle_in_transaction_timeout = false;</span></span><br><span class="line"><span class="addition">+	bool		idle_in_transaction_timeout_enabled = false;</span></span><br><span class="line"><span class="addition">+	bool		idle_session_timeout_enabled = false;</span></span><br><span class="line"></span><br><span class="line"> 	/* Initialize startup process environment if necessary. */</span><br><span class="line"> 	if (!IsUnderPostmaster)</span><br><span class="line"><span class="meta">@@ -4228,6 +4243,8 @@</span> PostgresMain(int argc, char *argv[],</span><br><span class="line"> 		 * processing of batched messages, and because we don&#x27;t want to report</span><br><span class="line"> 		 * uncommitted updates (that confuses autovacuum).  The notification</span><br><span class="line"> 		 * processor wants a call too, if we are not in a transaction block.</span><br><span class="line"><span class="addition">+		 *</span></span><br><span class="line"><span class="addition">+		 * Also, if an idle timeout is enabled, start the timer for that.</span></span><br><span class="line"> 		 */</span><br><span class="line"> 		if (send_ready_for_query)</span><br><span class="line"> 		&#123;</span><br><span class="line"><span class="meta">@@ -4239,7 +4256,7 @@</span> PostgresMain(int argc, char *argv[],</span><br><span class="line"> 				/* Start the idle-in-transaction timer */</span><br><span class="line"> 				if (IdleInTransactionSessionTimeout &gt; 0)</span><br><span class="line"> 				&#123;</span><br><span class="line"><span class="deletion">-					disable_idle_in_transaction_timeout = true;</span></span><br><span class="line"><span class="addition">+					idle_in_transaction_timeout_enabled = true;</span></span><br><span class="line"> 					enable_timeout_after(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,</span><br><span class="line"> 										 IdleInTransactionSessionTimeout);</span><br><span class="line"> 				&#125;</span><br><span class="line"><span class="meta">@@ -4252,7 +4269,7 @@</span> PostgresMain(int argc, char *argv[],</span><br><span class="line"> 				/* Start the idle-in-transaction timer */</span><br><span class="line"> 				if (IdleInTransactionSessionTimeout &gt; 0)</span><br><span class="line"> 				&#123;</span><br><span class="line"><span class="deletion">-					disable_idle_in_transaction_timeout = true;</span></span><br><span class="line"><span class="addition">+					idle_in_transaction_timeout_enabled = true;</span></span><br><span class="line"> 					enable_timeout_after(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,</span><br><span class="line"> 										 IdleInTransactionSessionTimeout);</span><br><span class="line"> 				&#125;</span><br><span class="line"><span class="meta">@@ -4275,6 +4292,14 @@</span> PostgresMain(int argc, char *argv[],</span><br><span class="line"></span><br><span class="line"> 				set_ps_display(&quot;idle&quot;);</span><br><span class="line"> 				pgstat_report_activity(STATE_IDLE, NULL);</span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+				/* Start the idle-session timer */</span></span><br><span class="line"><span class="addition">+				if (IdleSessionTimeout &gt; 0)</span></span><br><span class="line"><span class="addition">+				&#123;</span></span><br><span class="line"><span class="addition">+					idle_session_timeout_enabled = true;</span></span><br><span class="line"><span class="addition">+					enable_timeout_after(IDLE_SESSION_TIMEOUT,</span></span><br><span class="line"><span class="addition">+										 IdleSessionTimeout);</span></span><br><span class="line"><span class="addition">+				&#125;</span></span><br><span class="line"> 			&#125;</span><br><span class="line"></span><br><span class="line"> 			/* Report any recently-changed GUC options */</span><br><span class="line"><span class="meta">@@ -4310,12 +4335,21 @@</span> PostgresMain(int argc, char *argv[],</span><br><span class="line"> 		DoingCommandRead = false;</span><br><span class="line"></span><br><span class="line"> 		/*</span><br><span class="line"><span class="deletion">-		 * (5) turn off the idle-in-transaction timeout</span></span><br><span class="line"><span class="addition">+		 * (5) turn off the idle-in-transaction and idle-session timeouts, if</span></span><br><span class="line"><span class="addition">+		 * active.</span></span><br><span class="line"><span class="addition">+		 *</span></span><br><span class="line"><span class="addition">+		 * At most one of these two will be active, so there&#x27;s no need to</span></span><br><span class="line"><span class="addition">+		 * worry about combining the timeout.c calls into one.</span></span><br><span class="line"> 		 */</span><br><span class="line"><span class="deletion">-		if (disable_idle_in_transaction_timeout)</span></span><br><span class="line"><span class="addition">+		if (idle_in_transaction_timeout_enabled)</span></span><br><span class="line"> 		&#123;</span><br><span class="line"> 			disable_timeout(IDLE_IN_TRANSACTION_SESSION_TIMEOUT, false);</span><br><span class="line"><span class="deletion">-			disable_idle_in_transaction_timeout = false;</span></span><br><span class="line"><span class="addition">+			idle_in_transaction_timeout_enabled = false;</span></span><br><span class="line"><span class="addition">+		&#125;</span></span><br><span class="line"><span class="addition">+		if (idle_session_timeout_enabled)</span></span><br><span class="line"><span class="addition">+		&#123;</span></span><br><span class="line"><span class="addition">+			disable_timeout(IDLE_SESSION_TIMEOUT, false);</span></span><br><span class="line"><span class="addition">+			idle_session_timeout_enabled = false;</span></span><br><span class="line"> 		&#125;</span><br><span class="line"></span><br><span class="line"> 		/*</span><br><span class="line"><span class="comment">diff --git a/src/backend/utils/errcodes.txt b/src/backend/utils/errcodes.txt</span></span><br><span class="line"><span class="comment">index 64ca2deec9..1d5a78e73d 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/errcodes.txt</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/errcodes.txt</span></span><br><span class="line"><span class="meta">@@ -109,6 +109,7 @@</span> Section: Class 08 - Connection Exception</span><br><span class="line"> 08004    E    ERRCODE_SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION      sqlserver_rejected_establishment_of_sqlconnection</span><br><span class="line"> 08007    E    ERRCODE_TRANSACTION_RESOLUTION_UNKNOWN                         transaction_resolution_unknown</span><br><span class="line"> 08P01    E    ERRCODE_PROTOCOL_VIOLATION                                     protocol_violation</span><br><span class="line"><span class="addition">+08P02    E    ERRCODE_IDLE_SESSION_TIMEOUT                                   idle_session_timeout</span></span><br><span class="line"></span><br><span class="line"> Section: Class 09 - Triggered Action Exception</span><br><span class="line"></span><br><span class="line"><span class="comment">diff --git a/src/backend/utils/init/globals.c b/src/backend/utils/init/globals.c</span></span><br><span class="line"><span class="comment">index 3d5d6cc033..ea28769d6a 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/init/globals.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/init/globals.c</span></span><br><span class="line"><span class="meta">@@ -32,6 +32,7 @@</span> volatile sig_atomic_t QueryCancelPending = false;</span><br><span class="line"> volatile sig_atomic_t ProcDiePending = false;</span><br><span class="line"> volatile sig_atomic_t ClientConnectionLost = false;</span><br><span class="line"> volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;</span><br><span class="line"><span class="addition">+volatile sig_atomic_t IdleSessionTimeoutPending = false;</span></span><br><span class="line"> volatile sig_atomic_t ProcSignalBarrierPending = false;</span><br><span class="line"> volatile uint32 InterruptHoldoffCount = 0;</span><br><span class="line"> volatile uint32 QueryCancelHoldoffCount = 0;</span><br><span class="line"><span class="comment">diff --git a/src/backend/utils/init/postinit.c b/src/backend/utils/init/postinit.c</span></span><br><span class="line"><span class="comment">index 59b3f4b135..e5965bc517 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/init/postinit.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/init/postinit.c</span></span><br><span class="line"><span class="meta">@@ -72,6 +72,7 @@</span> static void ShutdownPostgres(int code, Datum arg);</span><br><span class="line"> static void StatementTimeoutHandler(void);</span><br><span class="line"> static void LockTimeoutHandler(void);</span><br><span class="line"> static void IdleInTransactionSessionTimeoutHandler(void);</span><br><span class="line"><span class="addition">+static void IdleSessionTimeoutHandler(void);</span></span><br><span class="line"> static bool ThereIsAtLeastOneRole(void);</span><br><span class="line"> static void process_startup_options(Port *port, bool am_superuser);</span><br><span class="line"> static void process_settings(Oid databaseid, Oid roleid);</span><br><span class="line"><span class="meta">@@ -619,6 +620,7 @@</span> InitPostgres(const char *in_dbname, Oid dboid, const char *username,</span><br><span class="line"> 		RegisterTimeout(LOCK_TIMEOUT, LockTimeoutHandler);</span><br><span class="line"> 		RegisterTimeout(IDLE_IN_TRANSACTION_SESSION_TIMEOUT,</span><br><span class="line"> 						IdleInTransactionSessionTimeoutHandler);</span><br><span class="line"><span class="addition">+		RegisterTimeout(IDLE_SESSION_TIMEOUT, IdleSessionTimeoutHandler);</span></span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"> 	/*</span><br><span class="line"><span class="meta">@@ -1233,6 +1235,14 @@</span> IdleInTransactionSessionTimeoutHandler(void)</span><br><span class="line"> 	SetLatch(MyLatch);</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="addition">+static void</span></span><br><span class="line"><span class="addition">+IdleSessionTimeoutHandler(void)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	IdleSessionTimeoutPending = true;</span></span><br><span class="line"><span class="addition">+	InterruptPending = true;</span></span><br><span class="line"><span class="addition">+	SetLatch(MyLatch);</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> /*</span><br><span class="line">  * Returns true if at least one role is defined in this database cluster.</span><br><span class="line">  */</span><br><span class="line"><span class="comment">diff --git a/src/backend/utils/misc/guc.c b/src/backend/utils/misc/guc.c</span></span><br><span class="line"><span class="comment">index 1ccf7593ee..daf9c127cd 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/misc/guc.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/misc/guc.c</span></span><br><span class="line"><span class="meta">@@ -2509,7 +2509,7 @@</span> static struct config_int ConfigureNamesInt[] =</span><br><span class="line"></span><br><span class="line"> 	&#123;</span><br><span class="line"> 		&#123;&quot;idle_in_transaction_session_timeout&quot;, PGC_USERSET, CLIENT_CONN_STATEMENT,</span><br><span class="line"><span class="deletion">-			gettext_noop(&quot;Sets the maximum allowed duration of any idling transaction.&quot;),</span></span><br><span class="line"><span class="addition">+			gettext_noop(&quot;Sets the maximum allowed idle time between queries, when in a transaction.&quot;),</span></span><br><span class="line"> 			gettext_noop(&quot;A value of 0 turns off the timeout.&quot;),</span><br><span class="line"> 			GUC_UNIT_MS</span><br><span class="line"> 		&#125;,</span><br><span class="line"><span class="meta">@@ -2518,6 +2518,17 @@</span> static struct config_int ConfigureNamesInt[] =</span><br><span class="line"> 		NULL, NULL, NULL</span><br><span class="line"> 	&#125;,</span><br><span class="line"></span><br><span class="line"><span class="addition">+	&#123;</span></span><br><span class="line"><span class="addition">+		&#123;&quot;idle_session_timeout&quot;, PGC_USERSET, CLIENT_CONN_STATEMENT,</span></span><br><span class="line"><span class="addition">+			gettext_noop(&quot;Sets the maximum allowed idle time between queries, when not in a transaction.&quot;),</span></span><br><span class="line"><span class="addition">+			gettext_noop(&quot;A value of 0 turns off the timeout.&quot;),</span></span><br><span class="line"><span class="addition">+			GUC_UNIT_MS</span></span><br><span class="line"><span class="addition">+		&#125;,</span></span><br><span class="line"><span class="addition">+		&amp;IdleSessionTimeout,</span></span><br><span class="line"><span class="addition">+		0, 0, INT_MAX,</span></span><br><span class="line"><span class="addition">+		NULL, NULL, NULL</span></span><br><span class="line"><span class="addition">+	&#125;,</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 	&#123;</span><br><span class="line"> 		&#123;&quot;vacuum_freeze_min_age&quot;, PGC_USERSET, CLIENT_CONN_STATEMENT,</span><br><span class="line"> 			gettext_noop(&quot;Minimum age at which VACUUM should freeze a table row.&quot;),</span><br><span class="line"><span class="comment">diff --git a/src/backend/utils/misc/postgresql.conf.sample b/src/backend/utils/misc/postgresql.conf.sample</span></span><br><span class="line"><span class="comment">index 5298e18ecd..033aa335a0 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/misc/postgresql.conf.sample</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/misc/postgresql.conf.sample</span></span><br><span class="line"><span class="meta">@@ -663,6 +663,7 @@</span></span><br><span class="line"> #statement_timeout = 0			# in milliseconds, 0 is disabled</span><br><span class="line"> #lock_timeout = 0			# in milliseconds, 0 is disabled</span><br><span class="line"> #idle_in_transaction_session_timeout = 0	# in milliseconds, 0 is disabled</span><br><span class="line"><span class="addition">+#idle_session_timeout = 0		# in milliseconds, 0 is disabled</span></span><br><span class="line"> #vacuum_freeze_min_age = 50000000</span><br><span class="line"> #vacuum_freeze_table_age = 150000000</span><br><span class="line"> #vacuum_multixact_freeze_min_age = 5000000</span><br><span class="line"><span class="comment">diff --git a/src/include/miscadmin.h b/src/include/miscadmin.h</span></span><br><span class="line"><span class="comment">index 2c71db79c0..1bdc97e308 100644</span></span><br><span class="line"><span class="comment">--- a/src/include/miscadmin.h</span></span><br><span class="line"><span class="comment">+++ b/src/include/miscadmin.h</span></span><br><span class="line"><span class="meta">@@ -82,6 +82,7 @@</span> extern PGDLLIMPORT volatile sig_atomic_t InterruptPending;</span><br><span class="line"> extern PGDLLIMPORT volatile sig_atomic_t QueryCancelPending;</span><br><span class="line"> extern PGDLLIMPORT volatile sig_atomic_t ProcDiePending;</span><br><span class="line"> extern PGDLLIMPORT volatile sig_atomic_t IdleInTransactionSessionTimeoutPending;</span><br><span class="line"><span class="addition">+extern PGDLLIMPORT volatile sig_atomic_t IdleSessionTimeoutPending;</span></span><br><span class="line"> extern PGDLLIMPORT volatile sig_atomic_t ProcSignalBarrierPending;</span><br><span class="line"></span><br><span class="line"> extern PGDLLIMPORT volatile sig_atomic_t ClientConnectionLost;</span><br><span class="line"><span class="comment">diff --git a/src/include/storage/proc.h b/src/include/storage/proc.h</span></span><br><span class="line"><span class="comment">index 989c5849d4..0786fcf103 100644</span></span><br><span class="line"><span class="comment">--- a/src/include/storage/proc.h</span></span><br><span class="line"><span class="comment">+++ b/src/include/storage/proc.h</span></span><br><span class="line"><span class="meta">@@ -378,6 +378,7 @@</span> extern PGDLLIMPORT int DeadlockTimeout;</span><br><span class="line"> extern PGDLLIMPORT int StatementTimeout;</span><br><span class="line"> extern PGDLLIMPORT int LockTimeout;</span><br><span class="line"> extern PGDLLIMPORT int IdleInTransactionSessionTimeout;</span><br><span class="line"><span class="addition">+extern PGDLLIMPORT int IdleSessionTimeout;</span></span><br><span class="line"> extern bool log_lock_waits;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">diff --git a/src/include/utils/timeout.h b/src/include/utils/timeout.h</span></span><br><span class="line"><span class="comment">index 8adb4e14ca..ecb2a366a5 100644</span></span><br><span class="line"><span class="comment">--- a/src/include/utils/timeout.h</span></span><br><span class="line"><span class="comment">+++ b/src/include/utils/timeout.h</span></span><br><span class="line"><span class="meta">@@ -31,10 +31,11 @@</span> typedef enum TimeoutId</span><br><span class="line"> 	STANDBY_TIMEOUT,</span><br><span class="line"> 	STANDBY_LOCK_TIMEOUT,</span><br><span class="line"> 	IDLE_IN_TRANSACTION_SESSION_TIMEOUT,</span><br><span class="line"><span class="addition">+	IDLE_SESSION_TIMEOUT,</span></span><br><span class="line"> 	/* First user-definable timeout reason */</span><br><span class="line"> 	USER_TIMEOUT,</span><br><span class="line"> 	/* Maximum number of timeout reasons */</span><br><span class="line"><span class="deletion">-	MAX_TIMEOUTS = 16</span></span><br><span class="line"><span class="addition">+	MAX_TIMEOUTS = USER_TIMEOUT + 10</span></span><br><span class="line"> &#125; TimeoutId;</span><br><span class="line"></span><br><span class="line"> /* callback function signature */</span><br></pre></td></tr></table></figure>
+
+<p>这个功能虽然比较小众，但是用来练手是比较好的一个实践过程，通过这个功能我更加熟悉了 PostgreSQL 社区的工作流程。社区中的人都比较包容，对于一些比较基础的问题也能耐心的解释，对待事物很严谨，即使是文档也是如此。最后附上整个功能的讨论过程。</p>
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a target="_blank" rel="noopener" href="https://postgr.es/m/763A0689-F189-459E-946F-F0EC4458980B@hotmail.com">https://postgr.es/m/763A0689-F189-459E-946F-F0EC4458980B@hotmail.com</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/" title="PostgreSQL 空闲会话超时">https://blog.japinli.top/2021/01/postgresql-idle-session-timeout/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/12/postgresql-logical-replication/" rel="prev" title="PostgreSQL 逻辑复制">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 逻辑复制
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="next" title="PostgreSQL auto_explain 插件内存泄露">
+                  PostgreSQL auto_explain 插件内存泄露 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

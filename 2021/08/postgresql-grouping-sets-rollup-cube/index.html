@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 是世界上最好的 OLTP 数据库（OLTP，即在线事务处理）之一。然而，它可以做的不仅仅是 OLTP。PostgreSQL 提供了许多与更具 OLAP 风格的工作负载相关的附加功能。其中一个特性称为“GROUPING SETS”（GROUPING SETS，即分组集）。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【译】PostgreSQL 分组集：ROLLUP &amp; CUBE">
+<meta property="og:url" content="https://blog.japinli.top/2021/08/postgresql-grouping-sets-rollup-cube/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 是世界上最好的 OLTP 数据库（OLTP，即在线事务处理）之一。然而，它可以做的不仅仅是 OLTP。PostgreSQL 提供了许多与更具 OLAP 风格的工作负载相关的附加功能。其中一个特性称为“GROUPING SETS”（GROUPING SETS，即分组集）。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-08-23T14:53:52.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.421Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="翻译">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/08/postgresql-grouping-sets-rollup-cube/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/08/postgresql-grouping-sets-rollup-cube/","path":"2021/08/postgresql-grouping-sets-rollup-cube/","title":"【译】PostgreSQL 分组集：ROLLUP & CUBE"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>【译】PostgreSQL 分组集：ROLLUP & CUBE | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E7%BB%84%E9%9B%86%EF%BC%9A%E5%9F%BA%E6%9C%AC%E6%9E%84%E5%BB%BA%E5%9D%97"><span class="nav-number">1.</span> <span class="nav-text">分组集：基本构建块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ROLLUP-%E6%B7%BB%E5%8A%A0%E2%80%9C%E5%BA%95%E7%BA%BF%E2%80%9D"><span class="nav-number">2.</span> <span class="nav-text">ROLLUP: 添加“底线”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CUBE-%E5%9C%A8-PostgreSQL-%E4%B8%AD%E9%AB%98%E6%95%88%E5%88%9B%E5%BB%BA%E6%95%B0%E6%8D%AE%E7%AB%8B%E6%96%B9%E4%BD%93"><span class="nav-number">3.</span> <span class="nav-text">CUBE: 在 PostgreSQL 中高效创建数据立方体</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E7%BB%84%E9%9B%86%EF%BC%9A%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92"><span class="nav-number">4.</span> <span class="nav-text">分组集：执行计划</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E5%90%8E"><span class="nav-number">5.</span> <span class="nav-text">最后</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%91%E8%80%85%E8%91%97"><span class="nav-number">6.</span> <span class="nav-text">译者著</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/08/postgresql-grouping-sets-rollup-cube/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          【译】PostgreSQL 分组集：ROLLUP & CUBE
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-08-23 22:53:52" itemprop="dateCreated datePublished" datetime="2021-08-23T22:53:52+08:00">2021-08-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 是世界上最好的 OLTP 数据库（<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Online_transaction_processing">OLTP</a>，即在线事务处理）之一。然而，它可以做的不仅仅是 OLTP。PostgreSQL 提供了许多与更具 OLAP 风格的工作负载相关的附加功能。其中一个特性称为“GROUPING SETS”（GROUPING SETS，即分组集）。</p>
+<span id="more"></span>
+
+<p>在我们深入研究细节之前，我提供了一些示例数据，您可以轻松地将它们加载到您的 SQL 数据库中：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t_sales</span><br><span class="line">(</span><br><span class="line">    country        text,</span><br><span class="line">    product_name   text,</span><br><span class="line">    <span class="keyword">year</span>           <span class="type">int</span>,</span><br><span class="line">    amount_sold    <span class="type">numeric</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t_sales <span class="keyword">VALUES</span></span><br><span class="line">    (<span class="string">&#x27;Argentina&#x27;</span>, <span class="string">&#x27;Shoes&#x27;</span>, <span class="number">2020</span>, <span class="number">12</span>),</span><br><span class="line">    (<span class="string">&#x27;Argentina&#x27;</span>, <span class="string">&#x27;Shoes&#x27;</span>, <span class="number">2021</span>, <span class="number">14</span>),</span><br><span class="line">    (<span class="string">&#x27;Argentina&#x27;</span>, <span class="string">&#x27;Hats&#x27;</span>, <span class="number">2020</span>, <span class="number">54</span>),</span><br><span class="line">    (<span class="string">&#x27;Argentina&#x27;</span>, <span class="string">&#x27;Hats&#x27;</span>, <span class="number">2021</span>, <span class="number">57</span>),</span><br><span class="line">    (<span class="string">&#x27;Germany&#x27;</span>, <span class="string">&#x27;Shoes&#x27;</span>, <span class="number">2020</span>, <span class="number">34</span>),</span><br><span class="line">    (<span class="string">&#x27;Germany&#x27;</span>, <span class="string">&#x27;Shoes&#x27;</span>, <span class="number">2021</span>, <span class="number">29</span>),</span><br><span class="line">    (<span class="string">&#x27;Germany&#x27;</span>, <span class="string">&#x27;Hats&#x27;</span>, <span class="number">2020</span>, <span class="number">19</span>),</span><br><span class="line">    (<span class="string">&#x27;Germany&#x27;</span>, <span class="string">&#x27;Hats&#x27;</span>, <span class="number">2021</span>, <span class="number">22</span>),</span><br><span class="line">    (<span class="string">&#x27;USA&#x27;</span>, <span class="string">&#x27;Shoes&#x27;</span>, <span class="number">2020</span>, <span class="number">99</span>),</span><br><span class="line">    (<span class="string">&#x27;USA&#x27;</span>, <span class="string">&#x27;Shoes&#x27;</span>, <span class="number">2021</span>, <span class="number">103</span>),</span><br><span class="line">    (<span class="string">&#x27;USA&#x27;</span>, <span class="string">&#x27;Hats&#x27;</span>, <span class="number">2020</span>, <span class="number">81</span>),</span><br><span class="line">    (<span class="string">&#x27;USA&#x27;</span>, <span class="string">&#x27;Hats&#x27;</span>, <span class="number">2021</span>, <span class="number">90</span>)</span><br><span class="line">;</span><br></pre></td></tr></table></figure>
+
+<p>请注意，您在本博客中看到的所有内容都非常符合 SQL 标准，因此您可以预期大部分内容也适用于其他专业SQL数据库。</p>
+<p>让我们从一个简单的聚合开始：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT  country, sum(amount_sold)</span><br><span class="line">       FROM    t_sales</span><br><span class="line">       GROUP BY 1;</span><br><span class="line"> country   | sum</span><br><span class="line">-----------+-----</span><br><span class="line"> USA       | 373</span><br><span class="line"> Germany   | 104</span><br><span class="line"> Argentina | 137</span><br><span class="line">(3 rows)</span><br></pre></td></tr></table></figure>
+
+<p>这里没什么好说的，除了我们将为每个小组得到一个总数。然而，有一点哲学上的讨论正在进行。<code>GROUP BY 1</code> 基本上是指 <code>GROUP BY country</code>，相当于 SELECT 子句中的第一列。因此，<code>GROUP BY country</code> 和 <code>GROUP BY 1</code> 是一回事：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT  country, product_name, sum(amount_sold)</span><br><span class="line">       FROM    t_sales</span><br><span class="line">       GROUP BY 1, 2</span><br><span class="line">       ORDER BY 1, 2;</span><br><span class="line"> country   | product_name | sum</span><br><span class="line">-----------+--------------+-----</span><br><span class="line"> Argentina | Hats         | 111</span><br><span class="line"> Argentina | Shoes        |  26</span><br><span class="line"> Germany   | Hats         |  41</span><br><span class="line"> Germany   | Shoes        |  63</span><br><span class="line"> USA       | Hats         | 171</span><br><span class="line"> USA       | Shoes        | 202</span><br><span class="line">(6 rows)</span><br></pre></td></tr></table></figure>
+
+<p>当然，这也适用于不止一列。不过，我想指出一点。考虑以下示例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT CASE WHEN country = &#x27;USA&#x27;</span><br><span class="line">                THEN &#x27;USA&#x27;</span><br><span class="line">                ELSE &#x27;non-US&#x27;</span><br><span class="line">              END,</span><br><span class="line">              sum(amount_sold)</span><br><span class="line">       FROM t_sales</span><br><span class="line">       GROUP BY 1;</span><br><span class="line"> case   | sum</span><br><span class="line">--------+-----</span><br><span class="line"> USA    | 373</span><br><span class="line"> non-US | 241</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>大多数人按列名分组。在某些情况下，按表达式分组是有意义的。在我的例子中，我们是在运行中形成组（即一个组用于美国销售，一个组用于非美国销售）。这个功能往往没有得到重视。然而，它在许多现实世界的场景中是很有用的。请记住，您将要看到的所有东西也可以与表达式一起工作，这意味着可以进行更灵活的分组。</p>
+<h2 id="分组集：基本构建块"><a href="#分组集：基本构建块" class="headerlink" title="分组集：基本构建块"></a>分组集：基本构建块</h2><p><code>GROUP BY</code> 将把一列中每一个不同的条目变成一个组。有时您可能想一次做更多的分组。为什么有这个必要呢？假设你正在处理一个 10TB 的表。显然，读取这些数据通常是性能方面的限制因素。因此，一次读取数据并一次产生更多的结果是很有吸引力的。这正是您可以用 <code>GROUP BY GROUP SETS</code> 做的事情。假设我们想一次产生两个结果：</p>
+<ul>
+<li><code>GROUP BY country</code></li>
+<li><code>GROUP BY product_name</code></li>
+</ul>
+<p>这是它如何工作的：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT  country, product_name, sum(amount_sold)</span><br><span class="line">       FROM    t_sales</span><br><span class="line">       GROUP BY GROUPING SETS ((1), (2))</span><br><span class="line">       ORDER BY 1, 2;</span><br><span class="line"> country   | product_name | sum</span><br><span class="line">-----------+--------------+-----</span><br><span class="line"> Argentina |              | 137</span><br><span class="line"> Germany   |              | 104</span><br><span class="line"> USA       |              | 373</span><br><span class="line">           | Hats         | 323</span><br><span class="line">           | Shoes        | 291</span><br><span class="line">(5 rows)</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，PostgreSQL 只是简单地附加结果。前三行代表 <code>GROUP BY country</code>。接下来的两行包含 <code>GROUP BY product_name</code> 的结果。从逻辑上讲，它相当于以下查询：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT  NULL AS country , product_name, sum(amount_sold)</span><br><span class="line">       FROM    t_sales</span><br><span class="line">       GROUP BY  1, 2</span><br><span class="line">       UNION ALL</span><br><span class="line">       SELECT  country, NULL, sum(amount_sold)</span><br><span class="line">       FROM    t_sales</span><br><span class="line">       GROUP BY  1, 2</span><br><span class="line">       ORDER BY 1, 2;</span><br><span class="line"> country   | product_name | sum</span><br><span class="line">-----------+--------------+-----</span><br><span class="line"> Argentina |              | 137</span><br><span class="line"> Germany   |              | 104</span><br><span class="line"> USA       |              | 373</span><br><span class="line">           | Hats         | 323</span><br><span class="line">           | Shoes        | 291</span><br><span class="line">(5 rows)</span><br></pre></td></tr></table></figure>
+
+<p>但是，<code>GROUPING SETS</code> 版本的效率更高，因为它只需要读取一次数据。</p>
+<h2 id="ROLLUP-添加“底线”"><a href="#ROLLUP-添加“底线”" class="headerlink" title="ROLLUP: 添加“底线”"></a>ROLLUP: 添加“底线”</h2><p>在创建报告时，您通常需要“底线”来总结表中显示的内容。在 SQL 中这样做的方法是使用 <code>GROUP BY ROLLUP</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT  country, product_name, sum(amount_sold)</span><br><span class="line">       FROM    t_sales</span><br><span class="line">       GROUP BY ROLLUP (1, 2)</span><br><span class="line">       ORDER BY 1, 2;</span><br><span class="line"> country   | product_name | sum</span><br><span class="line">-----------+--------------+-----</span><br><span class="line"> Argentina | Hats         | 111</span><br><span class="line"> Argentina | Shoes        |  26</span><br><span class="line"> Argentina |              | 137</span><br><span class="line"> Germany   | Hats         |  41</span><br><span class="line"> Germany   | Shoes        |  63</span><br><span class="line"> Germany   |              | 104</span><br><span class="line"> USA       | Hats         | 171</span><br><span class="line"> USA       | Shoes        | 202</span><br><span class="line"> USA       |              | 373</span><br><span class="line">           |              | 614</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 将在结果中注入几行。如您所见，<code>Argentina</code> 返回了 3 行，而不仅仅是 2 行记录。<code>product_name = NULL</code> 记录是由 <code>ROLLUP</code> 添加的。它包含了所有 <code>Argentina</code> 销售额的总和（<code>116 + 27 = 137</code>）。其他两个国家都有额外的行被注入。最后，为全球总销售额添加了一行。</p>
+<p>通常，这些空记录不是人们希望看到的，因此用其他类型的条目替换它们是有意义的。实现这一点的方法是使用一个 <code>subselect</code> 来检查 <code>NULL</code> 记录并进行替换。下面是它的工作原理：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT   CASE WHEN country IS NULL</span><br><span class="line">                      THEN &#x27;TOTAL&#x27; ELSE country END,</span><br><span class="line">                CASE WHEN product_name IS NULL</span><br><span class="line">                      THEN &#x27;TOTAL&#x27; ELSE product_name END,</span><br><span class="line">                sum</span><br><span class="line">       FROM (SELECT    country, product_name, sum(amount_sold)</span><br><span class="line">             FROM      t_sales</span><br><span class="line">             GROUP BY ROLLUP (1, 2)</span><br><span class="line">             ORDER BY 1, 2</span><br><span class="line">           ) AS x;</span><br><span class="line"> country   | product_name | sum</span><br><span class="line">-----------+--------------+-----</span><br><span class="line"> Argentina | Hats         | 111</span><br><span class="line"> Argentina | Shoes        |  26</span><br><span class="line"> Argentina | TOTAL        | 137</span><br><span class="line"> Germany   | Hats         |  41</span><br><span class="line"> Germany   | Shoes        |  63</span><br><span class="line"> Germany   | TOTAL        | 104</span><br><span class="line"> USA       | Hats         | 171</span><br><span class="line"> USA       | Shoes        | 202</span><br><span class="line"> USA       | TOTAL        | 373</span><br><span class="line"> TOTAL     | TOTAL        | 614</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p>如您所见，所有 <code>NULL</code> 记录都已替换为 <code>TOTAL</code>，__这在许多情况下是显示此数据的更理想方式__。</p>
+<h2 id="CUBE-在-PostgreSQL-中高效创建数据立方体"><a href="#CUBE-在-PostgreSQL-中高效创建数据立方体" class="headerlink" title="CUBE: 在 PostgreSQL 中高效创建数据立方体"></a>CUBE: 在 PostgreSQL 中高效创建数据立方体</h2><p>如果您想添加“底线”，<code>ROLLUP</code> 很有用。<strong>但是，您通常希望查看国家和产品的所有组合。<code>GROUP BY CUBE</code> 将做到这一点：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">test=# SELECT  country, product_name, sum(amount_sold)</span><br><span class="line">       FROM    t_sales</span><br><span class="line">       GROUP BY CUBE (1, 2)</span><br><span class="line">       ORDER BY 1, 2;</span><br><span class="line"> country   | product_name | sum</span><br><span class="line">-----------+--------------+-----</span><br><span class="line"> Argentina | Hats         | 111</span><br><span class="line"> Argentina | Shoes        |  26</span><br><span class="line"> Argentina |              | 137</span><br><span class="line"> Germany   | Hats         |  41</span><br><span class="line"> Germany   | Shoes        |  63</span><br><span class="line"> Germany   |              | 104</span><br><span class="line"> USA       | Hats         | 171</span><br><span class="line"> USA       | Shoes        | 202</span><br><span class="line"> USA       |              | 373</span><br><span class="line">           | Hats         | 323</span><br><span class="line">           | Shoes        | 291</span><br><span class="line">           |              | 614</span><br><span class="line">(12 rows)</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，我们有所有的组合。从技术上讲，它等同于：<code>GROUP BY country</code> + <code>GROUP BY product_name</code> + <code>GROUP BY country_product_name</code> + <code>GROUP BY()</code>。我们可以使用多个语句来做到这一点，但一次做起来更容易——而且效率更高。</p>
+<p>同样，添加 <code>NULL</code> 值以指示各种聚合级别。</p>
+<h2 id="分组集：执行计划"><a href="#分组集：执行计划" class="headerlink" title="分组集：执行计划"></a>分组集：执行计划</h2><p>分组集不只是简单地重写查询以将其转换为 <code>UNION ALL</code> —— 数据库引擎中实际上有特定的代码来执行这些聚合。</p>
+<p>您将看到的是一个 <code>MixedAggregate</code>，它能够同时在各个级别进行聚合。下面是一个例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">test=# explain SELECT country, product_name, sum(amount_sold)</span><br><span class="line">           FROM t_sales</span><br><span class="line">           GROUP BY CUBE (1, 2)</span><br><span class="line">           ORDER BY 1, 2;</span><br><span class="line">                          QUERY PLAN</span><br><span class="line">-----------------------------------------------------------</span><br><span class="line"> Sort  (cost=64.15..65.65 rows=601 width=96)</span><br><span class="line">   Sort Key: country, product_name</span><br><span class="line">   -&gt;  MixedAggregate  (cost=0.00..36.41 rows=601 width=96)</span><br><span class="line">     Hash Key: country, product_name</span><br><span class="line">     Hash Key: country</span><br><span class="line">     Hash Key: product_name</span><br><span class="line">     Group Key: ()</span><br><span class="line">     -&gt;  Seq Scan on t_sales ...</span><br><span class="line">(8 rows)</span><br></pre></td></tr></table></figure>
+
+<p>查看 <code>MixedAggregate</code> 还揭示了哪些聚合是作为分组集的一部分执行的。</p>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>一般来说，分组集是一个非常酷的功能，但通常不为人所知或被忽视。我们强烈建议使用这个很棒的东西来加速你的聚合。如果您正在处理大型数据集，它特别有用。</p>
+<p>如果您想了解更多关于 PostgreSQL 和 SQL 的一般信息，您可能还会喜欢我关于“<a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/finding-patterns-in-timeseries-a-poor-mans-method/">使用 SQL 进行字符串编码</a>”的文章。</p>
+<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><ul>
+<li>本文翻译自 Hans-Jürgen Schönig 的 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/postgresql-grouping-sets-rollup-cube/">POSTGRESQL GROUPING SETS: ROLLUP &amp; CUBE</a>。</li>
+<li>您也可以在《由浅入深 PostgreSQL》一书的“第 4 章-处理高级 SQL”中查看有关分组集的使用。</li>
+</ul>
+<div class="just-for-fun">
+笑林广记 - 启奏
+
+<p>一官被妻踏破纱帽。怒奏曰：“臣启陛下，臣妻罗唣，昨日相争，踏破臣的纱帽。”<br>上传旨云：“卿须忍耐，皇后有些惫赖，与朕一言不合，平天冠打得粉碎。你的纱帽只算得个卵袋。”</p>
+</div>
+
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/" rel="bookmark">【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/postgresql-security-things-to-avoid-in-real-life/" rel="bookmark">【译】PostgreSQL 安全：现实中需要避免的事情</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/understanding-lateral-joins-in-postgresql/" rel="bookmark">【译】理解 PostgreSQL 中的 LATERAL 连接</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/turning-query-results-into-json-in-postgresql/" rel="bookmark">【译】PostgreSQL 查询结果转为 JSON 格式</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/08/postgresql-grouping-sets-rollup-cube/" title="【译】PostgreSQL 分组集：ROLLUP &amp; CUBE">https://blog.japinli.top/2021/08/postgresql-grouping-sets-rollup-cube/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E7%BF%BB%E8%AF%91/" rel="tag"># 翻译</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/08/boyer-moore-majority-voting-algorithm/" rel="prev" title="【译】Boyer-Moore 多数派投票算法">
+                  <i class="fa fa-chevron-left"></i> 【译】Boyer-Moore 多数派投票算法
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/09/migrate-oracle-user-defined-aggregate-functions-to-postgresql/" rel="next" title="Oracle 迁移 PostgreSQL - 自定义聚合函数">
+                  Oracle 迁移 PostgreSQL - 自定义聚合函数 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

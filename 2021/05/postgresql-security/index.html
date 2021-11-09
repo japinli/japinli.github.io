@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="本文从网络、数据库实例、数据库、schema 和表对象几个层面对 PostgreSQL 数据库的安全性配置进行了简要的回顾。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 安全性配置概要">
+<meta property="og:url" content="https://blog.japinli.top/2021/05/postgresql-security/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="本文从网络、数据库实例、数据库、schema 和表对象几个层面对 PostgreSQL 数据库的安全性配置进行了简要的回顾。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2021/05/postgresql-security/pg_security.png">
+<meta property="article:published_time" content="2021-05-20T06:47:46.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.445Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2021/05/postgresql-security/pg_security.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/05/postgresql-security/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/05/postgresql-security/","path":"2021/05/postgresql-security/","title":"PostgreSQL 安全性配置概要"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 安全性配置概要 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8%E6%80%A7"><span class="nav-number">1.</span> <span class="nav-text">网络安全性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%91%E5%90%AC%E5%9C%B0%E5%9D%80"><span class="nav-number">1.1.</span> <span class="nav-text">监听地址</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#pg-hba"><span class="nav-number">1.2.</span> <span class="nav-text">pg_hba</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E4%BE%8B%E7%BA%A7%E5%AE%89%E5%85%A8"><span class="nav-number">2.</span> <span class="nav-text">实例级安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CREATE-USER-ROLE"><span class="nav-number">2.1.</span> <span class="nav-text">CREATE USER&#x2F;ROLE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ALTER-USER-ROLE"><span class="nav-number">2.2.</span> <span class="nav-text">ALTER USER&#x2F;ROLE</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E7%BA%A7%E5%AE%89%E5%85%A8"><span class="nav-number">3.</span> <span class="nav-text">数据库级安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CREATE"><span class="nav-number">3.1.</span> <span class="nav-text">CREATE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CONNECT"><span class="nav-number">3.2.</span> <span class="nav-text">CONNECT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%BB%98%E8%AE%A4%E6%9D%83%E9%99%90"><span class="nav-number">3.3.</span> <span class="nav-text">默认权限</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Schema-%E7%BA%A7%E5%AE%89%E5%85%A8"><span class="nav-number">4.</span> <span class="nav-text">Schema 级安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9D%83%E9%99%90"><span class="nav-number">4.1.</span> <span class="nav-text">权限</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%AD%E6%B3%95"><span class="nav-number">4.2.</span> <span class="nav-text">语法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A1%A8%E7%BA%A7%E5%AE%89%E5%85%A8"><span class="nav-number">5.</span> <span class="nav-text">表级安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A1%A8%E6%9D%83%E9%99%90"><span class="nav-number">5.1.</span> <span class="nav-text">表权限</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%97%E7%BA%A7%E5%AE%89%E5%85%A8"><span class="nav-number">5.2.</span> <span class="nav-text">列级安全</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A1%8C%E7%BA%A7%E5%AE%89%E5%85%A8%E7%AD%96%E7%95%A5"><span class="nav-number">6.</span> <span class="nav-text">行级安全策略</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%AF%E7%94%A8-%E7%A6%81%E7%94%A8"><span class="nav-number">6.1.</span> <span class="nav-text">启用&#x2F;禁用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AD%96%E7%95%A5"><span class="nav-number">6.2.</span> <span class="nav-text">策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5%E6%9D%83%E9%99%90"><span class="nav-number">7.</span> <span class="nav-text">检查权限</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#psql"><span class="nav-number">7.1.</span> <span class="nav-text">psql</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#aclexplode"><span class="nav-number">7.2.</span> <span class="nav-text">aclexplode</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/05/postgresql-security/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 安全性配置概要
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-05-20 14:47:46" itemprop="dateCreated datePublished" datetime="2021-05-20T14:47:46+08:00">2021-05-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>本文从网络、数据库实例、数据库、schema 和表对象几个层面对 PostgreSQL 数据库的安全性配置进行了简要的回顾。</p>
+<img src="/2021/05/postgresql-security/pg_security.png" class="">
+
+<span id="more"></span>
+
+<h2 id="网络安全性"><a href="#网络安全性" class="headerlink" title="网络安全性"></a>网络安全性</h2><h3 id="监听地址"><a href="#监听地址" class="headerlink" title="监听地址"></a>监听地址</h3><ul>
+<li>unix socket<br>通常 unix socket 方式要比 localhost 的性能要好。</li>
+<li>TCP/IP<br><code>listen_addresses</code>和 <code>port</code> 两个参数。<br><code>listen_addresses</code> 可以有多个 IP 地址，使用逗号分割。<ul>
+<li>localhost</li>
+<li>ip address</li>
+</ul>
+</li>
+</ul>
+<h3 id="pg-hba"><a href="#pg-hba" class="headerlink" title="pg_hba"></a>pg_hba</h3><p>pg_hba 用于告知 PostgreSQL 如何认证用户的连接。格式如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">local      DATABASE USER         METHOD [OPTIONS]</span><br><span class="line">host       DATABASE USER ADDRESS METHOD [OPTIONS]</span><br><span class="line">hostssl    DATABASE USER ADDRESS METHOD [OPTIONS]</span><br><span class="line">hostnossl  DATABASE USER ADDRESS METHOD [OPTIONS]</span><br></pre></td></tr></table></figure>
+
+<p>第一条规则匹配后续，后续规则将不予判断。</p>
+<ul>
+<li><p>rules</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>local</td>
+<td>用来配置本地 unix 套接字。</td>
+</tr>
+<tr>
+<td>host</td>
+<td>用于配置 SSL 和非 SSL 连接。</td>
+</tr>
+<tr>
+<td>hostssl</td>
+<td>仅用于配置 SSL 连接。必须编译有 SSL，并且 <code>ssl = on</code>，此外还需要配置以下参数 <code>ssl_cert_file</code> 和 <code>ssl_key_file</code>。</td>
+</tr>
+<tr>
+<td>hostnossl</td>
+<td>配置非 SSL 连接。</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>methods</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>trust</td>
+<td>允许不提供密码的认证，PostgreSQL 数据库中需要有对应的用户。</td>
+</tr>
+<tr>
+<td>reject</td>
+<td>拒绝连接。</td>
+</tr>
+<tr>
+<td>md5/password</td>
+<td>通过口令进行连接。md5 意味着口令在传输时被加密；password 以明文的形式发送（不建议这种方案）。</td>
+</tr>
+<tr>
+<td>GSS/SSPI</td>
+<td>GSSAPI 或 SSPI 认证，针对 TCP/IP 连接。</td>
+</tr>
+<tr>
+<td>ident</td>
+<td>通过联系客户端上的 Ident 服务器获得客户端的操作系统用户名，并且检查它是否匹配被请求的数据库用户名。</td>
+</tr>
+<tr>
+<td>peer</td>
+<td>只对本地连接有用。</td>
+</tr>
+<tr>
+<td>pam</td>
+<td>使用可插拔认证模块（PAM），对于使用非 PostgreSQL 自带的认证方式非常有用。</td>
+</tr>
+<tr>
+<td>ldap</td>
+<td>使用轻量级目录访问协议（LDAP）进行认证。</td>
+</tr>
+<tr>
+<td>radius</td>
+<td>远程认证拨入用户服务（RADIUS）。</td>
+</tr>
+<tr>
+<td>cert</td>
+<td>使用 SSL 客户端证书来执行认证，只用使用 SSL 才能使用它。</td>
+</tr>
+</tbody></table>
+<p><strong>备注：</strong></p>
+<ol>
+<li>SSPI (Security Support Provider Interface) 是微软 Windows 操作系统中用于执行各种安全相关操作（如身份认证）的一个 Win32 API。</li>
+<li>RADIUS 是一种用于在需要认证其链接的网络访问服务器（NAS）和共享认证服务器之间进行认证、授权和记帐信息的文档协议。RADIUS 服务器负责接收用户的连接请求、认证用户，然后返回客户机所有必要的配置信息以将服务发送到用户。</li>
+</ol>
+</li>
+</ul>
+<h2 id="实例级安全"><a href="#实例级安全" class="headerlink" title="实例级安全"></a>实例级安全</h2><h3 id="CREATE-USER-ROLE"><a href="#CREATE-USER-ROLE" class="headerlink" title="CREATE USER/ROLE"></a>CREATE USER/ROLE</h3><p><code>CREATE USER</code> 和 <code>CREATE ROLE</code> 的区别仅仅是 <code>CREATE USER</code> 默认具有 <code>LOGIN</code> 权限，而 <code>CREATE ROLE</code> 默认为 <code>NOLOGIN</code> 权限，即通过 <code>CREATE ROLE</code> 创建的用户如果没有指定 <code>LOGIN</code>，那么是无法用于登录数据库的。</p>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SUPERUSER/NOSUPERUSER</td>
+<td>是否为超级用户。</td>
+</tr>
+<tr>
+<td>CREATEDB/NOCREATEDB</td>
+<td>是否可以创建数据库。</td>
+</tr>
+<tr>
+<td>CREATEROLE/NOCREATEROLE</td>
+<td>是否可以创建角色/用户。</td>
+</tr>
+<tr>
+<td>INHERIT/NOINHERIT</td>
+<td>是否可以被继承。</td>
+</tr>
+<tr>
+<td>LOGIN/NOLOGIN</td>
+<td>是否可以登录数据库。</td>
+</tr>
+<tr>
+<td>REPLICATION/NOREPLICATION</td>
+<td>是否用于流复制。</td>
+</tr>
+<tr>
+<td>BYPASSRLS/NOBYPASSRLS</td>
+<td>是否可以绕过行级安全策略。</td>
+</tr>
+<tr>
+<td>CONNECTIOIN LIMIT</td>
+<td>用户最大连接数量。在设置 CONNECTIONS LIMIT 时，可以指定其值大于 <code>max_connections</code>。</td>
+</tr>
+<tr>
+<td>ENCRYPTED/UNENCRYPTED PASSWORD</td>
+<td>是否加密密码。UNENCRYPTED PASSWORD 在测试的时候可能很有用。</td>
+</tr>
+<tr>
+<td>VALID UNTIL</td>
+<td>设置用户有效期。</td>
+</tr>
+</tbody></table>
+<h3 id="ALTER-USER-ROLE"><a href="#ALTER-USER-ROLE" class="headerlink" title="ALTER USER/ROLE"></a>ALTER USER/ROLE</h3><ul>
+<li>OPTIONS<br>修改 <code>CREATE USER/ROLE</code> 时指定的选项。</li>
+<li>PARAMETERS<br>设置参数。<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">ALTE ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> DATABASE database_name ]</span><br><span class="line">  <span class="keyword">SET</span> configuration_parameter &#123; <span class="keyword">TO</span> <span class="operator">|</span> <span class="operator">=</span> &#125; &#123; <span class="keyword">value</span> <span class="operator">|</span> <span class="keyword">DEFAULT</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> DATABASE database_name ]</span><br><span class="line">  <span class="keyword">SET</span> configuration_parameter <span class="keyword">FROM</span> <span class="keyword">CURRENT</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> DATABASE database_name ]</span><br><span class="line">  RESET configuration_parameter</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125;</span><br><span class="line">  [ <span class="keyword">IN</span> DATABASE database_name ] RESET <span class="keyword">ALL</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="数据库级安全"><a href="#数据库级安全" class="headerlink" title="数据库级安全"></a>数据库级安全</h2><h3 id="CREATE"><a href="#CREATE" class="headerlink" title="CREATE"></a>CREATE</h3><p>允许用户在数据库中创建 <code>schema</code>，注意，授权了数据库的 <code>CREATE </code>权限仅仅表示用户可以在数据库中创建 <code>schema</code>，而其他对象则不能创建，例如，表、视图、函数等。</p>
+<h3 id="CONNECT"><a href="#CONNECT" class="headerlink" title="CONNECT"></a>CONNECT</h3><p>允许某个用户连接到数据库。</p>
+<h3 id="默认权限"><a href="#默认权限" class="headerlink" title="默认权限"></a>默认权限</h3><p>如果没有指定，那么默认的权限来自 <code>public</code>。注意 <code>public</code> 不是一个角色。<br>通常建议在其他数据库创建之前就从 postgres 数据库中收回权限是。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">REVOCK <span class="keyword">ALL</span> <span class="keyword">ON</span> DATABASE dbname <span class="keyword">FROM</span> public;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Schema-级安全"><a href="#Schema-级安全" class="headerlink" title="Schema 级安全"></a>Schema 级安全</h2><p>默认情况下，<code>public</code> 被允许使用 <code>public</code> 模式。</p>
+<p>当我们在数据库上只有 <code>CONNECT</code> 权限时，我们可以在 <code>public</code> 模式下建表。</p>
+<h3 id="权限"><a href="#权限" class="headerlink" title="权限"></a>权限</h3><table>
+<thead>
+<tr>
+<th>权限</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CREATE</td>
+<td>用户可以在该模式下创建对象，对对象进行修改。例如，ALTER TABLE。</td>
+</tr>
+<tr>
+<td>USAGE</td>
+<td>用户可以进入该模式，但是能否使用该模式下的对象，还有下层的权限进行控制，例如对表的增、删、查、改等。</td>
+</tr>
+</tbody></table>
+<h3 id="语法"><a href="#语法" class="headerlink" title="语法"></a>语法</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> &#123; &#123; <span class="keyword">SELECT</span> <span class="operator">|</span> UPDATE &#125; [, ...] <span class="operator">|</span> <span class="keyword">ALL</span> [ PRIVILEGES ] &#125;</span><br><span class="line">    <span class="keyword">ON</span> <span class="type">LARGE OBJECT</span> loid [, ...]</span><br><span class="line">    <span class="keyword">TO</span> role_specification [, ...] [ <span class="keyword">WITH</span> <span class="keyword">GRANT</span> OPTION ]</span><br><span class="line">    [ GRANTED <span class="keyword">BY</span> role_specification ]</span><br></pre></td></tr></table></figure>
+
+<h2 id="表级安全"><a href="#表级安全" class="headerlink" title="表级安全"></a>表级安全</h2><h3 id="表权限"><a href="#表权限" class="headerlink" title="表权限"></a>表权限</h3><table>
+<thead>
+<tr>
+<th>权限</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SELECT</td>
+<td>允许用户读取表的内容。</td>
+</tr>
+<tr>
+<td>INSERT</td>
+<td>允许用户向表中插入数据，注意如果是带有 RETURNING 子句的还需要 SELECT 权限。</td>
+</tr>
+<tr>
+<td>UPDATE</td>
+<td>允许用户对表进行更新。</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td>允许用户删除表中的行记录。</td>
+</tr>
+<tr>
+<td>TRUNCATE</td>
+<td>允许用户对表执行 TRUNCATE 命令。TRUNCATE 和 DELETE 是两种独立的权限，这是因为 TRUNCATE 会锁表，而 DELETE 语句则不会。</td>
+</tr>
+<tr>
+<td>REFERENCES</td>
+<td>允许用户创建外键，必须在引用和被引用列上都有这一特权，否则无法创建。</td>
+</tr>
+<tr>
+<td>TRIGGER</td>
+<td>允许用户在该表上创建触发器。</td>
+</tr>
+</tbody></table>
+<h3 id="列级安全"><a href="#列级安全" class="headerlink" title="列级安全"></a>列级安全</h3><p>限制用户对不同列的访问。显示授权：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">GRANT</span> <span class="keyword">SELECT</span> (id) <span class="keyword">ON</span> t_useful <span class="keyword">TO</span> paul;</span><br></pre></td></tr></table></figure>
+
+<h2 id="行级安全策略"><a href="#行级安全策略" class="headerlink" title="行级安全策略"></a>行级安全策略</h2><p>限制不同用户对不同数据行的查看权限。</p>
+<h3 id="启用-禁用"><a href="#启用-禁用" class="headerlink" title="启用/禁用"></a>启用/禁用</h3><p>默认情况下，表的所有者不受行级安全策略的限制，我们可以通过 <code>FORCE ROW LEVEL SECURITY</code> 来明确表明所有者也需要验证行级安全策略。相关命令如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name ENABLE <span class="type">ROW</span> LEVEL SECURITY;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name DISABLE <span class="type">ROW</span> LEVEL SECURITY;</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name FORCE <span class="type">ROW</span> LEVEL SECURITY;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> table_name <span class="keyword">NO</span> FORCE <span class="type">ROW</span> LEVEL SECURITY;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注意：</strong> 超级用户始终不受行级安全策略限制。</p>
+<h3 id="策略"><a href="#策略" class="headerlink" title="策略"></a>策略</h3><p>多个策略之间使用 <code>OR</code> 进行连接。</p>
+<ul>
+<li>创建<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> POLICY name <span class="keyword">ON</span> table_name</span><br><span class="line">    [ <span class="keyword">AS</span> &#123; PERMISSIVE <span class="operator">|</span> RESTRICTIVE &#125; ]</span><br><span class="line">    [ <span class="keyword">FOR</span> &#123; <span class="keyword">ALL</span> <span class="operator">|</span> <span class="keyword">SELECT</span> <span class="operator">|</span> <span class="keyword">INSERT</span> <span class="operator">|</span> UPDATE <span class="operator">|</span> <span class="keyword">DELETE</span> &#125; ]</span><br><span class="line">    [ <span class="keyword">TO</span> &#123; role_name <span class="operator">|</span> PUBLIC <span class="operator">|</span> <span class="built_in">CURRENT_ROLE</span> <span class="operator">|</span> <span class="built_in">CURRENT_USER</span> <span class="operator">|</span> <span class="built_in">SESSION_USER</span> &#125; [, ...] ]</span><br><span class="line">    [ <span class="keyword">USING</span> ( using_expression ) ]</span><br><span class="line">    [ <span class="keyword">WITH</span> <span class="keyword">CHECK</span> ( check_expression ) ]</span><br></pre></td></tr></table></figure>
+<ul>
+<li>USING<br>过滤已经存在的行记录，与 <code>SELECT</code> 和 <code>UPDATE</code> 子句相关。</li>
+<li>CHECK<br>过滤将要被创建的新行，与 <code>INSERT</code> 和 <code>UPDATE</code> 子句相关。</li>
+</ul>
+</li>
+<li>删除<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DROP</span> POLICY [ IF <span class="keyword">EXISTS</span> ] name <span class="keyword">ON</span> table_name [ CASCADE <span class="operator">|</span> RESTRICT ]</span><br></pre></td></tr></table></figure></li>
+<li>修改<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> POLICY name <span class="keyword">ON</span> table_name RENAME <span class="keyword">TO</span> new_name</span><br><span class="line"></span><br><span class="line"><span class="keyword">ALTER</span> POLICY name <span class="keyword">ON</span> table_name</span><br><span class="line">    [ <span class="keyword">TO</span> &#123; role_name <span class="operator">|</span> PUBLIC <span class="operator">|</span> <span class="built_in">CURRENT_ROLE</span> <span class="operator">|</span> <span class="built_in">CURRENT_USER</span> <span class="operator">|</span> <span class="built_in">SESSION_USER</span> &#125; [, ...] ]</span><br><span class="line">    [ <span class="keyword">USING</span> ( using_expression ) ]</span><br><span class="line">    [ <span class="keyword">WITH</span> <span class="keyword">CHECK</span> ( check_expression ) ]</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="检查权限"><a href="#检查权限" class="headerlink" title="检查权限"></a>检查权限</h2><p>主要是针对数据库对象。PostgreSQL 目前还没有提供很好的权限查询功能。</p>
+<h3 id="psql"><a href="#psql" class="headerlink" title="psql"></a>psql</h3><p>在 psql 中我们可以通过 <code>\z</code> 命令来查看表、视图和序列的权限，同 <code>\dp </code>命令。</p>
+<h3 id="aclexplode"><a href="#aclexplode" class="headerlink" title="aclexplode"></a>aclexplode</h3><p>通过 aclexplode() 函数来查看，例如：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> aclexplode(<span class="string">&#x27;&#123;joe=arwdDxt/postgres&#125;&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>标识</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a</td>
+<td>追加，用于 INSERT 子句。</td>
+</tr>
+<tr>
+<td>r</td>
+<td>读取，用于 SELECT 子句。</td>
+</tr>
+<tr>
+<td>w</td>
+<td>写入，用于 UPDATE 子句。</td>
+</tr>
+<tr>
+<td>d</td>
+<td>删除，用于 DELETE 子句。</td>
+</tr>
+<tr>
+<td>D</td>
+<td>用于 TRUNCATE 子句。</td>
+</tr>
+<tr>
+<td>x</td>
+<td>用于引用。</td>
+</tr>
+<tr>
+<td>t</td>
+<td>用于触发器。</td>
+</tr>
+</tbody></table>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 《由浅入深PostgreSQL》</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/05/postgresql-security/" title="PostgreSQL 安全性配置概要">https://blog.japinli.top/2021/05/postgresql-security/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/" rel="prev" title="PostgreSQL 类型转换时无效的类型输入">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 类型转换时无效的类型输入
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="next" title="Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库">
+                  Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

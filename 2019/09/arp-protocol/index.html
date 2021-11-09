@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="ARP (Address Resolution Protoco)，中文地址解析协议，用来将网络层的 IP 地址转换为数据链路层的物理地址，该协议属于 TCP&#x2F;IP 协议簇。当一台主机把以太网数据帧发送到位于同一局域网上的另一台主机时，是根据 48 bit 的以太网地址来确定目的接口的。设备驱动程序从不检查 IP 数据报中的目的 IP 地址。而地址解析为这两种不同的地址形式提供映射: 32 bit">
+<meta property="og:type" content="article">
+<meta property="og:title" content="重拾 ARP 协议">
+<meta property="og:url" content="https://blog.japinli.top/2019/09/arp-protocol/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="ARP (Address Resolution Protoco)，中文地址解析协议，用来将网络层的 IP 地址转换为数据链路层的物理地址，该协议属于 TCP&#x2F;IP 协议簇。当一台主机把以太网数据帧发送到位于同一局域网上的另一台主机时，是根据 48 bit 的以太网地址来确定目的接口的。设备驱动程序从不检查 IP 数据报中的目的 IP 地址。而地址解析为这两种不同的地址形式提供映射: 32 bit">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2019/09/arp-protocol/arp.png">
+<meta property="og:image" content="https://blog.japinli.top/2019/09/arp-protocol/tcpdump_arp.png">
+<meta property="article:published_time" content="2019-09-28T04:40:14.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.262Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="ARP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2019/09/arp-protocol/arp.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2019/09/arp-protocol/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2019/09/arp-protocol/","path":"2019/09/arp-protocol/","title":"重拾 ARP 协议"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>重拾 ARP 协议 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ARP-%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">ARP 原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ARP-%E6%8A%A5%E6%96%87%E6%A0%BC%E5%BC%8F"><span class="nav-number">2.</span> <span class="nav-text">ARP 报文格式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ARP-%E8%AF%B7%E6%B1%82%E4%B8%8E%E5%93%8D%E5%BA%94"><span class="nav-number">3.</span> <span class="nav-text">ARP 请求与响应</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%B9-ARP"><span class="nav-number">4.</span> <span class="nav-text">免费 ARP</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E-ARP-%E7%9A%84%E7%BC%96%E7%A8%8B"><span class="nav-number">5.</span> <span class="nav-text">关于 ARP 的编程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2019/09/arp-protocol/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          重拾 ARP 协议
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-28 12:40:14" itemprop="dateCreated datePublished" datetime="2019-09-28T12:40:14+08:00">2019-09-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>ARP (Address Resolution Protoco)，中文地址解析协议，用来将网络层的 IP 地址转换为数据链路层的物理地址，该协议属于 TCP/IP 协议簇。当一台主机把以太网数据帧发送到位于同一局域网上的另一台主机时，是根据 48 bit 的以太网地址来确定目的接口的。设备驱动程序从不检查 IP 数据报中的目的 IP 地址。而地址解析为这两种不同的地址形式提供映射: 32 bit 的 IP 地址和数据链路层使用的任何类型的地址。<a target="_blank" rel="noopener" href="https://tools.ietf.org/rfc/rfc826.txt">RFC 826</a> 给出了 ARP 协议的规范。ARP 协议为 IP 地址到对应的硬件物理地址提供了动态映射，通常情况下用户或系统管理员不用担心。</p>
+<span id="more"></span>
+
+<h2 id="ARP-原理"><a href="#ARP-原理" class="headerlink" title="ARP 原理"></a>ARP 原理</h2><p>我们知道主机之间是通过 IP 地址来进行通信的，而 IP 地址属于网络层，而实际上网络通信需要知道通信设备的硬件地址（即 MAC 地址）。ARP 协议便是做这项工作的。假设我们在局域网中有两台主机 <code>A</code> 和 <code>B</code>，<code>A</code> 想要与 <code>B</code> 进行通信，但是 <code>A</code> 只知道 <code>B</code> 的 IP 地址，其通信的硬件地址查询过程如下：</p>
+<ol>
+<li>主机 <code>A</code> 首先检测自己的 ARP 缓存中是否包含主机 <code>B</code> 的 IP 与 MAC 地址之间的映射关系。如果存在则可以直接通信；反之，则需要先获取主机 <code>B</code> 的 IP 与 MAC 地址之间的映射关系。</li>
+<li>主机 <code>A</code> 的 ARP 缓存中不存在该 IP 地址的映射记录，因此主机 <code>A</code> 需要想局域网广播请求该 IP 对应的 MAC 地址。</li>
+<li>局域网内的其它机器在收到该 ARP 请求之后，会获取主机 <code>A</code> 的 IP 地址和 MAC 地址并添加到自己的 ARP 缓存中，若该主机的 IP 地址为 ARP 所请求的 IP 地址，那么它需要发送 ARP 响应包，反之，则忽略该 ARP 请求。</li>
+<li>主机 <code>B</code> 在接收到该 ARP 请求之后会将自己的 IP 地址和 MAC 地址填入数据包中并__定向__ 发送给主机 <code>A</code>。</li>
+<li>主机 <code>A</code> 在接收到主机  <code>B</code> 的 ARP 响应之后使用该包的 IP 和 MAC 地址更新 ARP 缓存。此时，主机 <code>A</code> 和 <code>B</code> 便可以正常通信了。</li>
+</ol>
+<p>我们可以通过 <code>arp -a</code> 查看当前的 ARP 缓存。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ arp -a</span><br><span class="line">xiaoqiang (192.168.31.1) at 50:64:2b:18:b8:e3 on en0 ifscope [ethernet]</span><br><span class="line">? (192.168.31.29) at e0:6:e6:ca:25:26 on en0 ifscope [ethernet]</span><br><span class="line">? (192.168.31.126) at 40:83:1d:b9:f4:71 on en0 ifscope [ethernet]</span><br><span class="line">? (192.168.31.255) at ff:ff:ff:ff:ff:ff on en0 ifscope [ethernet]</span><br><span class="line">? (224.0.0.251) at 1:0:5e:0:0:fb on en0 ifscope permanent [ethernet]</span><br><span class="line">? (239.255.255.250) at 1:0:5e:7f:ff:fa on en0 ifscope permanent [ethernet]</span><br></pre></td></tr></table></figure>
+
+<h2 id="ARP-报文格式"><a href="#ARP-报文格式" class="headerlink" title="ARP 报文格式"></a>ARP 报文格式</h2><p>在以太网上解析 IP 地址时，ARP 请求和应答的格式如下图所示。</p>
+<img src="/2019/09/arp-protocol/arp.png" class="" title="ARP 报文结构">
+
+<ul>
+<li>以太网报头中的前两个字段是以太网的目的地址和源地址（即物理地址、MAC 地址）。若目的地址全为 <code>1</code>，这表明其为广播地址。局域网中的所有以太网接口都要接收广播的数据帧。</li>
+<li>帧类型则表明后续的数据类型，对于 ARP 请求和应答来说，它为 <code>0x0806</code>。</li>
+<li>硬件类型和协议类型用来描述 ARP 分组中的各个字段。 例如，一个 ARP 请求分组询问协议地址（这里是 IP 地址）对应的硬件地址（这里是以太网地址)。硬件类型字段表示硬件地址的类型。它的值为 <code>1</code> 即表示以太网地址。协议类型字段表示要映射的协议地址类型。它的值为 <code>0x0800</code> 即表示 IP 地址。</li>
+<li>硬件地址长度和协议地址长度分别指出硬件地址和协议地址的长度，以字节为单位。对于以太网上 IP 地址的 ARP 请求或应答来说，它们的值分别为 <code>6</code> 和 <code>4</code>。</li>
+<li>操作字段 <code>op</code> 给出了操作类型，它包含 ARP 请求 （<code>1</code>）、ARP 应答（<code>2</code>）、RARP 请求（<code>3</code>）和 RARP 应答（<code>4</code>）四种操作。</li>
+<li>最后四个字段分别是发送端的以太网地址和协议地址以及目的端的以太网地址和协议地址。</li>
+</ul>
+<h2 id="ARP-请求与响应"><a href="#ARP-请求与响应" class="headerlink" title="ARP 请求与响应"></a>ARP 请求与响应</h2><p>现在我们对 ARP 的工作原理以及报文格式有所了解，接下来就是如何去填充 ARP 报文？当我们请求一个 IP 地址的 MAC 地址时，我们是不知道其 MAC 地址的，即__以太网目的地址__和__目的端以太网地址__，而__以太网源地址__、<strong>发送端以太网地址__、__发送端 IP 地址__以及__目的端 IP 地址__我们是知道的。__op</strong> 字段则是根据 ARP 操作类型进行填充，这里为 ARP 请求，故值为 <code>1</code>。其它五个字段则是固定的，__帧类型__为 <code>0x0806</code>；__硬件类型__为 <code>0x01</code>；__协议类型__为 <code>0x0800</code>；__硬件地址长度__为 <code>6</code>；__协议地址长度__为 <code>4</code>。那么我们该如何填充__以太网目的地址__和__目的端以太网地址__呢？其实它们是相同的。我们需要将其设置为广播地址（<code>0xFF,0xFF, 0xFF,0xFF,0xFF, 0xFF</code>），这样局域网中的每个网络接口都会接收这个数据包并进行处理。</p>
+<p>如下图所示，我在主机 <code>lenovo</code> 上通过 <code>arping -I interface 192.168.31.138</code> 向局域网查询 IP 地址为 <code>192.168.31.138</code> 的 MAC 地址，同时在该主机上通过 <code>tcpdum</code> 捕获 ARP 数据包。</p>
+<img src="/2019/09/arp-protocol/tcpdump_arp.png" class="" title="ARP 请求响应">
+
+<p>ARP 响应报文则是将 ARP 请求包中的__以太网源地址__设置为响应主机的以太网地址，同时将 ARP 请求报文中的__以太网源地址__设置为响应报文中的__以太网目的地址__，同时需要将 ARP 请求报文中的 __发送端以太网地址__和__发送端 IP 地址__分别设置为 ARP 响应报文中的 __目的端以太网地址__和__目的端 IP 地址__，ARP 请求报文中的 __目的端 IP 地址__设置为 ARP 响应报文的__发送端 IP 地址__，并将该 IP 地址所在网卡的 MAC 地址设置为 ARP 响应报文中的 __发送端以太网地址__，最后更新 <strong>op</strong> 为 <code>2</code>，即 ARP 响应。</p>
+<h2 id="免费-ARP"><a href="#免费-ARP" class="headerlink" title="免费 ARP"></a>免费 ARP</h2><p>如果在 ARP 请求报文中的__目的端 IP 地址__和__发送端 IP 地址__相同时会出现什么情况呢？这种情况属于 ARP 的一种特性，即免费 ARP （Gratuitous ARP）。</p>
+<p>免费ARP可以有两个方面的作用：</p>
+<ol>
+<li>一个主机可以通过它来确定另一个主机是否设置了相同的IP地址。</li>
+<li>通过发送免费 ARP 来更新局域网中该 IP 地址对应的 MAC 地址，即刷新局域网主机的 ARP 缓存。</li>
+</ol>
+<p>我们可以通过 <code>arping -I interface -U ipaddress</code> 来发送免费 ARP。</p>
+<h2 id="关于-ARP-的编程"><a href="#关于-ARP-的编程" class="headerlink" title="关于 ARP 的编程"></a>关于 ARP 的编程</h2><p>在 Linux 平台上，<code>&lt;netinet/if_ether.h&gt;</code> 头文件中定义了 ARP 地址解析协议的数据结构，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Ethernet Address Resolution Protocol.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * See RFC 826 for protocol description.  Structure below is adapted</span></span><br><span class="line"><span class="comment"> * to resolving internet addresses.  Field names used correspond to</span></span><br><span class="line"><span class="comment"> * RFC 826.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span>  <span class="title">ether_arp</span> &#123;</span></span><br><span class="line">        <span class="class"><span class="keyword">struct</span>  <span class="title">arphdr</span> <span class="title">ea_hdr</span>;</span>          <span class="comment">/* fixed-size header */</span></span><br><span class="line">        <span class="keyword">uint8_t</span> arp_sha[ETH_ALEN];      <span class="comment">/* sender hardware address */</span></span><br><span class="line">        <span class="keyword">uint8_t</span> arp_spa[<span class="number">4</span>];             <span class="comment">/* sender protocol address */</span></span><br><span class="line">        <span class="keyword">uint8_t</span> arp_tha[ETH_ALEN];      <span class="comment">/* target hardware address */</span></span><br><span class="line">        <span class="keyword">uint8_t</span> arp_tpa[<span class="number">4</span>];             <span class="comment">/* target protocol address */</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> arp_hrd ea_hdr.ar_hrd</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> arp_pro ea_hdr.ar_pro</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> arp_hln ea_hdr.ar_hln</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> arp_pln ea_hdr.ar_pln</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> arp_op  ea_hdr.ar_op</span></span><br></pre></td></tr></table></figure>
+
+<p><code>struct arphdr</code> 则定义在 <code>&lt;net/if_arp.h&gt;</code> 头文件中，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* ARP protocol opcodes. */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ARPOP_REQUEST   1               <span class="comment">/* ARP request.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ARPOP_REPLY     2               <span class="comment">/* ARP reply.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ARPOP_RREQUEST  3               <span class="comment">/* RARP request.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ARPOP_RREPLY    4               <span class="comment">/* RARP reply.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ARPOP_InREQUEST 8               <span class="comment">/* InARP request.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ARPOP_InREPLY   9               <span class="comment">/* InARP reply.  */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ARPOP_NAK       10              <span class="comment">/* (ATM)ARP NAK.  */</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* See RFC 826 for protocol description.  ARP packets are variable</span></span><br><span class="line"><span class="comment">   in size; the arphdr structure defines the fixed-length portion.</span></span><br><span class="line"><span class="comment">   Protocol type values are the same as those for 10 Mb/s Ethernet.</span></span><br><span class="line"><span class="comment">   It is followed by the variable-sized fields ar_sha, arp_spa,</span></span><br><span class="line"><span class="comment">   arp_tha and arp_tpa in that order, according to the lengths</span></span><br><span class="line"><span class="comment">   specified.  Field names used correspond to RFC 826.  */</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">arphdr</span></span></span><br><span class="line"><span class="class">  &#123;</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span> <span class="keyword">int</span> ar_hrd;          <span class="comment">/* Format of hardware address.  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span> <span class="keyword">int</span> ar_pro;          <span class="comment">/* Format of protocol address.  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> ar_hln;               <span class="comment">/* Length of hardware address.  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> ar_pln;               <span class="comment">/* Length of protocol address.  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span> <span class="keyword">int</span> ar_op;           <span class="comment">/* ARP opcode (command).  */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> 0</span></span><br><span class="line">    <span class="comment">/* Ethernet looks like this : This bit is variable sized</span></span><br><span class="line"><span class="comment">       however...  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> __ar_sha[ETH_ALEN];   <span class="comment">/* Sender hardware address.  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> __ar_sip[<span class="number">4</span>];          <span class="comment">/* Sender IP address.  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> __ar_tha[ETH_ALEN];   <span class="comment">/* Target hardware address.  */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> __ar_tip[<span class="number">4</span>];          <span class="comment">/* Target IP address.  */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">  &#125;;</span><br></pre></td></tr></table></figure>
+
+<p>而以太网首都则定义在 <code>&lt;net/ethernet.h&gt;</code> 头文件中，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* This is a name for the 48 bit ethernet address available on many</span></span><br><span class="line"><span class="comment">   systems.  */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ether_addr</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  <span class="keyword">uint8_t</span> ether_addr_octet[ETH_ALEN];</span><br><span class="line">&#125; __attribute__ ((__packed__));</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 10Mb/s ethernet header */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ether_header</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  <span class="keyword">uint8_t</span>  ether_dhost[ETH_ALEN];       <span class="comment">/* destination eth addr */</span></span><br><span class="line">  <span class="keyword">uint8_t</span>  ether_shost[ETH_ALEN];       <span class="comment">/* source ether addr    */</span></span><br><span class="line">  <span class="keyword">uint16_t</span> ether_type;                  <span class="comment">/* packet type ID field */</span></span><br><span class="line">&#125; __attribute__ ((__packed__));</span><br><span class="line"></span><br><span class="line"><span class="comment">/* Ethernet protocol ID&#x27;s */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_PUP           0x0200          <span class="comment">/* Xerox PUP */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_SPRITE        0x0500          <span class="comment">/* Sprite */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_IP            0x0800          <span class="comment">/* IP */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_ARP           0x0806          <span class="comment">/* Address resolution */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_REVARP        0x8035          <span class="comment">/* Reverse ARP */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_AT            0x809B          <span class="comment">/* AppleTalk protocol */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_AARP          0x80F3          <span class="comment">/* AppleTalk ARP */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_VLAN          0x8100          <span class="comment">/* IEEE 802.1Q VLAN tagging */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_IPX           0x8137          <span class="comment">/* IPX */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_IPV6          0x86dd          <span class="comment">/* IP protocol version 6 */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHERTYPE_LOOPBACK      0x9000          <span class="comment">/* used to test interfaces */</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHER_ADDR_LEN  ETH_ALEN                 <span class="comment">/* size of ethernet addr */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHER_TYPE_LEN  2                        <span class="comment">/* bytes in type field */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHER_CRC_LEN   4                        <span class="comment">/* bytes in CRC field */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHER_HDR_LEN   ETH_HLEN                 <span class="comment">/* total octets in header */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHER_MIN_LEN   (ETH_ZLEN + ETHER_CRC_LEN) <span class="comment">/* min packet length */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ETHER_MAX_LEN   (ETH_FRAME_LEN + ETHER_CRC_LEN) <span class="comment">/* max packet length */</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://tools.ietf.org/rfc/rfc826.txt">https://tools.ietf.org/rfc/rfc826.txt</a><br>[2] <a target="_blank" rel="noopener" href="http://docs.52im.net/extend/docs/book/tcpip/vol1/4/">TCP/IP 详解，卷 1： 协议 - 第 4 章 ARP 地址解析协议</a></p>
+
+    </div>
+
+    
+    
+    
+      
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2019/09/arp-protocol/" title="重拾 ARP 协议">https://blog.japinli.top/2019/09/arp-protocol/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/ARP/" rel="tag"># ARP</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/09/turning-query-results-into-json-in-postgresql/" rel="prev" title="【译】PostgreSQL 查询结果转为 JSON 格式">
+                  <i class="fa fa-chevron-left"></i> 【译】PostgreSQL 查询结果转为 JSON 格式
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/10/C-statements/" rel="next" title="C 语言语句">
+                  C 语言语句 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

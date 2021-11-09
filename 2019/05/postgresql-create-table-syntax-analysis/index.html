@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 采用 flex 进行词法分析，随后利用 yacc 进行语法分析，其词法与语法分析在 scan.l 和 gram.y 文件中实现。本文主要针对 PostgreSQL 的建表语句 CREATE TABLE 来分析 PostgreSQL 数据库的词法、语法分析，并简要介绍整个 PostgreSQL 数据库的执行过程。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL CREATE TABLE 语法分析">
+<meta property="og:url" content="https://blog.japinli.top/2019/05/postgresql-create-table-syntax-analysis/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 采用 flex 进行词法分析，随后利用 yacc 进行语法分析，其词法与语法分析在 scan.l 和 gram.y 文件中实现。本文主要针对 PostgreSQL 的建表语句 CREATE TABLE 来分析 PostgreSQL 数据库的词法、语法分析，并简要介绍整个 PostgreSQL 数据库的执行过程。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2019-05-12T14:57:43.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.404Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2019/05/postgresql-create-table-syntax-analysis/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2019/05/postgresql-create-table-syntax-analysis/","path":"2019/05/postgresql-create-table-syntax-analysis/","title":"PostgreSQL CREATE TABLE 语法分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL CREATE TABLE 语法分析 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%AD%E6%B3%95%E5%88%86%E6%9E%90"><span class="nav-number">1.</span> <span class="nav-text">语法分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">执行流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2019/05/postgresql-create-table-syntax-analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL CREATE TABLE 语法分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-05-12 22:57:43" itemprop="dateCreated datePublished" datetime="2019-05-12T22:57:43+08:00">2019-05-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>8 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 采用 flex 进行词法分析，随后利用 yacc 进行语法分析，其词法与语法分析在 scan.l 和 gram.y 文件中实现。本文主要针对 PostgreSQL 的建表语句 <code>CREATE TABLE</code> 来分析 PostgreSQL 数据库的词法、语法分析，并简要介绍整个 PostgreSQL 数据库的执行过程。</p>
+<span id="more"></span>
+
+<h2 id="语法分析"><a href="#语法分析" class="headerlink" title="语法分析"></a>语法分析</h2><p>PostgreSQL 的词法以及语法分析相关的文件存放在 <code>src/include/parser/</code> 和 <code>src/backend/parser</code> 目录下，上文所介绍的 scan.l 和 gram.y 文件即在 <code>src/backend/parser</code> 目录中。本文对于词法分析不做详细介绍，PostgreSQL 将词法分析的结果交给语法分析模块进行语法分析，而语法分析的关键代码即在 gram.y 文件中。下面我们来看看 gram.y 文件的组成，该文件分为三个部分：声明部分 (declarations)、语法规则 (rules) 以及程序实现 (programs)。在声明部分其引入了 PostgreSQL 相关的头文件、函数声明等；第二部分规则给出了 PostgreSQL 数据库中 SQL 语句的定义；第三部分则包含了语法解析的初始化实现、节点的创建等函数定义。</p>
+<p>现在，我们主要来看看规则部分的定义。PostgreSQL 关于 SQL 的规则定义开始于 stmtblock，其定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line"> *  The target production for the whole parse.</span><br><span class="line"> */</span><br><span class="line">stmtblock:  stmtmulti</span><br><span class="line">            &#123;</span><br><span class="line">                pg_yyget_extra(yyscanner)-&gt;parsetree = $1;</span><br><span class="line">            &#125;</span><br><span class="line">        ;</span><br><span class="line"></span><br><span class="line">/*</span><br><span class="line"> * At top level, we wrap each stmt with a RawStmt node carrying start location</span><br><span class="line"> * and length of the stmt&#x27;s text.  Notice that the start loc/len are driven</span><br><span class="line"> * entirely from semicolon locations (@2).  It would seem natural to use</span><br><span class="line"> * @1 or @3 to get the true start location of a stmt, but that doesn&#x27;t work</span><br><span class="line"> * for statements that can start with empty nonterminals (opt_with_clause is</span><br><span class="line"> * the main offender here); as noted in the comments for YYLLOC_DEFAULT,</span><br><span class="line"> * we&#x27;d get -1 for the location in such cases.</span><br><span class="line"> * We also take care to discard empty statements entirely.</span><br><span class="line"> */</span><br><span class="line">stmtmulti:  stmtmulti &#x27;;&#x27; stmt</span><br><span class="line">                &#123;</span><br><span class="line">                    if ($1 != NIL)</span><br><span class="line">                    &#123;</span><br><span class="line">                        /* update length of previous stmt */</span><br><span class="line">                        updateRawStmtEnd(llast_node(RawStmt, $1), @2);</span><br><span class="line">                    &#125;</span><br><span class="line">                    if ($3 != NULL)</span><br><span class="line">                        $$ = lappend($1, makeRawStmt($3, @2 + 1));</span><br><span class="line">                    else</span><br><span class="line">                        $$ = $1;</span><br><span class="line">                &#125;</span><br><span class="line">            | stmt</span><br><span class="line">                &#123;</span><br><span class="line">                    if ($1 != NULL)</span><br><span class="line">                        $$ = list_make1(makeRawStmt($1, 0));</span><br><span class="line">                    else</span><br><span class="line">                        $$ = NIL;</span><br><span class="line">                &#125;</span><br><span class="line">        ;</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 的规则从 <code>stmtblock</code> 开始，它被定义为 <code>stmtmulti</code> 对象，其中 <code>$1</code> 即代表 <code>stmtmulti</code>，它最终被复制给 <code>base_yy_extra_type</code> 的 <code>parsetree</code> 成员，而 <code>parsetree</code> 是一个链表，它存储的是解析之后的原始解析树对象。<code>stmtmulti</code> 的定义则采用递归的方式进行定义，它可以是 <code>stmtmulti</code> 加上 <code>stmt</code> 也可以是单独的 <code>stmt</code>，但最终是以 <code>stmt</code> 对象来解析，而多个 <code>stmt</code> 对象则是通过链表链接起来的。</p>
+<p>接下来，我们看看 <code>stmt</code> 是如何定义的。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">stmt :</span><br><span class="line">            AlterEventTrigStmt</span><br><span class="line">            | AlterCollationStmt</span><br><span class="line">            | AlterDatabaseStmt</span><br><span class="line">            | AlterDatabaseSetStmt</span><br><span class="line">            | AlterDefaultPrivilegesStmt</span><br><span class="line">            | AlterDomainStmt</span><br><span class="line">            | AlterEnumStmt</span><br><span class="line">            | AlterExtensionStmt</span><br><span class="line">            | AlterExtensionContentsStmt</span><br><span class="line">            | AlterFdwStmt</span><br><span class="line">            | AlterForeignServerStmt</span><br><span class="line">            | AlterForeignTableStmt</span><br><span class="line">              ...</span><br><span class="line">            | CopyStmt</span><br><span class="line">            | CreateAmStmt</span><br><span class="line">            | CreateAsStmt</span><br><span class="line">            | CreateAssertionStmt</span><br><span class="line">            | CreateCastStmt</span><br><span class="line">            | CreateConversionStmt</span><br><span class="line">            | CreateDomainStmt</span><br><span class="line">            | CreateExtensionStmt</span><br><span class="line">            | CreateFdwStmt</span><br><span class="line">            | CreateForeignServerStmt</span><br><span class="line">            | CreateForeignTableStmt</span><br><span class="line">            | CreateFunctionStmt</span><br><span class="line">              ...</span><br><span class="line">            | SelectStmt</span><br><span class="line">            | TransactionStmt</span><br><span class="line">            | TruncateStmt</span><br><span class="line">            | UnlistenStmt</span><br><span class="line">            | UpdateStmt</span><br><span class="line">            | VacuumStmt</span><br><span class="line">            | VariableResetStmt</span><br><span class="line">            | VariableSetStmt</span><br><span class="line">            | VariableShowStmt</span><br><span class="line">            | ViewStmt</span><br><span class="line">            | /*EMPTY*/</span><br><span class="line">                &#123; $$ = NULL; &#125;</span><br><span class="line">        ;</span><br></pre></td></tr></table></figure>
+
+<p>当你看到这个的时候是否有中似曾相识的感觉？<code>stmt</code> 包含了 PostgreSQL 所支持的 SQL 语句的语法定义，例如我们输入 <code>SELECT * FROM pg_class;</code> 时，它将通过 <code>stmt</code> 转到 <code>SelectStmt</code> 的定义处进行解析，而语句在解析完之后都会转换为对应的 <code>SelectStmt</code> 结构用于后续进行查询计划的生成。</p>
+<p>现在我们针对 PostgreSQL 的建表语句进行分析，关于 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/devel/sql-createtable.html"><code>CREATE TABLE</code></a> 的语法可以在官方文档上查询。<code>CREATE TABLE</code> 的语法分析如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">CreateStmt: CREATE OptTemp TABLE qualified_name &#x27;(&#x27; OptTableElementList &#x27;)&#x27;</span><br><span class="line">            OptInherit OptPartitionSpec table_access_method_clause OptWith</span><br><span class="line">            OnCommitOption OptTableSpace</span><br><span class="line">                &#123;</span><br><span class="line">                    CreateStmt *n = makeNode(CreateStmt);</span><br><span class="line">                    $4-&gt;relpersistence = $2;</span><br><span class="line">                    n-&gt;relation = $4;</span><br><span class="line">                    n-&gt;tableElts = $6;</span><br><span class="line">                    n-&gt;inhRelations = $8;</span><br><span class="line">                    n-&gt;partspec = $9;</span><br><span class="line">                    n-&gt;ofTypename = NULL;</span><br><span class="line">                    n-&gt;constraints = NIL;</span><br><span class="line">                    n-&gt;accessMethod = $10;</span><br><span class="line">                    n-&gt;options = $11;</span><br><span class="line">                    n-&gt;oncommit = $12;</span><br><span class="line">                    n-&gt;tablespacename = $13;</span><br><span class="line">                    n-&gt;if_not_exists = false;</span><br><span class="line">                    $$ = (Node *)n;</span><br><span class="line">                &#125;</span><br><span class="line">				...</span><br></pre></td></tr></table></figure>
+
+<p>如上所示，<code>CREATE TABLE</code> 由关键字 <code>CREATE</code> 和 <code>TABLE</code> 以及其他一些语法解析对象组成。</p>
+<ul>
+<li><strong>OptTemp</strong> - 临时表的选项，表明该表是否为临时表，此外该选项还可以指定创建无日志表。</li>
+<li><strong>qualified_name</strong> - 表名，可以指定表所在的 schema。</li>
+<li><strong>OptTableElementList</strong> - 由链表构成的表属性列。</li>
+<li><strong>OptInherit</strong> - 表继承相关信息。</li>
+<li><strong>OptPartitionSpec</strong> - 表分区相关信息。</li>
+<li><strong>table_access_method_clause</strong> - 该选项是计划在 PostgreSQL 12 版本中给出的用于替换存储引擎的选项。</li>
+<li><strong>OptWith</strong> - <code>WITH</code> 选项，用于指定表的一些特定选项，例如 <code>fillfactor</code>、<code>parallel_workers</code> 等。</li>
+<li><strong>OnCommitOption</strong> - 指定数据在提交时的行为。</li>
+<li><strong>OptTableSpace</strong> - 指定表空间信息。</li>
+</ul>
+<p>从上面的语法分析可以看到，<code>CREATE TABLE</code> 语句在执行完语法分析之后将转换为 <code>CreateStmt</code> 对象，其定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* ----------------------</span></span><br><span class="line"><span class="comment"> *      Create Table Statement</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">NOTE:</span> in the raw gram.y output, ColumnDef and Constraint nodes are</span></span><br><span class="line"><span class="comment"> * intermixed in tableElts, and constraints is NIL.  After parse analysis,</span></span><br><span class="line"><span class="comment"> * tableElts contains just ColumnDefs, and constraints contains just</span></span><br><span class="line"><span class="comment"> * Constraint nodes (in fact, only CONSTR_CHECK nodes, in the present</span></span><br><span class="line"><span class="comment"> * implementation).</span></span><br><span class="line"><span class="comment"> * ----------------------</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">CreateStmt</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    NodeTag     type;</span><br><span class="line">    RangeVar   *relation;       <span class="comment">/* relation to create */</span></span><br><span class="line">    List       *tableElts;      <span class="comment">/* column definitions (list of ColumnDef) */</span></span><br><span class="line">    List       *inhRelations;   <span class="comment">/* relations to inherit from (list of</span></span><br><span class="line"><span class="comment">                                 * inhRelation) */</span></span><br><span class="line">    PartitionBoundSpec *partbound;  <span class="comment">/* FOR VALUES clause */</span></span><br><span class="line">    PartitionSpec *partspec;    <span class="comment">/* PARTITION BY clause */</span></span><br><span class="line">    TypeName   *ofTypename;     <span class="comment">/* OF typename */</span></span><br><span class="line">    List       *constraints;    <span class="comment">/* constraints (list of Constraint nodes) */</span></span><br><span class="line">    List       *options;        <span class="comment">/* options from WITH clause */</span></span><br><span class="line">    OnCommitAction oncommit;    <span class="comment">/* what do we do at COMMIT? */</span></span><br><span class="line">    <span class="keyword">char</span>       *tablespacename; <span class="comment">/* table space to use, or NULL */</span></span><br><span class="line">    <span class="keyword">char</span>       *accessMethod;   <span class="comment">/* table access method */</span></span><br><span class="line">    <span class="keyword">bool</span>        if_not_exists;  <span class="comment">/* just do nothing if it already exists? */</span></span><br><span class="line">&#125; CreateStmt;</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 在实现时对于内部节点采用了继承的思想，拿我们上面的 <code>CreateStmt</code> 结构体来说，它的第一个成员为 <code>NodeTag</code> 类型，当我们通过 <code>makeNode(CreateStmt)</code> 函数创建 <code>CreateStmt</code> 对象时，其内部通过一个 <code>switch</code> 来判断具体的节点类型，并分配存储空间，而在之后都转换为 <code>Node</code> 类型进行使用，如来 <code>$$ = (Node *) n;</code> 所示。</p>
+<p>假如我们有如下的建表语句：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> test (id <span class="type">int</span>, info text);</span><br></pre></td></tr></table></figure>
+
+<p>根据上面的语法规则，由于 <code>OptTemp</code> 部分没有指定因此其值为 <code>RELPERSISTENCE_PERMANENT</code>，<code>qualified_name</code> 则是一个 <code>RangeVar</code> 对象，其结构如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * RangeVar - range variable, used in FROM clauses</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Also used to represent table names in utility statements; there, the alias</span></span><br><span class="line"><span class="comment"> * field is not used, and inh tells whether to apply the operation</span></span><br><span class="line"><span class="comment"> * recursively to child tables.  In some contexts it is also useful to carry</span></span><br><span class="line"><span class="comment"> * a TEMP table indication here.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">RangeVar</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    NodeTag     type;</span><br><span class="line">    <span class="keyword">char</span>       *catalogname;    <span class="comment">/* the catalog (database) name, or NULL */</span></span><br><span class="line">    <span class="keyword">char</span>       *schemaname;     <span class="comment">/* the schema name, or NULL */</span></span><br><span class="line">    <span class="keyword">char</span>       *relname;        <span class="comment">/* the relation/sequence name */</span></span><br><span class="line">    <span class="keyword">bool</span>        inh;            <span class="comment">/* expand rel by inheritance? recursively act</span></span><br><span class="line"><span class="comment">                                 * on children? */</span></span><br><span class="line">    <span class="keyword">char</span>        relpersistence; <span class="comment">/* see RELPERSISTENCE_* in pg_class.h */</span></span><br><span class="line">    Alias      *alias;          <span class="comment">/* table alias &amp; optional column aliases */</span></span><br><span class="line">    <span class="keyword">int</span>         location;       <span class="comment">/* token location, or -1 if unknown */</span></span><br><span class="line">&#125; RangeVar;</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 在解析完表名之后会将表名 <code>test</code> 存放到 <code>RangeVar</code> 对象的 <code>relname</code> 成员中，随后使用<br><code>OptTemp</code> 的值更新 <code>RangeVar</code> 的 <code>relpersistence</code> 成员。</p>
+<p>接着，PostgreSQL 对表的属性列进行解析，即 <code>OptTableElementList</code>，它对应的定义为 <code>TableElementList</code>，而 <code>TableElementList</code> 被定义为 <code>TableElement</code> 和 <code>TableElementList &#39;,&#39; TableElement</code>。<code>TableElement</code> 的定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">TableElement:</span><br><span class="line">            columnDef                           &#123; $$ = $1; &#125;</span><br><span class="line">            | TableLikeClause                   &#123; $$ = $1; &#125;</span><br><span class="line">            | TableConstraint                   &#123; $$ = $1; &#125;</span><br><span class="line">        ;</span><br></pre></td></tr></table></figure>
+
+<p>从定义可以看出，SQL 语句中表的每个属性列在解析完之后都对应一个 <code>columnDef</code> 对象，如果我们为表指定了约束条件，那么就有一个对应的 <code>TableConstraint</code> 对象，如果在其中使用了 <code>LIKE</code> 的话，就对应有一个 <code>TableLikeClause</code> 对象。在本文中我们只关注第一种情况，后面两种情况的分析其实与此类似，故不做详细分析。</p>
+<p>在解析阶段，属性列由 <code>ColumnDef</code> 进行表示，其定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ColumnDef</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    NodeTag     type;</span><br><span class="line">    <span class="keyword">char</span>       *colname;        <span class="comment">/* name of column */</span></span><br><span class="line">    TypeName   *typeName;       <span class="comment">/* type of column */</span></span><br><span class="line">    <span class="keyword">int</span>         inhcount;       <span class="comment">/* number of times column is inherited */</span></span><br><span class="line">    <span class="keyword">bool</span>        is_local;       <span class="comment">/* column has local (non-inherited) def&#x27;n */</span></span><br><span class="line">    <span class="keyword">bool</span>        is_not_null;    <span class="comment">/* NOT NULL constraint specified? */</span></span><br><span class="line">    <span class="keyword">bool</span>        is_from_type;   <span class="comment">/* column definition came from table type */</span></span><br><span class="line">    <span class="keyword">char</span>        storage;        <span class="comment">/* attstorage setting, or 0 for default */</span></span><br><span class="line">    Node       *raw_default;    <span class="comment">/* default value (untransformed parse tree) */</span></span><br><span class="line">    Node       *cooked_default; <span class="comment">/* default value (transformed expr tree) */</span></span><br><span class="line">    <span class="keyword">char</span>        identity;       <span class="comment">/* attidentity setting */</span></span><br><span class="line">    RangeVar   *identitySequence;   <span class="comment">/* to store identity sequence name for</span></span><br><span class="line"><span class="comment">                                     * ALTER TABLE ... ADD COLUMN */</span></span><br><span class="line">    <span class="keyword">char</span>        generated;      <span class="comment">/* attgenerated setting */</span></span><br><span class="line">    CollateClause *collClause;  <span class="comment">/* untransformed COLLATE spec, if any */</span></span><br><span class="line">    Oid         collOid;        <span class="comment">/* collation OID (InvalidOid if not set) */</span></span><br><span class="line">    List       *constraints;    <span class="comment">/* other constraints on column */</span></span><br><span class="line">    List       *fdwoptions;     <span class="comment">/* per-column FDW options */</span></span><br><span class="line">    <span class="keyword">int</span>         location;       <span class="comment">/* parse location, or -1 if none/unknown */</span></span><br><span class="line">&#125; ColumnDef;</span><br></pre></td></tr></table></figure>
+
+<p><code>columnDef</code> 的语法解析如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">columnDef:  ColId Typename create_generic_options ColQualList</span><br><span class="line">                &#123;</span><br><span class="line">                    ColumnDef *n = makeNode(ColumnDef);</span><br><span class="line">                    n-&gt;colname = $1;</span><br><span class="line">                    n-&gt;typeName = $2;</span><br><span class="line">                    n-&gt;inhcount = 0;</span><br><span class="line">                    n-&gt;is_local = true;</span><br><span class="line">                    n-&gt;is_not_null = false;</span><br><span class="line">                    n-&gt;is_from_type = false;</span><br><span class="line">                    n-&gt;storage = 0;</span><br><span class="line">                    n-&gt;raw_default = NULL;</span><br><span class="line">                    n-&gt;cooked_default = NULL;</span><br><span class="line">                    n-&gt;collOid = InvalidOid;</span><br><span class="line">                    n-&gt;fdwoptions = $3;</span><br><span class="line">                    SplitColQualList($4, &amp;n-&gt;constraints, &amp;n-&gt;collClause,</span><br><span class="line">                                     yyscanner);</span><br><span class="line">                    n-&gt;location = @1;</span><br><span class="line">                    $$ = (Node *)n;</span><br><span class="line">                &#125;</span><br><span class="line">        ;</span><br></pre></td></tr></table></figure>
+
+<p>例如，上面的示例语句将产生两个 <code>ColumnDef</code> 对象，它们通过链表组织在一起，链表的第一个节点的 <code>colname</code> 和 <code>typeName</code> 分别为 <code>id</code> 和 <code>int</code>；第二节点的 <code>colname</code> 和 <code>typeName</code> 分别为 <code>info</code> 和 <code>text</code>。</p>
+<p>上面基本上就将示例给出的建表语法介绍完了，<code>CREATE TABLE</code> 语句解析完之后创建的 <code>CreateStmt</code> 对象将通过 <code>makeRawStmt()</code> 函数包装到 <code>RawStmt</code> 结构中，<code>RawStmt</code> 的定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> *      RawStmt --- container for any one statement&#x27;s raw parse tree</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Parse analysis converts a raw parse tree headed by a RawStmt node into</span></span><br><span class="line"><span class="comment"> * an analyzed statement headed by a Query node.  For optimizable statements,</span></span><br><span class="line"><span class="comment"> * the conversion is complex.  For utility statements, the parser usually just</span></span><br><span class="line"><span class="comment"> * transfers the raw parse tree (sans RawStmt) into the utilityStmt field of</span></span><br><span class="line"><span class="comment"> * the Query node, and all the useful work happens at execution time.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * stmt_location/stmt_len identify the portion of the source text string</span></span><br><span class="line"><span class="comment"> * containing this raw statement (useful for multi-statement strings).</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">RawStmt</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    NodeTag     type;</span><br><span class="line">    Node       *stmt;           <span class="comment">/* raw parse tree */</span></span><br><span class="line">    <span class="keyword">int</span>         stmt_location;  <span class="comment">/* start location, or -1 if unknown */</span></span><br><span class="line">    <span class="keyword">int</span>         stmt_len;       <span class="comment">/* length in bytes; 0 means &quot;rest of string&quot; */</span></span><br><span class="line">&#125; RawStmt;</span><br></pre></td></tr></table></figure>
+
+<p>从 <code>RawStmt</code> 的定义可以看出，所有语句最后都被转换为 <code>Node *</code> 的指针被存放到 <code>stmt</code> 成员中。根据 <code>makeRowStmt()</code> 函数的定义也验证的我们的看法。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> RawStmt *</span></span><br><span class="line"><span class="function"><span class="title">makeRawStmt</span><span class="params">(Node *stmt, <span class="keyword">int</span> stmt_location)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    RawStmt    *rs = makeNode(RawStmt);</span><br><span class="line"></span><br><span class="line">    rs-&gt;stmt = stmt;</span><br><span class="line">    rs-&gt;stmt_location = stmt_location;</span><br><span class="line">    rs-&gt;stmt_len = <span class="number">0</span>;           <span class="comment">/* might get changed later */</span></span><br><span class="line">    <span class="keyword">return</span> rs;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="执行流程"><a href="#执行流程" class="headerlink" title="执行流程"></a>执行流程</h2><p>上面我们分析了 PostgreSQL 的语法分析部分，接下来我们简要介绍一下 PostgreSQL 的执行流程。首先，我们需要明确 PostgreSQL 是基于多进程开发的，每当一个连接请求过来，PostgreSQL 都将创建一个新的 <code>postgres</code> 进程用于处理用户请求，在用户将需要执行的 SQL 语句发送到后端之后，<code>postgres</code> 进程将从 <code>exec_simple_query()</code> 函数开始进行处理，其主要的流程如下：</p>
+<ol>
+<li>调用 <code>pg_parse_query()</code> 函数进行词法、语法分析，即我们上面介绍的内容；</li>
+<li>循环遍历解析树链表对每个语句进行处理，如果没有查询语句转步骤 7；</li>
+<li>调用 <code>pg_analyze_and_rewrite()</code> 函数对解析树分析并重写并生成查询计划；</li>
+<li>调用 <code>pg_plan_queries()</code> 对查询树进行优化并选择一条最优路径生成执行计划；</li>
+<li>创建 <code>Portal</code> 对象并调用 <code>PortalRun()</code> 函数执行查询计划。</li>
+<li>执行 <code>Portal</code> 的清理工作并转步骤 2；</li>
+<li>退出。</li>
+</ol>
+<p>需要注意的是 DDL 在步骤 3 和步骤 4 时不会被重写或优化，而只是简单的在原始解析树外面包装对应的结构而已，只有到了步骤 5 时才会执行转换并生成查询计划。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/devel/sql-createtable.html">https://www.postgresql.org/docs/devel/sql-createtable.html</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/08/postgresql-new-catalog/" rel="bookmark">PostgreSQL 添加系统表</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2019/05/postgresql-create-table-syntax-analysis/" title="PostgreSQL CREATE TABLE 语法分析">https://blog.japinli.top/2019/05/postgresql-create-table-syntax-analysis/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/05/cross-database-querying-in-postgresql/" rel="prev" title="PostgreSQL 数据库跨库查询">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 数据库跨库查询
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/05/postgresql-create-table-query-plan/" rel="next" title="PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成">
+                  PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

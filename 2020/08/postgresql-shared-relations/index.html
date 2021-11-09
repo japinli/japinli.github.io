@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 数据库中提供的某些系统表是 Cluster 级别共享的，他们在数据库内部被称为 shared_relation，本文就介绍一下 PostgreSQL 是如何创建共享表的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 共享表">
+<meta property="og:url" content="https://blog.japinli.top/2020/08/postgresql-shared-relations/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 数据库中提供的某些系统表是 Cluster 级别共享的，他们在数据库内部被称为 shared_relation，本文就介绍一下 PostgreSQL 是如何创建共享表的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-08-08T07:15:41.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.449Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/08/postgresql-shared-relations/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/08/postgresql-shared-relations/","path":"2020/08/postgresql-shared-relations/","title":"PostgreSQL 共享表"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 共享表 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#SQL-%E6%9F%A5%E8%AF%A2"><span class="nav-number">1.</span> <span class="nav-text">SQL 查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">源码分析</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/08/postgresql-shared-relations/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 共享表
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-08-08 15:15:41" itemprop="dateCreated datePublished" datetime="2020-08-08T15:15:41+08:00">2020-08-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>12k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>11 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 数据库中提供的某些系统表是 Cluster 级别共享的，他们在数据库内部被称为 <code>shared_relation</code>，本文就介绍一下 PostgreSQL 是如何创建共享表的。</p>
+<span id="more"></span>
+
+<h2 id="SQL-查询"><a href="#SQL-查询" class="headerlink" title="SQL 查询"></a>SQL 查询</h2><p>我们可以通过下面的语句查看系统中提供的共享表。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    c.oid</span><br><span class="line">    , c.relname</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    pg_class c <span class="keyword">LEFT</span> <span class="keyword">JOIN</span> pg_tablespace t</span><br><span class="line">        <span class="keyword">ON</span> c.reltablespace <span class="operator">=</span> t.oid</span><br><span class="line"><span class="keyword">WHERE</span></span><br><span class="line">    c.relisshared <span class="operator">=</span> <span class="literal">true</span></span><br><span class="line">    <span class="keyword">AND</span> c.relkind <span class="operator">=</span> <span class="string">&#x27;r&#x27;</span></span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> c.oid;</span><br><span class="line"> oid  <span class="operator">|</span>        relname</span><br><span class="line"><span class="comment">------+-----------------------</span></span><br><span class="line"> <span class="number">1136</span> <span class="operator">|</span> pg_pltemplate</span><br><span class="line"> <span class="number">1213</span> <span class="operator">|</span> pg_tablespace</span><br><span class="line"> <span class="number">1214</span> <span class="operator">|</span> pg_shdepend</span><br><span class="line"> <span class="number">1260</span> <span class="operator">|</span> pg_authid</span><br><span class="line"> <span class="number">1261</span> <span class="operator">|</span> pg_auth_members</span><br><span class="line"> <span class="number">1262</span> <span class="operator">|</span> pg_database</span><br><span class="line"> <span class="number">2396</span> <span class="operator">|</span> pg_shdescription</span><br><span class="line"> <span class="number">2964</span> <span class="operator">|</span> pg_db_role_setting</span><br><span class="line"> <span class="number">3592</span> <span class="operator">|</span> pg_shseclabel</span><br><span class="line"> <span class="number">6000</span> <span class="operator">|</span> pg_replication_origin</span><br><span class="line"> <span class="number">6100</span> <span class="operator">|</span> pg_subscription</span><br><span class="line">(<span class="number">11</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>其实除了上述的基本表之外，这些表上的索引和 TOAST 也是共享的。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    c.oid</span><br><span class="line">    , c.relname</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    pg_class c <span class="keyword">LEFT</span> <span class="keyword">JOIN</span> pg_tablespace t</span><br><span class="line">        <span class="keyword">ON</span> c.reltablespace <span class="operator">=</span> t.oid</span><br><span class="line"><span class="keyword">WHERE</span></span><br><span class="line">    c.relisshared <span class="operator">=</span> <span class="literal">true</span></span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> c.oid;</span><br><span class="line"> oid  <span class="operator">|</span>                 relname</span><br><span class="line"><span class="comment">------+-----------------------------------------</span></span><br><span class="line"> <span class="number">1136</span> <span class="operator">|</span> pg_pltemplate</span><br><span class="line"> <span class="number">1137</span> <span class="operator">|</span> pg_pltemplate_name_index</span><br><span class="line"> <span class="number">1213</span> <span class="operator">|</span> pg_tablespace</span><br><span class="line"> <span class="number">1214</span> <span class="operator">|</span> pg_shdepend</span><br><span class="line"> <span class="number">1232</span> <span class="operator">|</span> pg_shdepend_depender_index</span><br><span class="line"> <span class="number">1233</span> <span class="operator">|</span> pg_shdepend_reference_index</span><br><span class="line"> <span class="number">1260</span> <span class="operator">|</span> pg_authid</span><br><span class="line"> <span class="number">1261</span> <span class="operator">|</span> pg_auth_members</span><br><span class="line"> <span class="number">1262</span> <span class="operator">|</span> pg_database</span><br><span class="line"> <span class="number">2396</span> <span class="operator">|</span> pg_shdescription</span><br><span class="line"> <span class="number">2397</span> <span class="operator">|</span> pg_shdescription_o_c_index</span><br><span class="line"> <span class="number">2671</span> <span class="operator">|</span> pg_database_datname_index</span><br><span class="line"> <span class="number">2672</span> <span class="operator">|</span> pg_database_oid_index</span><br><span class="line"> <span class="number">2676</span> <span class="operator">|</span> pg_authid_rolname_index</span><br><span class="line"> <span class="number">2677</span> <span class="operator">|</span> pg_authid_oid_index</span><br><span class="line"> <span class="number">2694</span> <span class="operator">|</span> pg_auth_members_role_member_index</span><br><span class="line"> <span class="number">2695</span> <span class="operator">|</span> pg_auth_members_member_role_index</span><br><span class="line"> <span class="number">2697</span> <span class="operator">|</span> pg_tablespace_oid_index</span><br><span class="line"> <span class="number">2698</span> <span class="operator">|</span> pg_tablespace_spcname_index</span><br><span class="line"> <span class="number">2846</span> <span class="operator">|</span> pg_toast_2396</span><br><span class="line"> <span class="number">2847</span> <span class="operator">|</span> pg_toast_2396_index</span><br><span class="line"> <span class="number">2964</span> <span class="operator">|</span> pg_db_role_setting</span><br><span class="line"> <span class="number">2965</span> <span class="operator">|</span> pg_db_role_setting_databaseid_rol_index</span><br><span class="line"> <span class="number">2966</span> <span class="operator">|</span> pg_toast_2964</span><br><span class="line"> <span class="number">2967</span> <span class="operator">|</span> pg_toast_2964_index</span><br><span class="line"> <span class="number">3592</span> <span class="operator">|</span> pg_shseclabel</span><br><span class="line"> <span class="number">3593</span> <span class="operator">|</span> pg_shseclabel_object_index</span><br><span class="line"> <span class="number">4060</span> <span class="operator">|</span> pg_toast_3592</span><br><span class="line"> <span class="number">4061</span> <span class="operator">|</span> pg_toast_3592_index</span><br><span class="line"> <span class="number">6000</span> <span class="operator">|</span> pg_replication_origin</span><br><span class="line"> <span class="number">6001</span> <span class="operator">|</span> pg_replication_origin_roiident_index</span><br><span class="line"> <span class="number">6002</span> <span class="operator">|</span> pg_replication_origin_roname_index</span><br><span class="line"> <span class="number">6100</span> <span class="operator">|</span> pg_subscription</span><br><span class="line"> <span class="number">6114</span> <span class="operator">|</span> pg_subscription_oid_index</span><br><span class="line"> <span class="number">6115</span> <span class="operator">|</span> pg_subscription_subname_index</span><br><span class="line">(<span class="number">35</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 中共享表的都是存储在 pg_global 这个表空间中的。</p>
+<h2 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h2><p>在源码中，PostgreSQL 通过 <code>IsSharedRelation()</code> 函数来判断表是否为共享表。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">IsSharedRelation</span><span class="params">(Oid relationId)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">/* These are the shared catalogs (look for BKI_SHARED_RELATION) */</span></span><br><span class="line">    <span class="keyword">if</span> (relationId == AuthIdRelationId ||</span><br><span class="line">        relationId == AuthMemRelationId ||</span><br><span class="line">        relationId == DatabaseRelationId ||</span><br><span class="line">        relationId == PLTemplateRelationId ||</span><br><span class="line">        relationId == SharedDescriptionRelationId ||</span><br><span class="line">        relationId == SharedDependRelationId ||</span><br><span class="line">        relationId == SharedSecLabelRelationId ||</span><br><span class="line">        relationId == TableSpaceRelationId ||</span><br><span class="line">        relationId == DbRoleSettingRelationId ||</span><br><span class="line">        relationId == ReplicationOriginRelationId ||</span><br><span class="line">        relationId == SubscriptionRelationId)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    <span class="comment">/* These are their indexes (see indexing.h) */</span></span><br><span class="line">    <span class="keyword">if</span> (relationId == AuthIdRolnameIndexId ||</span><br><span class="line">        relationId == AuthIdOidIndexId ||</span><br><span class="line">        relationId == AuthMemRoleMemIndexId ||</span><br><span class="line">        relationId == AuthMemMemRoleIndexId ||</span><br><span class="line">        relationId == DatabaseNameIndexId ||</span><br><span class="line">        relationId == DatabaseOidIndexId ||</span><br><span class="line">        relationId == PLTemplateNameIndexId ||</span><br><span class="line">        relationId == SharedDescriptionObjIndexId ||</span><br><span class="line">        relationId == SharedDependDependerIndexId ||</span><br><span class="line">        relationId == SharedDependReferenceIndexId ||</span><br><span class="line">        relationId == SharedSecLabelObjectIndexId ||</span><br><span class="line">        relationId == TablespaceOidIndexId ||</span><br><span class="line">        relationId == TablespaceNameIndexId ||</span><br><span class="line">        relationId == DbRoleSettingDatidRolidIndexId ||</span><br><span class="line">        relationId == ReplicationOriginIdentIndex ||</span><br><span class="line">        relationId == ReplicationOriginNameIndex ||</span><br><span class="line">        relationId == SubscriptionObjectIndexId ||</span><br><span class="line">        relationId == SubscriptionNameIndexId)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    <span class="comment">/* These are their toast tables and toast indexes (see toasting.h) */</span></span><br><span class="line">    <span class="keyword">if</span> (relationId == PgAuthidToastTable ||</span><br><span class="line">        relationId == PgAuthidToastIndex ||</span><br><span class="line">        relationId == PgDatabaseToastTable ||</span><br><span class="line">        relationId == PgDatabaseToastIndex ||</span><br><span class="line">        relationId == PgDbRoleSettingToastTable ||</span><br><span class="line">        relationId == PgDbRoleSettingToastIndex ||</span><br><span class="line">        relationId == PgPlTemplateToastTable ||</span><br><span class="line">        relationId == PgPlTemplateToastIndex ||</span><br><span class="line">        relationId == PgReplicationOriginToastTable ||</span><br><span class="line">        relationId == PgReplicationOriginToastIndex ||</span><br><span class="line">        relationId == PgShdescriptionToastTable ||</span><br><span class="line">        relationId == PgShdescriptionToastIndex ||</span><br><span class="line">        relationId == PgShseclabelToastTable ||</span><br><span class="line">        relationId == PgShseclabelToastIndex ||</span><br><span class="line">        relationId == PgSubscriptionToastTable ||</span><br><span class="line">        relationId == PgSubscriptionToastIndex ||</span><br><span class="line">        relationId == PgTablespaceToastTable ||</span><br><span class="line">        relationId == PgTablespaceToastIndex)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这和我们在上面看到的是一致的。</p>
+<p>那么 PostgreSQL 是如何定义共享表的呢？我们知道 PostgreSQL 的系统表都是定义在 <code>src/include/catalog/</code> 目录下。那么我们看看 <code>pg_authid</code> 这个共享表是如何定义的。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">CATALOG(pg_authid,1260,AuthIdRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(2842,AuthIdRelation_Rowtype_Id) BKI_SCHEMA_MACRO</span><br><span class="line">&#123;</span><br><span class="line">    Oid         oid;            /* oid */</span><br><span class="line">    NameData    rolname;        /* name of role */</span><br><span class="line">    bool        rolsuper;       /* read this field via superuser() only! */</span><br><span class="line">    bool        rolinherit;     /* inherit privileges from other roles? */</span><br><span class="line">    bool        rolcreaterole;  /* allowed to create more roles? */</span><br><span class="line">    bool        rolcreatedb;    /* allowed to create databases? */</span><br><span class="line">    bool        rolcanlogin;    /* allowed to log in as session user? */</span><br><span class="line">    bool        rolreplication; /* role used for streaming replication */</span><br><span class="line">    bool        rolbypassrls;   /* bypasses row level security? */</span><br><span class="line">    int32       rolconnlimit;   /* max connections allowed (-1=no limit) */</span><br><span class="line"></span><br><span class="line">    /* remaining fields may be null; use heap_getattr to read them! */</span><br><span class="line">#ifdef CATALOG_VARLEN           /* variable-length fields start here */</span><br><span class="line">    text        rolpassword;    /* password, if any */</span><br><span class="line">    timestamptz rolvaliduntil;  /* password expiration time, if any */</span><br><span class="line">#endif</span><br><span class="line">&#125; FormData_pg_authid;</span><br></pre></td></tr></table></figure>
+
+<p>我们可以看到这里有一个 <code>BKI_SHARED_RELATION</code> 宏，因此，我们推测只要加上这个宏，那么这个系统表就是共享的。我们可以通过对比其他系统表来进行验证。</p>
+<p>所有的系统表定义都将通过 <code>Catalog.pm</code> 来转换为 Perl 中的数据结构，最后通过 <code>genbki.pl</code> 脚步转换为 <code>postgres.bki</code> 文件，而 BKI 文件则用于初始化 PostgreSQL 模版数据库。</p>
+<p>例如，<code>pg_authid</code> 经过转换之后在 <code>postgres.bki</code> 中的内容如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">create pg_authid 1260 shared_relation rowtype_oid 2842</span><br><span class="line"> (</span><br><span class="line"> oid = oid ,</span><br><span class="line"> rolname = name ,</span><br><span class="line"> rolsuper = bool ,</span><br><span class="line"> rolinherit = bool ,</span><br><span class="line"> rolcreaterole = bool ,</span><br><span class="line"> rolcreatedb = bool ,</span><br><span class="line"> rolcanlogin = bool ,</span><br><span class="line"> rolreplication = bool ,</span><br><span class="line"> rolbypassrls = bool ,</span><br><span class="line"> rolconnlimit = int4 ,</span><br><span class="line"> rolpassword = text ,</span><br><span class="line"> rolvaliduntil = timestamptz</span><br><span class="line"> )</span><br><span class="line">open pg_authid</span><br><span class="line">insert ( 10 POSTGRES t t t t t t t -1 _null_ _null_ )</span><br><span class="line">insert ( 3373 pg_monitor f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 3374 pg_read_all_settings f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 3375 pg_read_all_stats f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 3377 pg_stat_scan_tables f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4569 pg_read_server_files f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4570 pg_write_server_files f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4571 pg_execute_server_program f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4200 pg_signal_backend f t f f f f f -1 _null_ _null_ )</span><br><span class="line">close pg_authid</span><br></pre></td></tr></table></figure>
+
+<p>当我们使用 initdb 初始化数据库时，<code>setup_data_file_paths()</code> 函数将会设置 <code>postgres.bki</code> 文件路径，随后通过 <code>initialize_data_directory()</code> 函数调用 <code>bootstrap_template1()</code> 函数来读取 <code>postgres.bki</code> 文件中的内容初始化模版数据库。</p>
+<p>最后通过 <code>postgres --boot -x1 -X 16777216 -F</code> 命令来初始化 <code>template1</code> 数据库，在 src/backend/main/main.c 文件中，我们可以看到如下代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (argc &gt; <span class="number">1</span> &amp;&amp; <span class="built_in">strcmp</span>(argv[<span class="number">1</span>], <span class="string">&quot;--boot&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">        AuxiliaryProcessMain(argc, argv);   <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (argc &gt; <span class="number">1</span> &amp;&amp; <span class="built_in">strcmp</span>(argv[<span class="number">1</span>], <span class="string">&quot;--describe-config&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">        GucInfoMain();          <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (argc &gt; <span class="number">1</span> &amp;&amp; <span class="built_in">strcmp</span>(argv[<span class="number">1</span>], <span class="string">&quot;--single&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">        PostgresMain(argc, argv,</span><br><span class="line">                     <span class="literal">NULL</span>,      <span class="comment">/* no dbname */</span></span><br><span class="line">                     strdup(get_user_name_or_exit(progname)));  <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        PostmasterMain(argc, argv); <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="built_in">abort</span>();                    <span class="comment">/* should not get here */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，在 initdb 的时候执行的是 <code>AuxiliaryProcessMain()</code> 函数，该函数可以用于创建多种类型的辅助进程，例如，Checkpointer、WAL writer 和 WAL receiver 等进程，该函数通过参数 <code>-x num</code> 来创建不同的进程，有如下辅助进程：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Auxiliary-process type identifiers.  These used to be in bootstrap.h</span></span><br><span class="line"><span class="comment"> * but it seems saner to have them here, with the ProcessingMode stuff.</span></span><br><span class="line"><span class="comment"> * The MyAuxProcType global is defined and set in bootstrap.c.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">enum</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    NotAnAuxProcess = <span class="number">-1</span>,</span><br><span class="line">    CheckerProcess = <span class="number">0</span>,</span><br><span class="line">    BootstrapProcess,</span><br><span class="line">    StartupProcess,</span><br><span class="line">    BgWriterProcess,</span><br><span class="line">    CheckpointerProcess,</span><br><span class="line">    WalWriterProcess,</span><br><span class="line">    WalReceiverProcess,</span><br><span class="line"></span><br><span class="line">    NUM_AUXPROCTYPES            <span class="comment">/* Must be last! */</span></span><br><span class="line">&#125; AuxProcType;</span><br><span class="line"></span><br><span class="line"><span class="keyword">extern</span> AuxProcType MyAuxProcType;</span><br></pre></td></tr></table></figure>
+
+<p>从 <code>initdb</code> 中传递过来的参数可以看到，我们的辅助进程类型为 <code>BootstrapProcess</code>，最后执行下面的内容：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">AuxiliaryProcessMain(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">switch</span> (MyAuxProcType)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">case</span> CheckerProcess:</span><br><span class="line">            <span class="comment">/* don&#x27;t set signals, they&#x27;re useless here */</span></span><br><span class="line">            CheckerModeMain();</span><br><span class="line">            proc_exit(<span class="number">1</span>);       <span class="comment">/* should never return */</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">case</span> BootstrapProcess:</span><br><span class="line"></span><br><span class="line">            <span class="comment">/*</span></span><br><span class="line"><span class="comment">             * There was a brief instant during which mode was Normal; this is</span></span><br><span class="line"><span class="comment">             * okay.  We need to be in bootstrap mode during BootStrapXLOG for</span></span><br><span class="line"><span class="comment">             * the sake of multixact initialization.</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">            SetProcessingMode(BootstrapProcessing);</span><br><span class="line">            bootstrap_signals();</span><br><span class="line">            BootStrapXLOG();</span><br><span class="line">            BootstrapModeMain();</span><br><span class="line">            proc_exit(<span class="number">1</span>);       <span class="comment">/* should never return */</span></span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里我们关注一下 <code>BootStrapXLOG()</code> 函数，在<a href="/2020/06/postgresql-system-identifier/" title="PostgreSQL 数据库系统标识符">PostgreSQL 数据库系统标识符</a>的文章中我们介绍了这个函数将会创建数据库标识符，此外，他还将创建 <code>pg_control</code> 文件，XLOG 日志文件以及 CLOG 文件。</p>
+<p>接着我们看看 <code>BootstrapModeMain()</code> 函数，该函数以 <code>bootstrap</code> 模式运行，并且处理 PostgreSQL 提供的特殊的 <code>bootstrap</code> 语法，即 <code>postgres.bki</code> 文件中的内容。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> *   The main entry point for running the backend in bootstrap mode</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> *   The bootstrap mode is used to initialize the template database.</span></span><br><span class="line"><span class="comment"> *   The bootstrap backend doesn&#x27;t speak SQL, but instead expects</span></span><br><span class="line"><span class="comment"> *   commands in a special bootstrap language.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">BootstrapModeMain</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span>         i;</span><br><span class="line"></span><br><span class="line">    Assert(!IsUnderPostmaster);</span><br><span class="line">    Assert(IsBootstrapProcessingMode());</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * To ensure that src/common/link-canary.c is linked into the backend, we</span></span><br><span class="line"><span class="comment">     * must call it from somewhere.  Here is as good as anywhere.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (pg_link_canary_is_frontend())</span><br><span class="line">        elog(ERROR, <span class="string">&quot;backend is incorrectly linked to frontend functions&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Do backend-like initialization for bootstrap mode</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    InitProcess();</span><br><span class="line"></span><br><span class="line">    InitPostgres(<span class="literal">NULL</span>, InvalidOid, <span class="literal">NULL</span>, InvalidOid, <span class="literal">NULL</span>, <span class="literal">false</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Initialize stuff for bootstrap-file processing */</span></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; MAXATTR; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        attrtypes[i] = <span class="literal">NULL</span>;</span><br><span class="line">        Nulls[i] = <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Process bootstrap input.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    StartTransactionCommand();</span><br><span class="line">    boot_yyparse();</span><br><span class="line">    CommitTransactionCommand();</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * We should now know about all mapped relations, so it&#x27;s okay to write</span></span><br><span class="line"><span class="comment">     * out the initial relation mapping files.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    RelationMapFinishBootstrap();</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Clean up and exit */</span></span><br><span class="line">    cleanup();</span><br><span class="line">    proc_exit(<span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从代码的注释我们可以看到整个 <code>postgres.bki</code> 文件的处理是通过 <code>boot_yyparse()</code> 函数来进行的，这个函数是由 <code>bootparse.y</code> 文件提供的，其实就是处理有关 <code>postgres.bki</code> 文件的语法，并将其转化为不同的对象进而调用 PostgreSQL 内部提供的函数。例如，创建 <code>pg_authid</code> 这个系统表，将会执行以下内容：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></td><td class="code"><pre><span class="line">Boot_CreateStmt:</span><br><span class="line">          XCREATE boot_ident oidspec optbootstrap optsharedrelation optrowtypeoid LPAREN</span><br><span class="line">                &#123;</span><br><span class="line">                    do_start();</span><br><span class="line">                    numattr = <span class="number">0</span>;</span><br><span class="line">                    elog(DEBUG4, <span class="string">&quot;creating%s%s relation %s %u&quot;</span>,</span><br><span class="line">                         $<span class="number">4</span> ? <span class="string">&quot; bootstrap&quot;</span> : <span class="string">&quot;&quot;</span>,</span><br><span class="line">                         $<span class="number">5</span> ? <span class="string">&quot; shared&quot;</span> : <span class="string">&quot;&quot;</span>,</span><br><span class="line">                         $<span class="number">2</span>,</span><br><span class="line">                         $<span class="number">3</span>);</span><br><span class="line">                &#125;</span><br><span class="line">          boot_column_list</span><br><span class="line">                &#123;</span><br><span class="line">                    do_end();</span><br><span class="line">                &#125;</span><br><span class="line">          RPAREN</span><br><span class="line">                &#123;</span><br><span class="line">                    TupleDesc tupdesc;</span><br><span class="line">                    <span class="keyword">bool</span>    shared_relation;</span><br><span class="line">                    <span class="keyword">bool</span>    mapped_relation;</span><br><span class="line"></span><br><span class="line">                    do_start();</span><br><span class="line"></span><br><span class="line">                    tupdesc = CreateTupleDesc(numattr, attrtypes);</span><br><span class="line"></span><br><span class="line">                    shared_relation = $<span class="number">5</span>;</span><br><span class="line"></span><br><span class="line">                    <span class="comment">/*</span></span><br><span class="line"><span class="comment">                     * The catalogs that use the relation mapper are the</span></span><br><span class="line"><span class="comment">                     * bootstrap catalogs plus the shared catalogs.  If this</span></span><br><span class="line"><span class="comment">                     * ever gets more complicated, we should invent a BKI</span></span><br><span class="line"><span class="comment">                     * keyword to mark the mapped catalogs, but for now a</span></span><br><span class="line"><span class="comment">                     * quick hack seems the most appropriate thing.  Note in</span></span><br><span class="line"><span class="comment">                     * particular that all &quot;nailed&quot; heap rels (see formrdesc</span></span><br><span class="line"><span class="comment">                     * in relcache.c) must be mapped.</span></span><br><span class="line"><span class="comment">                     */</span></span><br><span class="line">                    mapped_relation = ($<span class="number">4</span> || shared_relation);</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> ($<span class="number">4</span>)</span><br><span class="line">                    &#123;</span><br><span class="line">                        TransactionId relfrozenxid;</span><br><span class="line">                        MultiXactId relminmxid;</span><br><span class="line"></span><br><span class="line">                        <span class="keyword">if</span> (boot_reldesc)</span><br><span class="line">                        &#123;</span><br><span class="line">                            elog(DEBUG4, <span class="string">&quot;create bootstrap: warning, open relation exists, closing first&quot;</span>);</span><br><span class="line">                            closerel(<span class="literal">NULL</span>);</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                        boot_reldesc = heap_create($<span class="number">2</span>,</span><br><span class="line">                                                   PG_CATALOG_NAMESPACE,</span><br><span class="line">                                                   shared_relation ? GLOBALTABLESPACE_OID : <span class="number">0</span>,</span><br><span class="line">                                                   $<span class="number">3</span>,</span><br><span class="line">                                                   InvalidOid,</span><br><span class="line">                                                   HEAP_TABLE_AM_OID,</span><br><span class="line">                                                   tupdesc,</span><br><span class="line">                                                   RELKIND_RELATION,</span><br><span class="line">                                                   RELPERSISTENCE_PERMANENT,</span><br><span class="line">                                                   shared_relation,</span><br><span class="line">                                                   mapped_relation,</span><br><span class="line">                                                   <span class="literal">true</span>,</span><br><span class="line">                                                   &amp;relfrozenxid,</span><br><span class="line">                                                   &amp;relminmxid);</span><br><span class="line">                        elog(DEBUG4, <span class="string">&quot;bootstrap relation created&quot;</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">else</span></span><br><span class="line">                    &#123;</span><br><span class="line">                        Oid id;</span><br><span class="line"></span><br><span class="line">                        id = heap_create_with_catalog($<span class="number">2</span>,</span><br><span class="line">                                                      PG_CATALOG_NAMESPACE,</span><br><span class="line">                                                      shared_relation ? GLOBALTABLESPACE_OID : <span class="number">0</span>,</span><br><span class="line">                                                      $<span class="number">3</span>,</span><br><span class="line">                                                      $<span class="number">6</span>,</span><br><span class="line">                                                      InvalidOid,</span><br><span class="line">                                                      BOOTSTRAP_SUPERUSERID,</span><br><span class="line">                                                      HEAP_TABLE_AM_OID,</span><br><span class="line">                                                      tupdesc,</span><br><span class="line">                                                      NIL,</span><br><span class="line">                                                      RELKIND_RELATION,</span><br><span class="line">                                                      RELPERSISTENCE_PERMANENT,</span><br><span class="line">                                                      shared_relation,</span><br><span class="line">                                                      mapped_relation,</span><br><span class="line">                                                      ONCOMMIT_NOOP,</span><br><span class="line">                                                      (Datum) <span class="number">0</span>,</span><br><span class="line">                                                      <span class="literal">false</span>,</span><br><span class="line">                                                      <span class="literal">true</span>,</span><br><span class="line">                                                      <span class="literal">false</span>,</span><br><span class="line">                                                      InvalidOid,</span><br><span class="line">                                                      <span class="literal">NULL</span>);</span><br><span class="line">                        elog(DEBUG4, <span class="string">&quot;relation created with OID %u&quot;</span>, id);</span><br><span class="line">                    &#125;</span><br><span class="line">                    do_end();</span><br><span class="line">                &#125;</span><br><span class="line">        ;</span><br></pre></td></tr></table></figure>
+
+<p>这里我们可以看到 <code>postgres.bki</code> 中的表也是通过 <code>heap_create_with_catalog()</code> 函数来创建的。需要注意的是，我们在通过 SQL 创建表的时候虽然也是通过 <code>heap_create_with_catalog()</code> 来新建表的，但是其参数 <code>shared_relation</code> 始终为 <code>false</code>。</p>
+<p>PostgreSQL 的 BKI 文件提供了一下几种基本都命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">create - 创建一个表</span><br><span class="line">open - 打开一个表</span><br><span class="line">close - 关闭一个表</span><br><span class="line">declare toast - 创建 TOAST 表</span><br><span class="line">insert - 向表中插入数据</span><br><span class="line">declare index - 声明索引</span><br><span class="line">declare unique index - 声明唯一性索引</span><br><span class="line">build indices - 创建索引</span><br></pre></td></tr></table></figure>
+<p>关于各个命令的语法这里就不详细介绍了，感兴趣的朋友可以去看 <code>postgres.bki</code> 和 <code>bootstrap.y</code> 文件。至此，我们对 PostgreSQL 中的共享表的创建有了一个粗略的认识。</p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/08/postgresql-shared-relations/" title="PostgreSQL 共享表">https://blog.japinli.top/2020/08/postgresql-shared-relations/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/07/create-u-bootloader-on-macos/" rel="prev" title="MacOS 上创建 U 盘启动器">
+                  <i class="fa fa-chevron-left"></i> MacOS 上创建 U 盘启动器
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/08/postgresql-backtrace/" rel="next" title="PostgreSQL 13 - backtrace 功能预览">
+                  PostgreSQL 13 - backtrace 功能预览 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

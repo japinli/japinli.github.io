@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 标榜自己为最先进 (Most Advance) 的开源关系数据库，它支持大部分 SQL 标准并且提供了许多其他现代特性：复杂查询、外键、触发器、视图、事务完整性、MVCC。同样，PostgreSQL 可以用许多方法扩展，比如，通过增加新的数据类型、函数、操作符、聚集函数、索引。PostgreSQL 被设计为易于扩展，因此通过插件我们可以很容易的扩展 PostgreSQL 数据">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 插件编写">
+<meta property="og:url" content="https://blog.japinli.top/2018/12/write-postgresql-extension/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 标榜自己为最先进 (Most Advance) 的开源关系数据库，它支持大部分 SQL 标准并且提供了许多其他现代特性：复杂查询、外键、触发器、视图、事务完整性、MVCC。同样，PostgreSQL 可以用许多方法扩展，比如，通过增加新的数据类型、函数、操作符、聚集函数、索引。PostgreSQL 被设计为易于扩展，因此通过插件我们可以很容易的扩展 PostgreSQL 数据">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-12-19T13:31:57.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.463Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2018/12/write-postgresql-extension/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2018/12/write-postgresql-extension/","path":"2018/12/write-postgresql-extension/","title":"PostgreSQL 插件编写"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 插件编写 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%90%E6%B3%A2%E9%82%A3%E5%A5%91%E6%95%B0%E5%88%97"><span class="nav-number">1.</span> <span class="nav-text">斐波那契数列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PostgreSQL-%E6%89%A9%E5%B1%95%E6%8F%92%E4%BB%B6%E7%9A%84%E6%A1%86%E6%9E%B6"><span class="nav-number">2.</span> <span class="nav-text">PostgreSQL 扩展插件的框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E7%94%A8%E4%BE%8B"><span class="nav-number">3.</span> <span class="nav-text">测试用例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A9%E7%94%A8-C-%E8%AF%AD%E8%A8%80%E4%BC%98%E5%8C%96%E6%80%A7%E8%83%BD"><span class="nav-number">4.</span> <span class="nav-text">利用 C 语言优化性能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2018/12/write-postgresql-extension/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 插件编写
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2018-12-19 21:31:57" itemprop="dateCreated datePublished" datetime="2018-12-19T21:31:57+08:00">2018-12-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 标榜自己为最先进 (Most Advance) 的开源关系数据库，它支持大部分 SQL 标准并且提供了许多其他现代特性：复杂查询、外键、触发器、视图、事务完整性、MVCC。同样，PostgreSQL 可以用许多方法扩展，比如，通过增加新的数据类型、函数、操作符、聚集函数、索引。PostgreSQL 被设计为易于扩展，因此通过插件我们可以很容易的扩展 PostgreSQL 数据库。本文就从编写一个简单的斐波那契的数据库扩展来介绍 PostgreSQL 插件的编写。</p>
+<span id="more"></span>
+
+<h2 id="斐波那契数列"><a href="#斐波那契数列" class="headerlink" title="斐波那契数列"></a>斐波那契数列</h2><p>斐波那契数列 (Fibonacci sequence)，又称黄金分割数列、因数学家列昂纳多·斐波那契 (Leonardoda Fibonacci) 以兔子繁殖为例子而引入，故又称为“兔子数列”，指的是这样一个数列：1、1、2、3、5、8、13、21、34、…… 在数学上，斐波纳契数列以如下被以递推的方法定义<sup>1</sup>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">F(0) = 0, F(1) = 1, F(n) = F(n - 1) + F(n - 2) (n &gt;= 2, n ∈ N)</span><br></pre></td></tr></table></figure>
+
+<h2 id="PostgreSQL-扩展插件的框架"><a href="#PostgreSQL-扩展插件的框架" class="headerlink" title="PostgreSQL 扩展插件的框架"></a>PostgreSQL 扩展插件的框架</h2><p>我们为了使 PostgreSQL 可以通过 <code>CREATE EXTENSION</code> 命令加载插件，我们的扩展插件至少需要两个文件：一个名为 <code>extension_name.control</code> 的控制文件和一个名为 <code>extension--version.sql</code> 的扩展 SQL 脚本文件。其中控制文件中包含了扩展插件名、版本等基本信息。现在让我们创建这两个文件。</p>
+<p>我们的 fibonacci 扩展插件的控制文件 (fibonacci.control) 内容如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># fibonacci extension</span><br><span class="line">comment = &#x27;fibonacci extension&#x27;</span><br><span class="line">default_version = &#x27;0.0.1&#x27;</span><br><span class="line">relocatable = true</span><br></pre></td></tr></table></figure>
+
+<p>我们将使用 PL/pgSQL 来实现这个插件 (fibonacci–0.0.1.sql)，其内容如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">-- complain if script is sourced in psql, rather than via CREATE EXTENSION</span><br><span class="line">\echo Use &quot;CREATE EXTENSION fibonacci&quot; to load this file. \quit</span><br><span class="line">CREATE FUNCTION fibonacci(n INTEGER)</span><br><span class="line">RETURNS INTEGER</span><br><span class="line">LANGUAGE plpgsql IMMUTABLE STRICT</span><br><span class="line">    AS $$</span><br><span class="line">    DECLARE</span><br><span class="line">        counter INTEGER := 0;</span><br><span class="line">        i INTEGER := 0;</span><br><span class="line">        j INTEGER := 1;</span><br><span class="line">    BEGIN</span><br><span class="line"></span><br><span class="line">        IF n &lt; 1 THEN</span><br><span class="line">            RETURN 0;</span><br><span class="line">        END IF;</span><br><span class="line"></span><br><span class="line">        WHILE counter &lt; n LOOP</span><br><span class="line">            counter := counter + 1;</span><br><span class="line">            SELECT j, i + j INTO i, j;</span><br><span class="line">        END LOOP;</span><br><span class="line"></span><br><span class="line">        RETURN i;</span><br><span class="line">    END;</span><br><span class="line">    $$;</span><br></pre></td></tr></table></figure>
+
+<p>自 PostgreSQL 9.1 之后，PostgreSQL 提供了 PGXS 用于构建其插件，大部分构建插件的环境变量都可以通过 pg_config 得到重用。接下来我们为 fibonacci 插件添加一个 Makefile 文件用于安装插件。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">EXTENSION = fibonacci        # the extensions name</span><br><span class="line">DATA = fibonacci--0.0.1.sql  # script files to install</span><br><span class="line"></span><br><span class="line"># postgres build stuff</span><br><span class="line">PG_CONFIG = pg_config</span><br><span class="line">PGXS := $(shell $(PG_CONFIG) --pgxs)</span><br><span class="line">include $(PGXS)</span><br></pre></td></tr></table></figure>
+
+<p>接下来我们便可以通过 <code>make install</code> 来安装插件。最后，我们在数据库中执行如下操作：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postgres@database:~/postgresql-10.4/fib$ psql postgres</span><br><span class="line">psql (10.4)</span><br><span class="line">Type &quot;help&quot; for help.</span><br><span class="line"></span><br><span class="line">postgres=# create extension fibonacci ;</span><br><span class="line">CREATE EXTENSION</span><br><span class="line">postgres=# select fibonacci(10);</span><br><span class="line"> fibonacci</span><br><span class="line">-----------</span><br><span class="line">        55</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres=#</span><br></pre></td></tr></table></figure>
+
+<h2 id="测试用例"><a href="#测试用例" class="headerlink" title="测试用例"></a>测试用例</h2><p>现在我们完成了基本的插件功能，但是任何程序都应该包含测试用例以便验证程序的正确性。我们可以很方便的为 PostgreSQL 添加回归测试，在执行完 <code>make install</code> 命令之后利用 <code>make installcheck</code> 运行插件的回归测试。PostgreSQL 将回归测试脚本放在插件目录的 <code>sql/</code> 文件中，每个测试文件都对应一个期望结果的输出文件并放置在插件目录的 <code>expected/</code> 文件中，测试脚本与期望结果具有相同的名字，唯一不同的是期望结果的文件的后缀名为 <code>.out</code>。命令 <code>make installcheck</code> 执行 <code>psql</code> 目录下的所有脚本并且将输出的结果与 <code>expected</code> 目录中的文件进行比较。任何不同的结果都将被写入 <code>regression.diffs</code> 文件。现在，我们为插件添加测试用例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">postgres@database:~/postgresql-10.4/fib$ cat sql/fibonacci_test.sql</span><br><span class="line">CREATE EXTENSION fibonacci;</span><br><span class="line">SELECT fibonacci(0);</span><br><span class="line">SELECT fibonacci(1);</span><br><span class="line">SELECT fibonacci(2);</span><br><span class="line">SELECT fibonacci(3);</span><br><span class="line">SELECT fibonacci(4);</span><br><span class="line">SELECT fibonacci(5);</span><br><span class="line">SELECT fibonacci(6);</span><br><span class="line">SELECT fibonacci(7);</span><br><span class="line">SELECT fibonacci(8);</span><br><span class="line">SELECT fibonacci(9);</span><br><span class="line">SELECT fibonacci(10);</span><br><span class="line">SELECT fibonacci(11);</span><br><span class="line">SELECT fibonacci(12);</span><br><span class="line">SELECT fibonacci(13);</span><br><span class="line">SELECT fibonacci(14);</span><br><span class="line">SELECT fibonacci(15);</span><br><span class="line">SELECT fibonacci(16);</span><br><span class="line">SELECT fibonacci(17);</span><br><span class="line">SELECT fibonacci(18);</span><br><span class="line">SELECT fibonacci(19);</span><br><span class="line">SELECT fibonacci(20);</span><br></pre></td></tr></table></figure>
+
+<p>同时，我们需要修改 <code>Makefile</code> 文件，以便其能执行回归测试。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">EXTENSION = fibonacci        # the extensions name</span><br><span class="line">DATA = fibonacci--0.0.1.sql  # script files to install</span><br><span class="line">REGRESS = fibonacci_test     # our test script file (without extension)</span><br><span class="line"></span><br><span class="line"># postgres build stuff</span><br><span class="line">PG_CONFIG = pg_config</span><br><span class="line">PGXS := $(shell $(PG_CONFIG) --pgxs)</span><br><span class="line">include $(PGXS)</span><br></pre></td></tr></table></figure>
+
+<p>现在，我们执行 <code>make install &amp;&amp; make installcheck</code> 时，回归测试将会失败，这是由于我们还没有指定期望的输出结果。但是，我们发现目录下多了一个 <code>results</code> 目录，并且该目录下包含 <code>fibonacci_test.out</code> 和 <code>fibonacci_test.out.diff</code> 两个文件。为了简便，我们在这里创建一个 <code>expected</code> 目录，并将 <code>fibonacci_test.out</code> 拷贝到该目录下。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">postgres@database:~/postgresql-10.4/fib$ mkdir expected</span><br><span class="line">postgres@database:~/postgresql-10.4/fib$ mv results/fibonacci_test.out expected/</span><br><span class="line">postgres@database:~/postgresql-10.4/fib$ make installcheck</span><br><span class="line">/home/postgres/postgresql-10.4/lib/pgxs/src/makefiles/../../src/test/regress/pg_regress --inputdir=./ --bindir=&#x27;/home/postgres/postgresql-10.4/bin&#x27;    --dbname=contrib_regression fibonacci_test</span><br><span class="line">(using postmaster on Unix socket, default port)</span><br><span class="line">============== dropping database &quot;contrib_regression&quot; ==============</span><br><span class="line">DROP DATABASE</span><br><span class="line">============== creating database &quot;contrib_regression&quot; ==============</span><br><span class="line">CREATE DATABASE</span><br><span class="line">ALTER DATABASE</span><br><span class="line">============== running regression test queries        ==============</span><br><span class="line">test fibonacci_test           ... ok</span><br><span class="line"></span><br><span class="line">=====================</span><br><span class="line"> All 1 tests passed.</span><br><span class="line">=====================</span><br><span class="line"></span><br><span class="line">postgres@database:~/postgresql-10.4/fib$</span><br></pre></td></tr></table></figure>
+
+<p>我们测试求 <code>[1,30]</code> 的斐波那契数列，其运行结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">postgres=# SELECT i, fibonacci(i) FROM generate_series(1,30) i;</span><br><span class="line"> i  | fibonacci</span><br><span class="line">----+-----------</span><br><span class="line">  1 |         1</span><br><span class="line">  2 |         1</span><br><span class="line">  3 |         2</span><br><span class="line">  4 |         3</span><br><span class="line">  5 |         5</span><br><span class="line">  6 |         8</span><br><span class="line">  7 |        13</span><br><span class="line">  8 |        21</span><br><span class="line">  9 |        34</span><br><span class="line"> 10 |        55</span><br><span class="line"> 11 |        89</span><br><span class="line"> 12 |       144</span><br><span class="line"> 13 |       233</span><br><span class="line"> 14 |       377</span><br><span class="line"> 15 |       610</span><br><span class="line"> 16 |       987</span><br><span class="line"> 17 |      1597</span><br><span class="line"> 18 |      2584</span><br><span class="line"> 19 |      4181</span><br><span class="line"> 20 |      6765</span><br><span class="line"> 21 |     10946</span><br><span class="line"> 22 |     17711</span><br><span class="line"> 23 |     28657</span><br><span class="line"> 24 |     46368</span><br><span class="line"> 25 |     75025</span><br><span class="line"> 26 |    121393</span><br><span class="line"> 27 |    196418</span><br><span class="line"> 28 |    317811</span><br><span class="line"> 29 |    514229</span><br><span class="line"> 30 |    832040</span><br><span class="line">(30 rows)</span><br><span class="line"></span><br><span class="line">Time: 12.432 ms</span><br><span class="line">postgres=#</span><br></pre></td></tr></table></figure>
+
+<h2 id="利用-C-语言优化性能"><a href="#利用-C-语言优化性能" class="headerlink" title="利用 C 语言优化性能"></a>利用 C 语言优化性能</h2><p>上面我们使用 PL/pgSQL 为 PostgreSQL 编写了斐波那契插件，从上面的运行时间看基本还算可以。但是，我们还可以通过 C 语言来重写这个插件从而提高其性能。下面给出了 C 语言版的斐波那契插件的实现。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*----------------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * fibonacci.c</span></span><br><span class="line"><span class="comment"> *   Fibonacci extension for PostgreSQL.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> *----------------------------------------------------------------------------</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;postgres.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;fmgr.h&quot;</span></span></span><br><span class="line"></span><br><span class="line">PG_MODULE_MAGIC;</span><br><span class="line"></span><br><span class="line"><span class="function">Datum <span class="title">fibonacci</span><span class="params">(PG_FUNCTION_ARGS)</span></span>;</span><br><span class="line"></span><br><span class="line">PG_FUNCTION_INFO_V1(fibonacci);</span><br><span class="line"></span><br><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">fibonacci</span><span class="params">(PG_FUNCTION_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    int32 arg = PG_GETARG_INT32(<span class="number">0</span>);</span><br><span class="line">    int32 i = <span class="number">0</span>;</span><br><span class="line">    int32 j = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (arg &lt; <span class="number">1</span>) &#123;</span><br><span class="line">        PG_RETURN_INT32(<span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (arg--) &#123;</span><br><span class="line">        int32 t = j;</span><br><span class="line">        j = i + j;</span><br><span class="line">        i = t;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    PG_RETURN_INT32(i);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>postgres.h</code> 文件包含了 PostgreSQL 的一些基本的编程接口，该文件需要在每个声明 Postgres 函数的 C 源文件中出现。</li>
+<li><code>fmgr.h</code> 包含了 <code>PG_GETARG_XXX</code> 和 <code>PG_RETURN_XXX</code> 的一系列宏定义。</li>
+<li><code>PG_MODULE_MAGIC</code> 是一个魔术块，它用于确保将动态加载的目标文件加载到兼容的服务器中。</li>
+</ul>
+<p>现在，我们利用 C 语言重写了斐波那契插件；接着，我们需要修改安装脚本文件 <code>fibonacci--0.0.1.sql</code> 和 <code>Makefile</code> 文件。为了便于区分，我们将 C 语言实现的版本命名为 <code>0.0.2</code>，因此我们创建一个 <code>fibonacci--0.0.2.sql</code> 的安装脚本，其内容如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- complain if script is sourced in psql, rather than via CREATE EXTENSION</span></span><br><span class="line">\echo Use &quot;CREATE EXTENSION fibonacci&quot; <span class="keyword">to</span> load this file. \quit</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">FUNCTION</span> fibonacci(n <span class="type">INTEGER</span>)</span><br><span class="line"><span class="keyword">RETURNS</span> <span class="type">INTEGER</span> <span class="keyword">AS</span> <span class="string">&#x27;$libdir/fibonacci&#x27;</span></span><br><span class="line"><span class="keyword">LANGUAGE</span> C IMMUTABLE STRICT;</span><br></pre></td></tr></table></figure>
+
+<p>接下来修改 <code>Makefile</code> 文件使其能正常编译我们的 fibonacci 插件的源文件。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">EXTENSION = fibonacci        # the extensions name</span><br><span class="line">DATA = fibonacci--0.0.2.sql  # script files to install</span><br><span class="line">REGRESS = fibonacci_test     # our test script file (without extension)</span><br><span class="line">MODULES = fibonacci</span><br><span class="line"></span><br><span class="line"># postgres build stuff</span><br><span class="line">PG_CONFIG = pg_config</span><br><span class="line">PGXS := $(shell $(PG_CONFIG) --pgxs)</span><br><span class="line">include $(PGXS)</span><br></pre></td></tr></table></figure>
+
+<p>注意，我们还需要修改 <code>fibonacci.control</code> 文件中的 <code>default_version</code> 为 <code>0.0.2</code>。现在我们便可以通过 <code>make install &amp;&amp; make installcheck</code> 来安装插件了。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">postgres=# SELECT i, fibonacci(i) FROM generate_series(1,30) i;</span><br><span class="line"> i  | fibonacci</span><br><span class="line">----+-----------</span><br><span class="line">  1 |         1</span><br><span class="line">  2 |         1</span><br><span class="line">  3 |         2</span><br><span class="line">  4 |         3</span><br><span class="line">  5 |         5</span><br><span class="line">  6 |         8</span><br><span class="line">  7 |        13</span><br><span class="line">  8 |        21</span><br><span class="line">  9 |        34</span><br><span class="line"> 10 |        55</span><br><span class="line"> 11 |        89</span><br><span class="line"> 12 |       144</span><br><span class="line"> 13 |       233</span><br><span class="line"> 14 |       377</span><br><span class="line"> 15 |       610</span><br><span class="line"> 16 |       987</span><br><span class="line"> 17 |      1597</span><br><span class="line"> 18 |      2584</span><br><span class="line"> 19 |      4181</span><br><span class="line"> 20 |      6765</span><br><span class="line"> 21 |     10946</span><br><span class="line"> 22 |     17711</span><br><span class="line"> 23 |     28657</span><br><span class="line"> 24 |     46368</span><br><span class="line"> 25 |     75025</span><br><span class="line"> 26 |    121393</span><br><span class="line"> 27 |    196418</span><br><span class="line"> 28 |    317811</span><br><span class="line"> 29 |    514229</span><br><span class="line"> 30 |    832040</span><br><span class="line">(30 rows)</span><br><span class="line"></span><br><span class="line">Time: 2.280 ms</span><br><span class="line">postgres=#</span><br></pre></td></tr></table></figure>
+
+<p>从运行时间上看，C 语言版的斐波那契要比 PL/pgSQL 的运行速度快大约 80%。</p>
+<p><strong>备注：</strong> 由于 C 语言插件在 PostgreSQL 中采用动态库的形式载入的，因此我们需要修改配置文件中的 <code>shared_preload_libraries</code> 参数。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文介绍了如何使用 plpgsql 编写 PostgreSQL 的扩展插件，PostgreSQL 有两个基本的文件：</p>
+<ul>
+<li>extension.control - 插件控制文件</li>
+<li>extension–version.sql - 用于创建扩展的脚本文件</li>
+</ul>
+<p>此外，我们可能还需要 <code>sql</code> 和 <code>expected</code> 目录用于存放回归测试用例及其结果。最后，为了提高插件的运行效率，我们将原来的 PL/pgSQL 版本采用 C 语言来实现。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://baike.baidu.com/item/%E6%96%90%E6%B3%A2%E9%82%A3%E5%A5%91%E6%95%B0%E5%88%97/99145?fr=aladdin">斐波那契数列</a><br>[2] <a target="_blank" rel="noopener" href="http://big-elephants.com/2015-10/writing-postgres-extensions-part-i/">Writing Postgres Extensions - the Basics</a><br>[3] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/10/xfunc-c.html">PostgreSQL - C-Language Functions</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2018/12/write-postgresql-extension/" title="PostgreSQL 插件编写">https://blog.japinli.top/2018/12/write-postgresql-extension/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2018/12/postgresql-skills/" rel="prev" title="PostgreSQL 常用命令集合">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 常用命令集合
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/01/git-sync-branches-among-remote-repositories/" rel="next" title="Git 多仓库分支同步">
+                  Git 多仓库分支同步 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

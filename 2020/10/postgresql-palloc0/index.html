@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近在查看 PostgreSQL 数据库中内存分配相关的代码时，我发现 palloc() 和 palloc0() 函数存在大量的冗余代码。本着减少冗余代码的想法，我将修改后的代码提交到社区，得到的反馈是这样修改会影响整体效率。本文简要分析一下这是如何影响效率的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL palloc0 函数优化">
+<meta property="og:url" content="https://blog.japinli.top/2020/10/postgresql-palloc0/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近在查看 PostgreSQL 数据库中内存分配相关的代码时，我发现 palloc() 和 palloc0() 函数存在大量的冗余代码。本着减少冗余代码的想法，我将修改后的代码提交到社区，得到的反馈是这样修改会影响整体效率。本文简要分析一下这是如何影响效率的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-10-02T14:45:16.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.441Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/10/postgresql-palloc0/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/10/postgresql-palloc0/","path":"2020/10/postgresql-palloc0/","title":"PostgreSQL palloc0 函数优化"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL palloc0 函数优化 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#PATCH-%E6%96%87%E4%BB%B6"><span class="nav-number">1.</span> <span class="nav-text">PATCH 文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5"><span class="nav-number">3.</span> <span class="nav-text">链接</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/10/postgresql-palloc0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL palloc0 函数优化
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-10-02 22:45:16" itemprop="dateCreated datePublished" datetime="2020-10-02T22:45:16+08:00">2020-10-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>10k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近在查看 PostgreSQL 数据库中内存分配相关的代码时，我发现 <code>palloc()</code> 和 <code>palloc0()</code> 函数存在大量的冗余代码。本着减少冗余代码的想法，我将修改后的代码提交到社区，得到的反馈是这样修改会影响整体效率。本文简要分析一下这是如何影响效率的。</p>
+<span id="more"></span>
+
+<h2 id="PATCH-文件"><a href="#PATCH-文件" class="headerlink" title="PATCH 文件"></a>PATCH 文件</h2><p>我提交的 PATCH 文件如下所示，其实非常简单，本质上就是将 <code>palloc0()</code> 函数中的部分代码改由 <code>palloc()</code> 函数来实现。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/utils/mmgr/mcxt.c b/src/backend/utils/mmgr/mcxt.c</span></span><br><span class="line"><span class="comment">index dda70ef9f3..cb07958a1f 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/mmgr/mcxt.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/mmgr/mcxt.c</span></span><br><span class="line"><span class="meta">@@ -982,28 +982,8 @@</span> palloc0(Size size)</span><br><span class="line"> &#123;</span><br><span class="line"> 	/* duplicates MemoryContextAllocZero to avoid increased overhead */</span><br><span class="line"> 	void	   *ret;</span><br><span class="line"><span class="deletion">-	MemoryContext context = CurrentMemoryContext;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-	AssertArg(MemoryContextIsValid(context));</span></span><br><span class="line"><span class="deletion">-	AssertNotInCriticalSection(context);</span></span><br><span class="line"></span><br><span class="line"><span class="deletion">-	if (!AllocSizeIsValid(size))</span></span><br><span class="line"><span class="deletion">-		elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-	context-&gt;isReset = false;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-	ret = context-&gt;methods-&gt;alloc(context, size);</span></span><br><span class="line"><span class="deletion">-	if (unlikely(ret == NULL))</span></span><br><span class="line"><span class="deletion">-	&#123;</span></span><br><span class="line"><span class="deletion">-		MemoryContextStats(TopMemoryContext);</span></span><br><span class="line"><span class="deletion">-		ereport(ERROR,</span></span><br><span class="line"><span class="deletion">-				(errcode(ERRCODE_OUT_OF_MEMORY),</span></span><br><span class="line"><span class="deletion">-				 errmsg(&quot;out of memory&quot;),</span></span><br><span class="line"><span class="deletion">-				 errdetail(&quot;Failed on request of size %zu in memory context \&quot;%s\&quot;.&quot;,</span></span><br><span class="line"><span class="deletion">-						   size, context-&gt;name)));</span></span><br><span class="line"><span class="deletion">-	&#125;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-	VALGRIND_MEMPOOL_ALLOC(context, ret, size);</span></span><br><span class="line"><span class="addition">+	ret = palloc(size);</span></span><br><span class="line"></span><br><span class="line"> 	MemSetAligned(ret, 0, size);</span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>在 Alvaro Herrera 的指导下，我通过分析原始代码和修改后代码的汇编代码进行分析。原版 PostgreSQL 数据库 <code>palloc()</code> 和 <code>palloc0()</code> 的汇编代码如下（使用命令 <code>objdump -S --disassemble postgres</code> 查看）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br></pre></td><td class="code"><pre><span class="line">00000000005175b0 &lt;palloc&gt;:</span><br><span class="line">  5175b0:	55                   	push   %rbp</span><br><span class="line">  5175b1:	53                   	push   %rbx</span><br><span class="line">  5175b2:	48 89 fd             	mov    %rdi,%rbp</span><br><span class="line">  5175b5:	48 83 ec 08          	sub    $0x8,%rsp</span><br><span class="line">  5175b9:	48 81 ff ff ff ff 3f 	cmp    $0x3fffffff,%rdi</span><br><span class="line">  5175c0:	48 8b 1d b9 0d 48 00 	mov    0x480db9(%rip),%rbx        # 998380 &lt;CurrentMemoryContext&gt;</span><br><span class="line">  5175c7:	0f 87 85 00 00 00    	ja     517652 &lt;palloc+0xa2&gt;</span><br><span class="line">  5175cd:	48 8b 43 10          	mov    0x10(%rbx),%rax</span><br><span class="line">  5175d1:	48 89 fe             	mov    %rdi,%rsi</span><br><span class="line">  5175d4:	c6 43 04 00          	movb   $0x0,0x4(%rbx)</span><br><span class="line">  5175d8:	48 89 df             	mov    %rbx,%rdi</span><br><span class="line">  5175db:	ff 10                	callq  *(%rax)</span><br><span class="line">  5175dd:	48 85 c0             	test   %rax,%rax</span><br><span class="line">  5175e0:	74 0e                	je     5175f0 &lt;palloc+0x40&gt;</span><br><span class="line">  5175e2:	48 83 c4 08          	add    $0x8,%rsp</span><br><span class="line">  5175e6:	5b                   	pop    %rbx</span><br><span class="line">  5175e7:	5d                   	pop    %rbp</span><br><span class="line">  5175e8:	c3                   	retq</span><br><span class="line">  5175e9:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)</span><br><span class="line">  5175f0:	48 8b 3d 81 0d 48 00 	mov    0x480d81(%rip),%rdi        # 998378 &lt;TopMemoryContext&gt;</span><br><span class="line">  5175f7:	be 64 00 00 00       	mov    $0x64,%esi</span><br><span class="line">  5175fc:	e8 4f fa ff ff       	callq  517050 &lt;MemoryContextStatsDetail&gt;</span><br><span class="line">  517601:	31 f6                	xor    %esi,%esi</span><br><span class="line">  517603:	bf 14 00 00 00       	mov    $0x14,%edi</span><br><span class="line">  517608:	e8 83 6e fd ff       	callq  4ee490 &lt;errstart&gt;</span><br><span class="line">  51760d:	bf c5 20 00 00       	mov    $0x20c5,%edi</span><br><span class="line">  517612:	e8 c9 9c fd ff       	callq  4f12e0 &lt;errcode&gt;</span><br><span class="line">  517617:	48 8d 3d 37 55 03 00 	lea    0x35537(%rip),%rdi        # 54cb55 &lt;__func__.7554+0x45&gt;</span><br><span class="line">  51761e:	31 c0                	xor    %eax,%eax</span><br><span class="line">  517620:	e8 db 9e fd ff       	callq  4f1500 &lt;errmsg&gt;</span><br><span class="line">  517625:	48 8b 53 38          	mov    0x38(%rbx),%rdx</span><br><span class="line">  517629:	48 8d 3d b0 12 16 00 	lea    0x1612b0(%rip),%rdi        # 6788e0 &lt;__func__.6248+0x150&gt;</span><br><span class="line">  517630:	48 89 ee             	mov    %rbp,%rsi</span><br><span class="line">  517633:	31 c0                	xor    %eax,%eax</span><br><span class="line">  517635:	e8 86 a3 fd ff       	callq  4f19c0 &lt;errdetail&gt;</span><br><span class="line">  51763a:	48 8d 15 37 13 16 00 	lea    0x161337(%rip),%rdx        # 678978 &lt;__func__.7318&gt;</span><br><span class="line">  517641:	48 8d 3d 50 12 16 00 	lea    0x161250(%rip),%rdi        # 678898 &lt;__func__.6248+0x108&gt;</span><br><span class="line">  517648:	be cc 03 00 00       	mov    $0x3cc,%esi</span><br><span class="line">  51764d:	e8 3e 96 fd ff       	callq  4f0c90 &lt;errfinish&gt;</span><br><span class="line">  517652:	31 f6                	xor    %esi,%esi</span><br><span class="line">  517654:	bf 14 00 00 00       	mov    $0x14,%edi</span><br><span class="line">  517659:	e8 32 6e fd ff       	callq  4ee490 &lt;errstart&gt;</span><br><span class="line">  51765e:	48 8d 3d 0b 12 16 00 	lea    0x16120b(%rip),%rdi        # 678870 &lt;__func__.6248+0xe0&gt;</span><br><span class="line">  517665:	48 89 ee             	mov    %rbp,%rsi</span><br><span class="line">  517668:	31 c0                	xor    %eax,%eax</span><br><span class="line">  51766a:	e8 c1 99 fd ff       	callq  4f1030 &lt;errmsg_internal&gt;</span><br><span class="line">  51766f:	48 8d 15 02 13 16 00 	lea    0x161302(%rip),%rdx        # 678978 &lt;__func__.7318&gt;</span><br><span class="line">  517676:	48 8d 3d 1b 12 16 00 	lea    0x16121b(%rip),%rdi        # 678898 &lt;__func__.6248+0x108&gt;</span><br><span class="line">  51767d:	be c0 03 00 00       	mov    $0x3c0,%esi</span><br><span class="line">  517682:	e8 09 96 fd ff       	callq  4f0c90 &lt;errfinish&gt;</span><br><span class="line">  517687:	66 0f 1f 84 00 00 00 	nopw   0x0(%rax,%rax,1)</span><br><span class="line">  51768e:	00 00</span><br><span class="line"></span><br><span class="line">0000000000517690 &lt;palloc0&gt;:</span><br><span class="line">  517690: 55                    push   %rbp</span><br><span class="line">  517691: 53                    push   %rbx</span><br><span class="line">  517692: 48 89 fb              mov    %rdi,%rbx</span><br><span class="line">  517695: 48 83 ec 08           sub    $0x8,%rsp</span><br><span class="line">  517699: 48 81 ff ff ff ff 3f  cmp    $0x3fffffff,%rdi</span><br><span class="line">  5176a0: 48 8b 2d d9 0c 48 00  mov    0x480cd9(%rip),%rbp        # 998380 &lt;CurrentMemoryContext&gt;</span><br><span class="line">  5176a7: 0f 87 d5 00 00 00     ja     517782 &lt;palloc0+0xf2&gt;</span><br><span class="line">  5176ad: 48 8b 45 10           mov    0x10(%rbp),%rax</span><br><span class="line">  5176b1: 48 89 fe              mov    %rdi,%rsi</span><br><span class="line">  5176b4: c6 45 04 00           movb   $0x0,0x4(%rbp)</span><br><span class="line">  5176b8: 48 89 ef              mov    %rbp,%rdi</span><br><span class="line">  5176bb: ff 10                 callq  *(%rax)</span><br><span class="line">  5176bd: 48 85 c0              test   %rax,%rax</span><br><span class="line">  5176c0: 48 89 c1              mov    %rax,%rcx</span><br><span class="line">  5176c3: 74 5b                 je     517720 &lt;palloc0+0x90&gt;</span><br><span class="line">  5176c5: f6 c3 07              test   $0x7,%bl</span><br><span class="line">  5176c8: 75 36                 jne    517700 &lt;palloc0+0x70&gt;</span><br><span class="line">  5176ca: 48 81 fb 00 04 00 00  cmp    $0x400,%rbx</span><br><span class="line">  5176d1: 77 2d                 ja     517700 &lt;palloc0+0x70&gt;</span><br><span class="line">  5176d3: 48 01 c3              add    %rax,%rbx</span><br><span class="line">  5176d6: 48 39 d8              cmp    %rbx,%rax</span><br><span class="line">  5176d9: 73 35                 jae    517710 &lt;palloc0+0x80&gt;</span><br><span class="line">  5176db: 0f 1f 44 00 00        nopl   0x0(%rax,%rax,1)</span><br><span class="line">  5176e0: 48 83 c0 08           add    $0x8,%rax</span><br><span class="line">  5176e4: 48 c7 40 f8 00 00 00  movq   $0x0,-0x8(%rax)</span><br><span class="line">  5176eb: 00</span><br><span class="line">  5176ec: 48 39 c3              cmp    %rax,%rbx</span><br><span class="line">  5176ef: 77 ef                 ja     5176e0 &lt;palloc0+0x50&gt;</span><br><span class="line">  5176f1: 48 83 c4 08           add    $0x8,%rsp</span><br><span class="line">  5176f5: 48 89 c8              mov    %rcx,%rax</span><br><span class="line">  5176f8: 5b                    pop    %rbx</span><br><span class="line">  5176f9: 5d                    pop    %rbp</span><br><span class="line">  5176fa: c3                    retq</span><br><span class="line">  5176fb: 0f 1f 44 00 00        nopl   0x0(%rax,%rax,1)</span><br><span class="line">  517700: 48 89 cf              mov    %rcx,%rdi</span><br><span class="line">  517703: 48 89 da              mov    %rbx,%rdx</span><br><span class="line">  517706: 31 f6                 xor    %esi,%esi</span><br><span class="line">  517708: e8 e3 0e ba ff        callq  b85f0 &lt;memset@plt&gt;</span><br><span class="line">  51770d: 48 89 c1              mov    %rax,%rcx</span><br><span class="line">  517710: 48 83 c4 08           add    $0x8,%rsp</span><br><span class="line">  517714: 48 89 c8              mov    %rcx,%rax</span><br><span class="line">  517717: 5b                    pop    %rbx</span><br><span class="line">  517718: 5d                    pop    %rbp</span><br><span class="line">  517719: c3                    retq</span><br><span class="line">  51771a: 66 0f 1f 44 00 00     nopw   0x0(%rax,%rax,1)</span><br><span class="line">  517720: 48 8b 3d 51 0c 48 00  mov    0x480c51(%rip),%rdi        # 998378 &lt;TopMemoryContext&gt;</span><br><span class="line">  517727: be 64 00 00 00        mov    $0x64,%esi</span><br><span class="line">  51772c: e8 1f f9 ff ff        callq  517050 &lt;MemoryContextStatsDetail&gt;</span><br><span class="line">  517731: 31 f6                 xor    %esi,%esi</span><br><span class="line">  517733: bf 14 00 00 00        mov    $0x14,%edi</span><br><span class="line">  517738: e8 53 6d fd ff        callq  4ee490 &lt;errstart&gt;</span><br><span class="line">  51773d: bf c5 20 00 00        mov    $0x20c5,%edi</span><br><span class="line">  517742: e8 99 9b fd ff        callq  4f12e0 &lt;errcode&gt;</span><br><span class="line">  517747: 48 8d 3d 07 54 03 00  lea    0x35407(%rip),%rdi        # 54cb55 &lt;__func__.7554+0x45&gt;</span><br><span class="line">  51774e: 31 c0                 xor    %eax,%eax</span><br><span class="line">  517750: e8 ab 9d fd ff        callq  4f1500 &lt;errmsg&gt;</span><br><span class="line">  517755: 48 8b 55 38           mov    0x38(%rbp),%rdx</span><br><span class="line">  517759: 48 8d 3d 80 11 16 00  lea    0x161180(%rip),%rdi        # 6788e0 &lt;__func__.6248+0x150&gt;</span><br><span class="line">  517760: 48 89 de              mov    %rbx,%rsi</span><br><span class="line">  517763: 31 c0                 xor    %eax,%eax</span><br><span class="line">  517765: e8 56 a2 fd ff        callq  4f19c0 &lt;errdetail&gt;</span><br><span class="line">  51776a: 48 8d 15 ff 11 16 00  lea    0x1611ff(%rip),%rdx        # 678970 &lt;__func__.7326&gt;</span><br><span class="line">  517771: 48 8d 3d 20 11 16 00  lea    0x161120(%rip),%rdi        # 678898 &lt;__func__.6248+0x108&gt;</span><br><span class="line">  517778: be eb 03 00 00        mov    $0x3eb,%esi</span><br><span class="line">  51777d: e8 0e 95 fd ff        callq  4f0c90 &lt;errfinish&gt;</span><br><span class="line">  517782: 31 f6                 xor    %esi,%esi</span><br><span class="line">  517784: bf 14 00 00 00        mov    $0x14,%edi</span><br><span class="line">  517789: e8 02 6d fd ff        callq  4ee490 &lt;errstart&gt;</span><br><span class="line">  51778e: 48 8d 3d db 10 16 00  lea    0x1610db(%rip),%rdi        # 678870 &lt;__func__.6248+0xe0&gt;</span><br><span class="line">  517795: 48 89 de              mov    %rbx,%rsi</span><br><span class="line">  517798: 31 c0                 xor    %eax,%eax</span><br><span class="line">  51779a: e8 91 98 fd ff        callq  4f1030 &lt;errmsg_internal&gt;</span><br><span class="line">  51779f: 48 8d 15 ca 11 16 00  lea    0x1611ca(%rip),%rdx        # 678970 &lt;__func__.7326&gt;</span><br><span class="line">  5177a6: 48 8d 3d eb 10 16 00  lea    0x1610eb(%rip),%rdi        # 678898 &lt;__func__.6248+0x108&gt;</span><br><span class="line">  5177ad: be df 03 00 00        mov    $0x3df,%esi</span><br><span class="line">  5177b2: e8 d9 94 fd ff        callq  4f0c90 &lt;errfinish&gt;</span><br><span class="line">  5177b7: 66 0f 1f 84 00 00 00  nopw   0x0(%rax,%rax,1)</span><br><span class="line">  5177be: 00 00</span><br></pre></td></tr></table></figure>
+
+<p>修改之后的汇编代码如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line">00000000005175b0 &lt;palloc&gt;:</span><br><span class="line">  5175b0: 55                    push   %rbp</span><br><span class="line">  5175b1: 53                    push   %rbx</span><br><span class="line">  5175b2: 48 89 fd              mov    %rdi,%rbp</span><br><span class="line">  5175b5: 48 83 ec 08           sub    $0x8,%rsp</span><br><span class="line">  5175b9: 48 81 ff ff ff ff 3f  cmp    $0x3fffffff,%rdi</span><br><span class="line">  5175c0: 48 8b 1d b9 0d 48 00  mov    0x480db9(%rip),%rbx        # 998380 &lt;CurrentMemoryContext&gt;</span><br><span class="line">  5175c7: 0f 87 85 00 00 00     ja     517652 &lt;palloc+0xa2&gt;</span><br><span class="line">  5175cd: 48 8b 43 10           mov    0x10(%rbx),%rax</span><br><span class="line">  5175d1: 48 89 fe              mov    %rdi,%rsi</span><br><span class="line">  5175d4: c6 43 04 00           movb   $0x0,0x4(%rbx)</span><br><span class="line">  5175d8: 48 89 df              mov    %rbx,%rdi</span><br><span class="line">  5175db: ff 10                 callq  *(%rax)</span><br><span class="line">  5175dd: 48 85 c0              test   %rax,%rax</span><br><span class="line">  5175e0: 74 0e                 je     5175f0 &lt;palloc+0x40&gt;</span><br><span class="line">  5175e2: 48 83 c4 08           add    $0x8,%rsp</span><br><span class="line">  5175e6: 5b                    pop    %rbx</span><br><span class="line">  5175e7: 5d                    pop    %rbp</span><br><span class="line">  5175e8: c3                    retq</span><br><span class="line">  5175e9: 0f 1f 80 00 00 00 00  nopl   0x0(%rax)</span><br><span class="line">  5175f0: 48 8b 3d 81 0d 48 00  mov    0x480d81(%rip),%rdi        # 998378 &lt;TopMemoryContext&gt;</span><br><span class="line">  5175f7: be 64 00 00 00        mov    $0x64,%esi</span><br><span class="line">  5175fc: e8 4f fa ff ff        callq  517050 &lt;MemoryContextStatsDetail&gt;</span><br><span class="line">  517601: 31 f6                 xor    %esi,%esi</span><br><span class="line">  517603: bf 14 00 00 00        mov    $0x14,%edi</span><br><span class="line">  517608: e8 83 6e fd ff        callq  4ee490 &lt;errstart&gt;</span><br><span class="line">  51760d: bf c5 20 00 00        mov    $0x20c5,%edi</span><br><span class="line">  517612: e8 c9 9c fd ff        callq  4f12e0 &lt;errcode&gt;</span><br><span class="line">  517617: 48 8d 3d 77 54 03 00  lea    0x35477(%rip),%rdi        # 54ca95 &lt;__func__.7554+0x45&gt;</span><br><span class="line">  51761e: 31 c0                 xor    %eax,%eax</span><br><span class="line">  517620: e8 db 9e fd ff        callq  4f1500 &lt;errmsg&gt;</span><br><span class="line">  517625: 48 8b 53 38           mov    0x38(%rbx),%rdx</span><br><span class="line">  517629: 48 8d 3d f0 11 16 00  lea    0x1611f0(%rip),%rdi        # 678820 &lt;__func__.6248+0x150&gt;</span><br><span class="line">  517630: 48 89 ee              mov    %rbp,%rsi</span><br><span class="line">  517633: 31 c0                 xor    %eax,%eax</span><br><span class="line">  517635: e8 86 a3 fd ff        callq  4f19c0 &lt;errdetail&gt;</span><br><span class="line">  51763a: 48 8d 15 6f 12 16 00  lea    0x16126f(%rip),%rdx        # 6788b0 &lt;__func__.7318&gt;</span><br><span class="line">  517641: 48 8d 3d 90 11 16 00  lea    0x161190(%rip),%rdi        # 6787d8 &lt;__func__.6248+0x108&gt;</span><br><span class="line">  517648: be cc 03 00 00        mov    $0x3cc,%esi</span><br><span class="line">  51764d: e8 3e 96 fd ff        callq  4f0c90 &lt;errfinish&gt;</span><br><span class="line">  517652: 31 f6                 xor    %esi,%esi</span><br><span class="line">  517654: bf 14 00 00 00        mov    $0x14,%edi</span><br><span class="line">  517659: e8 32 6e fd ff        callq  4ee490 &lt;errstart&gt;</span><br><span class="line">  51765e: 48 8d 3d 4b 11 16 00  lea    0x16114b(%rip),%rdi        # 6787b0 &lt;__func__.6248+0xe0&gt;</span><br><span class="line">  517665: 48 89 ee              mov    %rbp,%rsi</span><br><span class="line">  517668: 31 c0                 xor    %eax,%eax</span><br><span class="line">  51766a: e8 c1 99 fd ff        callq  4f1030 &lt;errmsg_internal&gt;</span><br><span class="line">  51766f: 48 8d 15 3a 12 16 00  lea    0x16123a(%rip),%rdx        # 6788b0 &lt;__func__.7318&gt;</span><br><span class="line">  517676: 48 8d 3d 5b 11 16 00  lea    0x16115b(%rip),%rdi        # 6787d8 &lt;__func__.6248+0x108&gt;</span><br><span class="line">  51767d: be c0 03 00 00        mov    $0x3c0,%esi</span><br><span class="line">  517682: e8 09 96 fd ff        callq  4f0c90 &lt;errfinish&gt;</span><br><span class="line">  517687: 66 0f 1f 84 00 00 00  nopw   0x0(%rax,%rax,1)</span><br><span class="line">  51768e: 00 00</span><br><span class="line"></span><br><span class="line">0000000000517690 &lt;palloc0&gt;:</span><br><span class="line">  517690: 53                    push   %rbx</span><br><span class="line">  517691: 48 89 fb              mov    %rdi,%rbx</span><br><span class="line">  517694: e8 17 ff ff ff        callq  5175b0 &lt;palloc&gt;</span><br><span class="line">  517699: f6 c3 07              test   $0x7,%bl</span><br><span class="line">  51769c: 48 89 c1              mov    %rax,%rcx</span><br><span class="line">  51769f: 75 2f                 jne    5176d0 &lt;palloc0+0x40&gt;</span><br><span class="line">  5176a1: 48 81 fb 00 04 00 00  cmp    $0x400,%rbx</span><br><span class="line">  5176a8: 77 26                 ja     5176d0 &lt;palloc0+0x40&gt;</span><br><span class="line">  5176aa: 48 01 c3              add    %rax,%rbx</span><br><span class="line">  5176ad: 48 39 d8              cmp    %rbx,%rax</span><br><span class="line">  5176b0: 73 2e                 jae    5176e0 &lt;palloc0+0x50&gt;</span><br><span class="line">  5176b2: 66 0f 1f 44 00 00     nopw   0x0(%rax,%rax,1)</span><br><span class="line">  5176b8: 48 83 c0 08           add    $0x8,%rax</span><br><span class="line">  5176bc: 48 c7 40 f8 00 00 00  movq   $0x0,-0x8(%rax)</span><br><span class="line">  5176c3: 00</span><br><span class="line">  5176c4: 48 39 c3              cmp    %rax,%rbx</span><br><span class="line">  5176c7: 77 ef                 ja     5176b8 &lt;palloc0+0x28&gt;</span><br><span class="line">  5176c9: 48 89 c8              mov    %rcx,%rax</span><br><span class="line">  5176cc: 5b                    pop    %rbx</span><br><span class="line">  5176cd: c3                    retq</span><br><span class="line">  5176ce: 66 90                 xchg   %ax,%ax</span><br><span class="line">  5176d0: 48 89 cf              mov    %rcx,%rdi</span><br><span class="line">  5176d3: 48 89 da              mov    %rbx,%rdx</span><br><span class="line">  5176d6: 31 f6                 xor    %esi,%esi</span><br><span class="line">  5176d8: e8 13 0f ba ff        callq  b85f0 &lt;memset@plt&gt;</span><br><span class="line">  5176dd: 48 89 c1              mov    %rax,%rcx</span><br><span class="line">  5176e0: 48 89 c8              mov    %rcx,%rax</span><br><span class="line">  5176e3: 5b                    pop    %rbx</span><br><span class="line">  5176e4: c3                    retq</span><br><span class="line">  5176e5: 90                    nop</span><br><span class="line">  5176e6: 66 2e 0f 1f 84 00 00  nopw   %cs:0x0(%rax,%rax,1)</span><br><span class="line">  5176ed: 00 00 00</span><br></pre></td></tr></table></figure>
+
+<p>从上面的汇编代码可以看到修改后的 <code>palloc0()</code> 额外引入了更多的汇编指令，从而导致其运行效率有所降低，由于该函数属于底层函数，很多地方都会调用该函数。因此对整体数据库的性能影响较大。当然，这只是从汇编指令级别得到的理论结果，我们还可以通过实际测试来进行对比。</p>
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/flat/3A57E434-BB2C-420C-86C8-0A81AE23F679%40hotmail.com">https://www.postgresql.org/message-id/flat/3A57E434-BB2C-420C-86C8-0A81AE23F679%40hotmail.com</a></p>
+<div class="just-for-fun">
+笑林广记 - 小恭五两
+
+<p>讹诈得财，蜀人谓之敲钉锤。<br>一广文善敲钉锤，见一生员在泮池旁出小恭，上前扭住吓之曰：“尔身列学门，擅在泮池解手，无礼已极。”<br>饬门斗：“押至明伦堂重惩，为大不敬者戒。”<br>生员央之曰：“生员一时错误，情愿认罚。”<br>广文云：“好在是出小恭，若是出大恭，定罚银十两。小恭五两可也。”<br>生员曰：“我这身边带银一块，重十两，愿分一半奉送。”<br>广文云：“何必分，全给了我就是了。”<br>生员说：“老师讲明，小恭五两，因何又要十两？”<br>广文曰：“不妨，你尽管全给了我，以后准你泮池旁再出大恭一次，让你五两。千万不可与外人说，恐坏了我的学规。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/10/postgresql-palloc0/" title="PostgreSQL palloc0 函数优化">https://blog.japinli.top/2020/10/postgresql-palloc0/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/09/go-http-response-writer/" rel="prev" title="Go 语言 http 响应头设置">
+                  <i class="fa fa-chevron-left"></i> Go 语言 http 响应头设置
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/11/postgresql-row-level-security-v2/" rel="next" title="再谈 PostgreSQL 行级安全策略">
+                  再谈 PostgreSQL 行级安全策略 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

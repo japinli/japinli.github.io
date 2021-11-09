@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="在工作中经常使用 GDB 来调试程序，但是一直都没有系统的进行学习过，为此，我打算对其进行一个系统的学习，学习的主要材料来自 GNU GDB 文档 Debugging with GDB。 本文主要包括如何运行以及退出 GDB，通常，我们使用 gdb 即可进入 GDB，而 quit 命令或者 Ctrl-d 快捷键便可以退出 GDB。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GDB 基本使用">
+<meta property="og:url" content="https://blog.japinli.top/2020/01/getting-in-and-out-of-gdb/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="在工作中经常使用 GDB 来调试程序，但是一直都没有系统的进行学习过，为此，我打算对其进行一个系统的学习，学习的主要材料来自 GNU GDB 文档 Debugging with GDB。 本文主要包括如何运行以及退出 GDB，通常，我们使用 gdb 即可进入 GDB，而 quit 命令或者 Ctrl-d 快捷键便可以退出 GDB。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-01-13T14:42:31.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.327Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="gdb">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/01/getting-in-and-out-of-gdb/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/01/getting-in-and-out-of-gdb/","path":"2020/01/getting-in-and-out-of-gdb/","title":"GDB 基本使用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>GDB 基本使用 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%90%E8%A1%8C-GDB"><span class="nav-number">1.</span> <span class="nav-text">运行 GDB</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E9%80%89%E6%8B%A9"><span class="nav-number">1.1.</span> <span class="nav-text">文件选择</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E6%8B%A9%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.2.</span> <span class="nav-text">选择模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GDB-%E5%9C%A8%E5%90%AF%E5%8A%A8%E6%97%B6%E9%83%BD%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88"><span class="nav-number">1.3.</span> <span class="nav-text">GDB 在启动时都做了什么</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%80%E5%87%BA-GDB"><span class="nav-number">2.</span> <span class="nav-text">退出 GDB</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Shell-%E5%91%BD%E4%BB%A4"><span class="nav-number">3.</span> <span class="nav-text">Shell 命令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E8%BE%93%E5%87%BA"><span class="nav-number">4.</span> <span class="nav-text">日志输出</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/01/getting-in-and-out-of-gdb/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          GDB 基本使用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-01-13 22:42:31" itemprop="dateCreated datePublished" datetime="2020-01-13T22:42:31+08:00">2020-01-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>在工作中经常使用 GDB 来调试程序，但是一直都没有系统的进行学习过，为此，我打算对其进行一个系统的学习，学习的主要材料来自 GNU GDB 文档 <a target="_blank" rel="noopener" href="https://sourceware.org/gdb/current/onlinedocs/gdb/">Debugging with GDB</a>。</p>
+<p>本文主要包括如何运行以及退出 GDB，通常，我们使用 <code>gdb</code> 即可进入 GDB，而 <code>quit</code> 命令或者 <code>Ctrl-d</code> 快捷键便可以退出 GDB。</p>
+<span id="more"></span>
+
+<h2 id="运行-GDB"><a href="#运行-GDB" class="headerlink" title="运行 GDB"></a>运行 GDB</h2><p>通过在命令行中输入 <code>gdb</code> 就可以进入到 GDB，此时，GDB 将读取用户输入的命令并执行，这其实就是一个交互式的界面，读取用户命令，执行用户命令，再读取用户命令，直到用户输入退出指令执行退出操作。</p>
+<p>我们还可以在 <code>gdb</code> 运行时指定一系列参数和选项，从而指定更多关于我们调试环境的一些设置。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program</span></span><br></pre></td></tr></table></figure>
+
+<p>上面是最常用的 GDB 使用方式，它指定我们将要调试的可执行程序。此外，我们还可以指定调试的程序以及一个 core 文件：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program core</span></span><br></pre></td></tr></table></figure>
+
+<p>如果我们要调试正在运行的程序，我们还可以使用进程 ID 或者 <code>-p</code> 选项作为第二个参数：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program 1234</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gdb -p 1234</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的命令将使用 GDB 附加到进程 ID 为 <code>1234</code> 的进程上，如果使用 <code>-p</code> 选项，我们可以省略 <code>program</code> 程序名。</p>
+<p>我们可以选择使用 <code>--args</code> 来向调试的程序传递参数，该选项将终止可选参数的处理。例如：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb --args gcc -O2 -c foo.c</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的命令将使用 GDB 调试 gcc 程序，并将 <code>-O2 -c foo.c</code> 作为 <code>gcc</code> 的命令行参数。</p>
+<p>GDB 运行时会输出类似下面的信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">$ gdb</span><br><span class="line">GNU gdb (GDB) 8.3</span><br><span class="line">Copyright (C) 2019 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.</span><br><span class="line">Type &quot;show copying&quot; and &quot;show warranty&quot; for details.</span><br><span class="line">This GDB was configured as &quot;x86_64-apple-darwin18.5.0&quot;.</span><br><span class="line">Type &quot;show configuration&quot; for configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">    &lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line"></span><br><span class="line">For help, type &quot;help&quot;.</span><br><span class="line">Type &quot;apropos word&quot; to search for commands related to &quot;word&quot;.</span><br></pre></td></tr></table></figure>
+
+<p>我们可以使用 <code>--slient</code> 或者 <code>-q/--quite</code> 选项来抑制这些信息的输出。还有很多关于 GDB 的命令行选项，我们可以通过 <code>gdb -help</code> 来获取其使用方法。</p>
+<h3 id="文件选择"><a href="#文件选择" class="headerlink" title="文件选择"></a>文件选择</h3><p>当 GDB 运行时，它将读取选项以外的所有参数以指定可执行文件和 core 文件（或者进程 ID）中读取其它参数。这与分别由 <code>-se</code> 和 <code>-c</code> （或者 <code>-p</code>）指定参数相同。（GDB 将第一个没有选项关联的参数视为与 <code>-se</code> 后跟参数等效；将第二个没有选项关联的参数视为与 <code>-c</code> 或者 <code>-p</code> 后跟参数等效。）如果第二个参数以数字开始，GDB 首先尝试将其附加为一个进程，如果失败了，GDB 则试图将其作为一个 core 文件来打开。如果我们有一个以数字开始的 core 文件，那么我们可以为期添加前缀（如 <code>./</code>）来避免 GDB 将其视为一个进程 ID。</p>
+<p>如果 GDB 不支持配置 core 文件，例如对于大多是嵌入式目标，那么 GDB 将输出日志并忽略第二个参数。</p>
+<p>大多数 GDB 选项都有长，短选项两种形式；如果我们截断了长格式，只要足够 GDB 区分歧义，那么它也是能识别的。</p>
+<style>
+table th:nth-of-type(1) {
+    width: 35%;
+}
+table th:nth-of-type(2) {
+    width: 65%;
+}
+</style>
+
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-symbols file</code>, <br/><code>-s file</code></td>
+<td>从文件 <code>file</code> 中读取符号表</td>
+</tr>
+<tr>
+<td><code>-exec file</code>, <br/><code>-e file</code></td>
+<td>使用文件 <code>file</code> 作为可执行文件在适当时执行，并与核心转储一起检查纯数据</td>
+</tr>
+<tr>
+<td><code>-se file</code></td>
+<td>从文件 <code>file</code> 中读取符号表，并将其用作可执行文件</td>
+</tr>
+<tr>
+<td><code>-core file</code>, <br/><code>-c file</code></td>
+<td>使用文件 <code>file</code> 作为 coredump 文件进行检查</td>
+</tr>
+<tr>
+<td><code>-pid number</code>, <br/><code>-p number</code></td>
+<td>与 <code>attach</code> 命令一样，附加到进程 ID 为 <code>number</code> 的进程</td>
+</tr>
+<tr>
+<td><code>-command file</code>, <br/><code>-x file</code></td>
+<td>执行 <code>file</code> 文件中的命令，该文件的内容与 <code>source</code> 命令的内容相同</td>
+</tr>
+<tr>
+<td><code>-eval-command command</code>, <br/><code>-ex command</code></td>
+<td>执行单个的 GDB 命令，可多次使用，也可以与 <code>-x</code> 交叉使用</td>
+</tr>
+<tr>
+<td><code>-init-command file</code>, <br/><code>-ix file</code></td>
+<td>在加载 <code>inferior</code> 之前（在加载 <code>gdbinit</code> 文件之后）执行 <code>file</code> 文件内的 GDB 命令</td>
+</tr>
+<tr>
+<td><code>-init-eval-command command</code>,<br/> <code>-iex command</code></td>
+<td>在加载 <code>inferior</code> 之前（在加载 <code>gdbinit</code> 文件之后）执行单个 GDB 命令</td>
+</tr>
+<tr>
+<td><code>-directory directory</code>, <br/><code>-d directory</code></td>
+<td>将目录 <code>directory</code> 作为源码或脚本的搜索路径</td>
+</tr>
+<tr>
+<td><code>-r</code>, <br/><code>-readnow</code></td>
+<td>立即读取每个符号文件的整个符号表，而不是默认值，默认值是根据需要逐步读取它。这会使启动速度变慢，但会使以后的操作变快</td>
+</tr>
+<tr>
+<td><code>--readnever</code></td>
+<td>不要读取每个符号文件的符号调试信息。这使启动速度更快，但以无法执行符号调试为代价。DWARF展开信息也不会被读取，这意味着 backtrace 可能变得不完整或不准确。这种用法通常是用户只关心程序的执行顺序。</td>
+</tr>
+</tbody></table>
+<h3 id="选择模式"><a href="#选择模式" class="headerlink" title="选择模式"></a>选择模式</h3><p>我们可以在不同模式下运行 GBD，例如，批处理模式或者静默模式。</p>
+<ul>
+<li><p><code>-nx, -n</code> 不要执行初始化文件中的命令。GDB 包含三个初始化文件，它们按照如下的顺序加载：</p>
+<ul>
+<li><code>system.gdbinit</code> - 系统级别的初始化文件，它由编译时选项 <code>--with-system-gdbinit</code> 指定的位置。GDB 会在命令行选项处理之前加载此文件。</li>
+<li><code>system.gdbinit.d</code> - 这是系统级别的初始化目录。它由编译时选项 <code>--with-system-gdbinit-dir</code> 指定。此处的文件将在 <code>system.gdbinit</code> 文件之后、命令行选项之前进行加载，该目录下可能存在多个文件，它们按字母顺序进行加载。文件需要具有公认的脚本语言扩展名（<code>.py/.scm</code>）或以 <code>.gdb</code> 扩展名（将其视为普通的 GDB 命令）命名。GDB 不会递归的加载该目录下的子目录。</li>
+<li><code>~/.gdbinit</code> - 用户家目录初始化文件，它在 <code>system.gdbinit</code> 之后，命令行选项处理之前加载。</li>
+<li><code>./.gdbinit</code> - 当前目录的初始化文件。它最后被加载，除了 <code>-x</code> 和 <code>-nx</code> 命令行选项之外。<code>-x</code> 和 <code>-ex</code> 是最后被处理的，在 <code>./.gdbinit</code> 之后加载。</li>
+</ul>
+</li>
+<li><p><code>-nh</code> 不要执行来自用户家目录下的初始化文件（即 <code>~/.gdbinit</code>）中的命令。</p>
+</li>
+<li><p><code>-quite, -silent, -q</code> 静默模式，不输出介绍信息和版权信息。在批处理模式下也不会输出这些信息。</p>
+</li>
+<li><p><code>-batch</code> 批处理模式。在处理完由 <code>-x</code> 指定的所有命令文件（如果没有使用 <code>-n</code> 选项，也将处理初始化文件中的命令）并退出，正常返回 0，非 0 表示出现错误。批处理模式将会禁止分页功能，即终端的宽度和高度没有限制，类似于 <code>set confirm off</code>。</p>
+</li>
+<li><p><code>-cd directory</code> 使用 <code>directory</code> 作为工作目录，而不是当前目录作为工作目录。</p>
+</li>
+<li><p><code>-data-directory directory, -D directory</code> 使用 <code>directory</code> 作为 GDB 运行时的数据目录，这个目录包含了 GDB 的辅助文件。</p>
+</li>
+</ul>
+<p>此处只列出了部分选项，更多选项<a target="_blank" rel="noopener" href="https://sourceware.org/gdb/current/onlinedocs/gdb/Mode-Options.html#Mode-Options">请看这里</a>。</p>
+<h3 id="GDB-在启动时都做了什么"><a href="#GDB-在启动时都做了什么" class="headerlink" title="GDB 在启动时都做了什么"></a>GDB 在启动时都做了什么</h3><p>下面是有关 GDB 在会话启动过程中执行的操作的说明：</p>
+<ol>
+<li><p>设置命令行指定的命令解释器。</p>
+</li>
+<li><p>读取系统级别的初始化文件以及系统级别的初始化目录，并执行这些文件中的命令。这些文件以 <code>.gdb</code> 结尾（包含 GDB 命令）或者 GDB 支持的脚本语言的后缀结尾。</p>
+</li>
+<li><p>读取用户级别的初始化文件并执行其中的命令。</p>
+</li>
+<li><p>执行由 <code>-iex</code> 或 <code>-ix</code> 选项指定的命令文件或命令，按照指定的顺序执行。</p>
+</li>
+<li><p>处理命令行选项和操作数。</p>
+</li>
+<li><p>读取并执行来自当前工作目录下的初始化文件（需要 <code>set auto-load local-gdbinit</code> 设置为 <code>on</code>）。仅在当前目录不是用户家目录时才会执行。因此，我们可以在调用 GDB 的目录中拥有多个初始化文件，一个初始化文件位于用户家目录中，而另一个文件特定于要调试的程序目录。</p>
+</li>
+<li><p>如果命令行选项指定了待调试的程序，或者需要附加的进程，或者 core 文件，GDB 会加载为程序或其加载的共享库提供的有自动加载的脚本。<br>如果我们想要禁用启动时自动加载脚本，可以按如下方式使用：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ gdb -iex &quot;set auto-load python-scripts off&quot; myprogname</span><br></pre></td></tr></table></figure>
+
+<p>选项 <code>-ex</code> 不会有效，这是因为它加载的时间太晚了，以致于来不及关闭自动加载功能。</p>
+</li>
+<li><p>按顺序执行来自 <code>-ex</code> 和 <code>-x</code> 选项指定的命令。</p>
+</li>
+<li><p>读取历史文件中的历史文件。</p>
+</li>
+</ol>
+<p>初始化文件使用的语法与命令文件相同，并且 GDB 处理的方式也一样。用户家目录的初始化文件设置选项可以影响后续选项的处理。如果使用了 <code>-nx</code> 选项，那么将不会执行初始化文件中的命令。</p>
+<p>通过 <code>gdb --help</code> 可以看到 GDB 启动时加载的初始化文件列表。</p>
+<h2 id="退出-GDB"><a href="#退出-GDB" class="headerlink" title="退出 GDB"></a>退出 GDB</h2><p>我们可以使用 <code>quit [expression]</code> 或者 <code>q [expression]</code> 退出 GDB。如果没有指定 <code>expression</code> 表达式，GDB 将正常终止；否则他将使用表达式 <code>experssion</code> 的结果作为错误码。</p>
+<p>中断（通常是 <code>Ctrl-c</code>）不会退出 GDB，而是终止正在运行的 GDB 命令，并返回到 GDB 的命令行。如果您一直在使用 GDB 来控制连接的进程或设备，则可以使用 <code>detach</code> 命令释放它。</p>
+<h2 id="Shell-命令"><a href="#Shell-命令" class="headerlink" title="Shell 命令"></a>Shell 命令</h2><p>如果我们想要在调试期间执行 shell 命令，我们没有必要离开或者挂起 GDB；我们可以直接使用 SHELL 命令。</p>
+<p>我们可以使用 <code>shell command-string</code> 或者 <code>!command-string</code> 来执行标准的 shell 命令。需要注意的是在 <code>!</code> 和 <code>command-string</code> 之间没有空格。如果存在空格，那么将使用环境变量 <code>SHELL</code> 来运行 shell 命令。否则，GDB 将使用默认的 shell（Unix 系统为 /bin/sh，Windows 平台为 COMMAND.COM 等）。</p>
+<p>编译工具 <code>make</code> 总是在开发环境中，因此，在 GDB 中我们不必为 <code>make</code> 使用 <code>shell</code> 命令。</p>
+<ul>
+<li><p><code>make make-args</code> -  将以给定的参数执行 <code>make</code> 命令，这等同于 <code>shell make make-args</code>。</p>
+</li>
+<li><p><code>pipe [command] | shell_command</code> 和 <code>| [command] | shell_command</code> - 命令执行 <code>command</code> 命令并将结果重定向到 <code>shell_command</code> 中。</p>
+</li>
+<li><p><code>pipe -d delim command delim shell_command</code> 和<code>| -d delim command delim shell_command</code> - 与上面的命令相似，不同的是我们可以指定分割符 <code>delim</code>。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">(gdb) p var</span><br><span class="line">$1 = &#123;</span><br><span class="line">  black = 144,</span><br><span class="line">  red = 233,</span><br><span class="line">  green = 377,</span><br><span class="line">  blue = 610,</span><br><span class="line">  white = 987</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">(gdb) pipe p var | wc</span><br><span class="line">      7      19      80</span><br><span class="line">(gdb) | p var | wc -l</span><br><span class="line">7</span><br><span class="line"></span><br><span class="line">(gdb) p /x var</span><br><span class="line">$4 = &#123;</span><br><span class="line">  black = 0x90,</span><br><span class="line">  red = 0xe9,</span><br><span class="line">  green = 0x179,</span><br><span class="line">  blue = 0x262,</span><br><span class="line">  white = 0x3db</span><br><span class="line">&#125;</span><br><span class="line">(gdb) || grep red</span><br><span class="line">  red =&gt; 0xe9,</span><br><span class="line"></span><br><span class="line">(gdb) | -d ! echo this contains a | char\n ! sed -e &#x27;s/|/PIPE/&#x27;</span><br><span class="line">this contains a PIPE char</span><br><span class="line">(gdb) | -d xxx echo this contains a | char!\n xxx sed -e &#x27;s/|/PIPE/&#x27;</span><br><span class="line">this contains a PIPE char!</span><br><span class="line">(gdb)</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>变量 <code>$_shell_exitcode</code> 和 <code>$_shell_exitsignal</code> 可以方便的检查 <code>shell</code>, <code>make</code>, <code>pipe</code> 和 <code>|</code> 最后一个 shell 命令的退出状态。</p>
+<h2 id="日志输出"><a href="#日志输出" class="headerlink" title="日志输出"></a>日志输出</h2><p>我们可能想要将 GDB 的输出保存在文件中，GDB 提供多个命令来控制日志的输出。</p>
+<ul>
+<li><code>set logging on</code> - 启用日志。</li>
+<li><code>set logging off</code> - 禁用日志。</li>
+<li><code>set logging file filename</code> - 改变当前日志文件名。默认为 gdb.txt。</li>
+<li><code>set logging overwrite [on|off]</code> - 默认情况下，GDB 将采用追加的方法写日志文件。我们可以通过设置该参数来改变其行为。</li>
+<li><code>set logging redirect [on|off]</code> - 默认情况下，GDB 会同时输出到终端和日志文件中，如果设置 <code>redirect</code>，那么只会输出到日志文件。如果是使用多个 TUI 模式，在 GDB 的命令窗口没有输出，也就无法输出到日志文件中。</li>
+<li><code>set logging debugredirect [on|off]</code> - 默认情况下，GDB 的调试输出同时输出到终端和日志文件中，如果设置了 <code>debugredirect</code>，那么就只会输出到日志文件中。GDB 8.1 没有这个命令。</li>
+<li><code>show logging</code> - 显示当前日志配置。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://sourceware.org/gdb/current/onlinedocs/gdb">https://sourceware.org/gdb/current/onlinedocs/gdb</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/06/GDB-on-MacOS-Mojave/" rel="bookmark">MacOS Mojave 上 GDB 调试配置</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2020/04/gdb-commands/" rel="bookmark">GDB 命令</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/01/getting-in-and-out-of-gdb/" title="GDB 基本使用">https://blog.japinli.top/2020/01/getting-in-and-out-of-gdb/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/gdb/" rel="tag"># gdb</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/01/C-program-structure-and-scope/" rel="prev" title="C 程序结构和范围">
+                  <i class="fa fa-chevron-left"></i> C 程序结构和范围
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/02/postgresql-stream-replication/" rel="next" title="PostgreSQL 12 流复制配置">
+                  PostgreSQL 12 流复制配置 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

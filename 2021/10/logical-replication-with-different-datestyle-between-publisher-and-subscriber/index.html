@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近在浏览 PostgreSQL 邮件列表时发现一个 bug：逻辑复制时，如果发布者和订阅者的 datestyle 不一致可能导致逻辑复制失败。本文简要记录这个问题的分析与修复方法。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 发布者与订阅者不同的 datestyle 导致失败">
+<meta property="og:url" content="https://blog.japinli.top/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近在浏览 PostgreSQL 邮件列表时发现一个 bug：逻辑复制时，如果发布者和订阅者的 datestyle 不一致可能导致逻辑复制失败。本文简要记录这个问题的分析与修复方法。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-10-17T03:15:59.000Z">
+<meta property="article:modified_time" content="2021-11-08T15:04:46.916Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/","path":"2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/","title":"PostgreSQL 发布者与订阅者不同的 datestyle 导致失败"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 发布者与订阅者不同的 datestyle 导致失败 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">现象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0"><span class="nav-number">3.</span> <span class="nav-text">更新</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 发布者与订阅者不同的 datestyle 导致失败
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-10-17 11:15:59" itemprop="dateCreated datePublished" datetime="2021-10-17T11:15:59+08:00">2021-10-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>8 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近在浏览 PostgreSQL 邮件列表时发现一个 bug：逻辑复制时，如果发布者和订阅者的 <code>datestyle</code> 不一致可能导致逻辑复制失败。本文简要记录这个问题的分析与修复方法。</p>
+<span id="more"></span>
+
+<h2 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h2><p>逻辑复制的环境搭建就不赘述了。我们直接来看看如何重现这个问题。首先我们在发布者上执行下面的命令修改日期格式为 <code>SQL, MDY</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">postgres[<span class="number">6789</span>]<span class="operator">=</span># <span class="keyword">ALTER</span> <span class="keyword">SYSTEM</span> <span class="keyword">SET</span> datestyle <span class="keyword">TO</span> <span class="string">&#x27;SQL, MDY&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>接着在订阅者上使用相同的命令修改日志格式为 <code>SQL, DMY</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">postgres[<span class="number">9876</span>]<span class="operator">=</span># <span class="keyword">ALTER</span> <span class="keyword">SYSTEM</span> <span class="keyword">SET</span> datestyle <span class="keyword">TO</span> <span class="string">&#x27;SQL, DMY&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>执行完上述命令之后，重启发布者和订阅者。接着使用下面的命令重现问题。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">-- publisher</span><br><span class="line">postgres[6789]=# CREATE TABLE tbl (a date);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[6789]=# INSERT INTO tbl values (&#x27;10-17-2021&#x27;), (&#x27;10-18-2021&#x27;);</span><br><span class="line">INSERT 0 2</span><br><span class="line">postgres[6789]=# CREATE PUBLICATION pub FOR TABLE tbl ;</span><br><span class="line">CREATE PUBLICATION</span><br><span class="line">postgres[6789]=# table tbl;</span><br><span class="line">     a</span><br><span class="line">------------</span><br><span class="line"> 10/17/2021</span><br><span class="line"> 10/18/2021</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">-- subscriber</span><br><span class="line">postgres[9876]=# CREATE TABLE tbl (a date);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[9876]=# CREATE SUBSCRIPTION sub CONNECTION &#x27;dbname=postgres port=6789&#x27; PUBLICATION pub;</span><br><span class="line">NOTICE:  created replication slot &quot;sub&quot; on publisher</span><br><span class="line">CREATE SUBSCRIPTION</span><br><span class="line">postgres[9876]=# table tbl ;</span><br><span class="line"> a</span><br><span class="line">---</span><br><span class="line">(0 rows)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，订阅者并没有获取到发布者的数据。查看订阅者的日志，可以发现如下内容：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">2021-10-17 11:40:41.082 CST [1138050] LOG:  logical replication table synchronization worker for subscription &quot;sub&quot;, table &quot;tbl&quot; has started</span><br><span class="line">2021-10-17 11:40:41.106 CST [1138050] ERROR:  date/time field value out of range: &quot;10/17/2021&quot;</span><br><span class="line">2021-10-17 11:40:41.106 CST [1138050] HINT:  Perhaps you need a different &quot;datestyle&quot; setting.</span><br><span class="line">2021-10-17 11:40:41.106 CST [1138050] CONTEXT:  COPY tbl, line 1, column a: &quot;10/17/2021&quot;</span><br><span class="line">2021-10-17 11:40:41.109 CST [1135717] LOG:  background worker &quot;logical replication worker&quot; (PID 1138050) exited with exit code 1</span><br></pre></td></tr></table></figure>
+
+<p>以上就是整个问题的复现过程。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>这个问题是由于 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/13/runtime-config-client.html#GUC-DATESTYLE"><code>datestyle</code></a> 这个参数导致的，那么我们先看看它有什么作用。</p>
+<blockquote>
+<p><strong>DateStyle (string)</strong><br>Sets the display format for date and time values, as well as the rules for interpreting ambiguous date input values. For historical reasons, this variable contains two independent components: the output format specification (ISO, Postgres, SQL, or German) and the input/output specification for year/month/day ordering (DMY, MDY, or YMD). These can be set separately or together. The keywords Euro and European are synonyms for DMY; the keywords US, NonEuro, and NonEuropean are synonyms for MDY. See <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/13/datatype-datetime.html">Section 8.5</a> for more information. The built-in default is ISO, MDY, but initdb will initialize the configuration file with a setting that corresponds to the behavior of the chosen lc_time locale.</p>
+</blockquote>
+<p>从文档说明来看，它用于显示日期格式。该参数分为两个独立的部分：输出格式规范和年月日排序的输入输出规范。</p>
+<p>输出格式规范包含 <code>ISO</code>，<code>Postgres</code>，<code>SQL</code> 和 <code>German</code>。年月日排序的输入输出规范包含 <code>DMY</code>，<code>MDY</code> 和 <code>YMD</code>。</p>
+<p>结合日志我们可以发现，发布者的采用的是 <code>SQL, MDY</code>，而订阅者采用的是 <code>SQL, DMY</code>，因此，发布端的 <code>10/17/2021</code> 表示 2021 年 10 月 17 日，然而，在订阅端却被识别为 2021 年 17 月 10 日，从而导致日期越界。</p>
+<p>了解了问题的原因，那么我们就可以对其进行修复了。当我们在连接到发布者的时候通过指定 <code>datestyle</code> 即可解决这个问题。</p>
+<p>通过查看代码我们发现，逻辑复制是通过 <code>walrcv_connect()</code> 函数来建立连接的，它被定义为：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> walrcv_connect(conninfo, logical, appname, err) \</span></span><br><span class="line"><span class="meta">    WalReceiverFunctions-&gt;walrcv_connect(conninfo, logical, appname, err)</span></span><br></pre></td></tr></table></figure>
+
+<p>为此，我们需要知道 <code>WalReceiverFunctions-&gt;walrcv_connect()</code> 函数的实现。<code>WalReceiverFunctions</code> 则是在 <code>libpqwalreceiver.c</code> 文件中声明定义的一个静态变量，如下所示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> WalReceiverFunctionsType PQWalReceiverFunctions = &#123;</span><br><span class="line">    libpqrcv_connect,</span><br><span class="line">    libpqrcv_check_conninfo,</span><br><span class="line">    libpqrcv_get_conninfo,</span><br><span class="line">    libpqrcv_get_senderinfo,</span><br><span class="line">    libpqrcv_identify_system,</span><br><span class="line">    libpqrcv_server_version,</span><br><span class="line">    libpqrcv_readtimelinehistoryfile,</span><br><span class="line">    libpqrcv_startstreaming,</span><br><span class="line">    libpqrcv_endstreaming,</span><br><span class="line">    libpqrcv_receive,</span><br><span class="line">    libpqrcv_send,</span><br><span class="line">    libpqrcv_create_slot,</span><br><span class="line">    libpqrcv_get_backend_pid,</span><br><span class="line">    libpqrcv_exec,</span><br><span class="line">    libpqrcv_disconnect</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>结合 <code>WalReceiverFunctionsType</code> 类型的声明，我们可以得知流复制是通过 <code>libpqrcv_connect()</code> 函数来完成的。通过如下修改即可修复上述问题：</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c b/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c</span></span><br><span class="line"><span class="comment">index 5c6e56a5b2..81cf9e30d7 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c</span></span><br><span class="line"><span class="meta">@@ -30,6 +30,7 @@</span></span><br><span class="line"> #include &quot;pqexpbuffer.h&quot;</span><br><span class="line"> #include &quot;replication/walreceiver.h&quot;</span><br><span class="line"> #include &quot;utils/builtins.h&quot;</span><br><span class="line"><span class="addition">+#include &quot;utils/guc.h&quot;</span></span><br><span class="line"> #include &quot;utils/memutils.h&quot;</span><br><span class="line"> #include &quot;utils/pg_lsn.h&quot;</span><br><span class="line"> #include &quot;utils/tuplestore.h&quot;</span><br><span class="line"><span class="meta">@@ -218,6 +219,7 @@</span> libpqrcv_connect(const char *conninfo, bool logical, const char *appname,</span><br><span class="line"> 	if (logical)</span><br><span class="line"> 	&#123;</span><br><span class="line"> 		PGresult   *res;</span><br><span class="line"><span class="addition">+		const char *datestyle;</span></span><br><span class="line"></span><br><span class="line"> 		res = libpqrcv_PQexec(conn-&gt;streamConn,</span><br><span class="line"> 							  ALWAYS_SECURE_SEARCH_PATH_SQL);</span><br><span class="line"><span class="meta">@@ -229,6 +231,23 @@</span> libpqrcv_connect(const char *conninfo, bool logical, const char *appname,</span><br><span class="line"> 							pchomp(PQerrorMessage(conn-&gt;streamConn)))));</span><br><span class="line"> 		&#125;</span><br><span class="line"> 		PQclear(res);</span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+		datestyle = GetConfigOption(&quot;datestyle&quot;, true, true);</span></span><br><span class="line"><span class="addition">+		if (datestyle != NULL) &#123;</span></span><br><span class="line"><span class="addition">+			char *sql;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+			sql = psprintf(&quot;SELECT pg_catalog.set_config(&#x27;datestyle&#x27;, &#x27;%s&#x27;, false);&quot;, datestyle);</span></span><br><span class="line"><span class="addition">+			res = libpqrcv_PQexec(conn-&gt;streamConn, sql);</span></span><br><span class="line"><span class="addition">+			if (PQresultStatus(res) != PGRES_TUPLES_OK)</span></span><br><span class="line"><span class="addition">+			&#123;</span></span><br><span class="line"><span class="addition">+				PQclear(res);</span></span><br><span class="line"><span class="addition">+				ereport(ERROR,</span></span><br><span class="line"><span class="addition">+						(errmsg(&quot;could not set datestyle: %s&quot;,</span></span><br><span class="line"><span class="addition">+								pchomp(PQerrorMessage(conn-&gt;streamConn)))));</span></span><br><span class="line"><span class="addition">+			&#125;</span></span><br><span class="line"><span class="addition">+			PQclear(res);</span></span><br><span class="line"><span class="addition">+			pfree(sql);</span></span><br><span class="line"><span class="addition">+		&#125;</span></span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"> 	conn-&gt;logical = logical;</span><br></pre></td></tr></table></figure>
+
+<p>需要注意的是物理复制也是通过 <code>libpqrcv_connect()</code> 函数来建立连接的。理论上 <code>datestyle</code> 仅会影响到逻辑复制，为此，我将设置 <code>datestyle</code> 的代码放到了逻辑复制部分中。</p>
+<p>最后，附带上测试用例。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/test/subscription/t/100_bugs.pl b/src/test/subscription/t/100_bugs.pl</span></span><br><span class="line"><span class="comment">index baa4a90771..a88a61df41 100644</span></span><br><span class="line"><span class="comment">--- a/src/test/subscription/t/100_bugs.pl</span></span><br><span class="line"><span class="comment">+++ b/src/test/subscription/t/100_bugs.pl</span></span><br><span class="line"><span class="meta">@@ -6,7 +6,7 @@</span> use strict;</span><br><span class="line"> use warnings;</span><br><span class="line"> use PostgresNode;</span><br><span class="line"> use TestLib;</span><br><span class="line"><span class="deletion">-use Test::More tests =&gt; 5;</span></span><br><span class="line"><span class="addition">+use Test::More tests =&gt; 6;</span></span><br><span class="line"></span><br><span class="line"> # Bug #15114</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -224,3 +224,44 @@</span> $node_sub-&gt;safe_psql(&#x27;postgres&#x27;, &quot;DROP TABLE tab1&quot;);</span><br><span class="line"> $node_pub-&gt;stop(&#x27;fast&#x27;);</span><br><span class="line"> $node_pub_sub-&gt;stop(&#x27;fast&#x27;);</span><br><span class="line"> $node_sub-&gt;stop(&#x27;fast&#x27;);</span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+# Verify different datestyle between publisher and subscriber.</span></span><br><span class="line"><span class="addition">+$node_publisher = PostgresNode-&gt;new(&#x27;datestyle_publisher&#x27;);</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;init(allows_streaming =&gt; &#x27;logical&#x27;);</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;append_conf(&#x27;postgresql.conf&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;datestyle = &#x27;SQL, MDY&#x27;&quot;);</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;start;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+$node_subscriber = PostgresNode-&gt;new(&#x27;datestyle_subscriber&#x27;);</span></span><br><span class="line"><span class="addition">+$node_subscriber-&gt;init(allows_streaming =&gt; &#x27;logical&#x27;);</span></span><br><span class="line"><span class="addition">+$node_subscriber-&gt;append_conf(&#x27;postgresql.conf&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;datestyle = &#x27;SQL, DMY&#x27;&quot;);</span></span><br><span class="line"><span class="addition">+$node_subscriber-&gt;start;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;safe_psql(&#x27;postgres&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;CREATE TABLE tab_rep(a date)&quot;);</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;safe_psql(&#x27;postgres&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;INSERT INTO tab_rep VALUES (&#x27;07-18-2021&#x27;), (&#x27;05-15-2018&#x27;)&quot;);</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+$node_subscriber-&gt;safe_psql(&#x27;postgres&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;CREATE TABLE tab_rep(a date)&quot;);</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+# Setup logical replication</span></span><br><span class="line"><span class="addition">+my $node_publisher_connstr = $node_publisher-&gt;connstr . &#x27; dbname=postgres&#x27;;</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;safe_psql(&#x27;postgres&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;CREATE PUBLICATION tab_pub FOR ALL TABLES&quot;);</span></span><br><span class="line"><span class="addition">+$node_subscriber-&gt;safe_psql(&#x27;postgres&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;CREATE SUBSCRIPTION tab_sub CONNECTION &#x27;$node_publisher_connstr&#x27; PUBLICATION tab_pub&quot;);</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;wait_for_catchup(&#x27;tab_sub&#x27;);</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+my $result = $node_subscriber-&gt;safe_psql(&#x27;postgres&#x27;,</span></span><br><span class="line"><span class="addition">+	&quot;SELECT count(*) FROM tab_rep&quot;);</span></span><br><span class="line"><span class="addition">+is($result, qq(2), &#x27;failed to replication date from different datestyle&#x27;);</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+# Clean up the tables on both publisher and subscriber as we don&#x27;t need them</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;safe_psql(&#x27;postgres&#x27;, &#x27;DROP TABLE tab_rep&#x27;);</span></span><br><span class="line"><span class="addition">+$node_subscriber-&gt;safe_psql(&#x27;postgres&#x27;, &#x27;DROP TABLE tab_rep&#x27;);</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+$node_publisher-&gt;stop(&#x27;fast&#x27;);</span></span><br><span class="line"><span class="addition">+$node_subscriber-&gt;stop(&#x27;fast&#x27;);</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="更新"><a href="#更新" class="headerlink" title="更新"></a>更新</h2><p>在我最初的 patch 中是通过 <code>libpqrcv_PQexec()</code> 去修改参数，这实际上会导致网络的开销，为了避免这一点，有两种解决方案：</p>
+<ol>
+<li>在 walsender 端设置 <code>datestyle</code>，<code>intervalstyle</code> 和 <code>extra_float_digts</code>。</li>
+<li>在 walreceiver 端设置 <code>datestyle</code>，<code>intervalstyle</code> 和 <code>extra_float_digts</code>。</li>
+</ol>
+<p>在 walsender 端设置可能导致现有的一些插件无法正常使用，经过讨论，大部分都接受在 walreceiver 端进行设置。该 patch 于 2021 年 11 月 2 日的时候合并到主分支，合并的 patch 如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c b/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c</span></span><br><span class="line"><span class="comment">index 5c6e56a5b2..c08e599eef 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/replication/libpqwalreceiver/libpqwalreceiver.c</span></span><br><span class="line"><span class="meta">@@ -128,8 +128,8 @@</span> libpqrcv_connect(const char *conninfo, bool logical, const char *appname,</span><br><span class="line"> &#123;</span><br><span class="line">        WalReceiverConn *conn;</span><br><span class="line">        PostgresPollingStatusType status;</span><br><span class="line"><span class="deletion">-       const char *keys[5];</span></span><br><span class="line"><span class="deletion">-       const char *vals[5];</span></span><br><span class="line"><span class="addition">+       const char *keys[6];</span></span><br><span class="line"><span class="addition">+       const char *vals[6];</span></span><br><span class="line">        int                     i = 0;</span><br><span class="line"></span><br><span class="line">        /*</span><br><span class="line"><span class="meta">@@ -153,8 +153,20 @@</span> libpqrcv_connect(const char *conninfo, bool logical, const char *appname,</span><br><span class="line">        vals[i] = appname;</span><br><span class="line">        if (logical)</span><br><span class="line">        &#123;</span><br><span class="line"><span class="addition">+               /* Tell the publisher to translate to our encoding */</span></span><br><span class="line">                keys[++i] = &quot;client_encoding&quot;;</span><br><span class="line">                vals[i] = GetDatabaseEncodingName();</span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+               /*</span></span><br><span class="line"><span class="addition">+                * Force assorted GUC parameters to settings that ensure that the</span></span><br><span class="line"><span class="addition">+                * publisher will output data values in a form that is unambiguous to</span></span><br><span class="line"><span class="addition">+                * the subscriber.  (We don&#x27;t want to modify the subscriber&#x27;s GUC</span></span><br><span class="line"><span class="addition">+                * settings, since that might surprise user-defined code running in</span></span><br><span class="line"><span class="addition">+                * the subscriber, such as triggers.)  This should match what pg_dump</span></span><br><span class="line"><span class="addition">+                * does.</span></span><br><span class="line"><span class="addition">+                */</span></span><br><span class="line"><span class="addition">+               keys[++i] = &quot;options&quot;;</span></span><br><span class="line"><span class="addition">+               vals[i] = &quot;-c datestyle=ISO -c intervalstyle=postgres -c extra_float_digits=3&quot;;</span></span><br><span class="line">        &#125;</span><br><span class="line">        keys[++i] = NULL;</span><br><span class="line">        vals[i] = NULL;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/CAFF0-CF=D7pc6st-3A9f1JnOt0qmc+BcBPVzD6fLYisKyAjkGA@mail.gmail.com">https://www.postgresql.org/message-id/CAFF0-CF=D7pc6st-3A9f1JnOt0qmc+BcBPVzD6fLYisKyAjkGA@mail.gmail.com</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/13/runtime-config-client.html#GUC-DATESTYLE">https://www.postgresql.org/docs/13/runtime-config-client.html#GUC-DATESTYLE</a></p>
+<div class="just-for-fun">
+笑林广记 - 同僚
+
+<p>有妻、妾各居者。<br>一日，妾欲谒妻，谋之于夫：“当如何写帖？”<br>夫曰：“该用‘寅弟’二字。”<br>妾问其义如何，夫曰：“同僚写帖，皆用此称呼，做官府之例耳。”<br>妾曰：“我辈并无官职，如何亦写此帖？”<br>夫曰：“官职虽无，同僚总是一样。”</p>
+</div>
+
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/08/postgresql-new-catalog/" rel="bookmark">PostgreSQL 添加系统表</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" title="PostgreSQL 发布者与订阅者不同的 datestyle 导致失败">https://blog.japinli.top/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/10/postgresql-multirange-types/" rel="prev" title="【译】PostgreSQL 14 - multirange 类型">
+                  <i class="fa fa-chevron-left"></i> 【译】PostgreSQL 14 - multirange 类型
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/" rel="next" title="PostgreSQL 更新组合类型的 domain 类型数组导致崩溃">
+                  PostgreSQL 更新组合类型的 domain 类型数组导致崩溃 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

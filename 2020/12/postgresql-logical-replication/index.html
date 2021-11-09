@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 数据库在 9.0 中引入了物理复制，之前的文章中也有介绍。物理复制将主库中所有的更改都通过 WAL 日志流式地传输到备库中，备库通过重放 WAL 日志来实现同步。但是，物理复制也有其自身的局限性。  不能执行有选择性的复制，或者说不支持复制部分数据库对象； 不能在不同的数据大版本之间进行复制，例如，pg10 -&gt; pg12 是无法通过物理复制来实现同步的； 不能在不同平">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 逻辑复制">
+<meta property="og:url" content="https://blog.japinli.top/2020/12/postgresql-logical-replication/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 数据库在 9.0 中引入了物理复制，之前的文章中也有介绍。物理复制将主库中所有的更改都通过 WAL 日志流式地传输到备库中，备库通过重放 WAL 日志来实现同步。但是，物理复制也有其自身的局限性。  不能执行有选择性的复制，或者说不支持复制部分数据库对象； 不能在不同的数据大版本之间进行复制，例如，pg10 -&gt; pg12 是无法通过物理复制来实现同步的； 不能在不同平">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-13T09:37:55.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.430Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/12/postgresql-logical-replication/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/12/postgresql-logical-replication/","path":"2020/12/postgresql-logical-replication/","title":"PostgreSQL 逻辑复制"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 逻辑复制 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%AD%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">语法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B"><span class="nav-number">3.</span> <span class="nav-text">示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%8C%BA%E8%A1%A8%E7%9A%84%E6%B5%81%E5%A4%8D%E5%88%B6"><span class="nav-number">4.</span> <span class="nav-text">分区表的流复制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#publish-via-partition-root-false"><span class="nav-number">4.1.</span> <span class="nav-text">publish_via_partition_root (false)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#publish-via-partition-root-true"><span class="nav-number">4.2.</span> <span class="nav-text">publish_via_partition_root (true)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Tips"><span class="nav-number">5.</span> <span class="nav-text">Tips</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0"><span class="nav-number">6.</span> <span class="nav-text">更新</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">7.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/12/postgresql-logical-replication/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 逻辑复制
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-12-13 17:37:55" itemprop="dateCreated datePublished" datetime="2020-12-13T17:37:55+08:00">2020-12-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>11k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>10 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 数据库在 9.0 中引入了物理复制，之前的文章中也有介绍。物理复制将主库中所有的更改都通过 WAL 日志流式地传输到备库中，备库通过重放 WAL 日志来实现同步。但是，物理复制也有其自身的局限性。</p>
+<ul>
+<li>不能执行有选择性的复制，或者说不支持复制部分数据库对象；</li>
+<li>不能在不同的数据大版本之间进行复制，例如，pg10 -&gt; pg12 是无法通过物理复制来实现同步的；</li>
+<li>不能在不同平台之间进行复制，例如，Linux 和 Windows 之间不能使用物理复制来实现同步；</li>
+<li>备库无法提供写入操作。</li>
+</ul>
+<p>PostgreSQL 在版本 10 中引入了逻辑复制，它用于解决上述物理复制的局限性，同时业务复制开辟了一个新的方向。逻辑复制使用发布和订阅模式，一个或多个订阅者可以订阅一个发布者上的一个或多个发布。订阅者最初会从发布者那里收到复制的数据库对象的副本，并在同一对象上实时进行后续更改。</p>
+<span id="more"></span>
+
+<h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><p>正如上面所说，PostgreSQL 的逻辑复制采用的是发布-订阅模型，因此，在发布者（publisher）节点上，它将创建一个发布（publication），它是一个表或一组表的更改集合；在订阅者（subscriber）节点上，它将创建一个订阅（subscription），它可以订阅来自同一个发布者的一个或多个发布。</p>
+<p>逻辑复制通常从获取发布者数据库上的数据快照并将其复制到订阅者开始，这被称为表同步阶段（table synchronization phase）。在表同步阶段，如果存在多个表需要同步，那么 PostgreSQL 将创建多个进程来进行同步，但是每个表只能有一个同步进程。一旦复制完成后，发布者节点中的后续更改将实时发送给订阅者节点。订阅者以与发布者相同的顺序应用数据，从而确保单个订阅中的发布具有事务一致性。这种数据复制方法有时称为事务复制。</p>
+<h2 id="语法"><a href="#语法" class="headerlink" title="语法"></a>语法</h2><p>在使用逻辑复制之前，我们需要在发布者将 <code>wal_level</code> 参数修改为 <code>logical</code>。这将指示服务器在 WAL 中存储其他信息，以将二进制更改转换为逻辑更改。接下来，我们就可以使用命令创建 <code>CREATE PUBLICATION</code> 创建发布了，其语法如下所示。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">CREATE PUBLICATION name</span><br><span class="line">    [ FOR TABLE [ ONLY ] table_name [ * ] [, ...]</span><br><span class="line">      | FOR ALL TABLES ]</span><br><span class="line">    [ WITH ( publication_parameter [= value] [, ... ] ) ]</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>name</strong> - 表示发布的名称，该名称在当前数据库中必须唯一。</li>
+<li><strong>FOR TABLE</strong> - 指定需要添加到该发布中的表。如果指定了 __ONLY__，那么仅该表纳入发布中，反之，其后代表也被纳入到发布中。您也可以在表名后加上 <code>*</code> 来显示地将后代表纳入发布中。分区表总是纳入到发布中的，因此我们不需要显示地将分区表的子表加入到发布中。<br>只有持久话的基表和分区表可以做个发布的内容。临时表、无日志表、外表、物化视图和常规视图都不能作为发布的内容。分区表被加入到发布中后，其后续的字表将自动加入到发布中。</li>
+<li><strong>FOR ALL TABLES</strong> - 将发布标记为可复制数据库中所有的表，包括将来创建的表。</li>
+<li><strong>WITH</strong> - 指定发布可选的参数，目前支持两个参数。<ul>
+<li><strong>publish (string)</strong> - 此参数确定新发布将向订阅者发布哪些 DML 操作。这些操作包括 <code>insert</code>、<code>update</code>、<code>delete</code> 和 <code>truncate</code>。默认是所有操作。</li>
+<li><strong>publish_via_partition_root (boolean)</strong> - 此参数决定是否使用分区表（或其分区上）的身份和模式，而不是实际更改的各个分区的身份和模式来发布发布发布中包含的分区表（或其分区上）的更改；后者是默认值。启用此功能可以将更改复制到非分区表或由不同分区集组成的分区表中。<br>如果启用此功能，直接在分区上执行的TRUNCATE操作将不会被复制。</li>
+</ul>
+</li>
+</ul>
+<p>这里有几点我们需要注意：</p>
+<ol>
+<li>逻辑复制不支持 DDL 操作。</li>
+<li><code>COPY ... FROM</code> 命令是由 <code>INSERT</code> 操作来发布的。</li>
+<li><code>INSERT ... ON CONFLICT</code> 命令是根据其最终结果来决定发布的命令。如果其不是 <code>INSERT</code> 或 <code>UPDATE</code>，它甚至可能不会发布。</li>
+<li>添加到发布中以发布 <code>UPDATE </code> 和/或 <code>DELETE</code> 操作的表必须定义 <code>REPLICA IDENTITY</code>。</li>
+<li>用户需要有足够的权限才可以将表加入到发布中。对于 <code>FOR ALL TABLES</code> 必须是超级用户。</li>
+<li>用户必须具有 <code>CREATE</code> 权限才可以创建发布（超级用户除外）。</li>
+<li>发布创建完成之后并没有开始复制流程，它仅仅是为订阅者定义了分组和过滤逻辑。</li>
+<li>如果没有指定 <code>FOR TABLE</code> 和 <code>FOR ALL TABLES</code>，则发表一组空表，这对于后续添加表非常有用。</li>
+</ol>
+<p>有了发布者之后，我们就需要创建订阅者了，其语法如下所示。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">CREATE SUBSCRIPTION subscription_name</span><br><span class="line">    CONNECTION &#x27;conninfo&#x27;</span><br><span class="line">    PUBLICATION publication_name [, ...]</span><br><span class="line">    [ WITH ( subscription_parameter [= value] [, ... ] ) ]</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>subscription_name</strong> - 订阅者名称，当前数据库必须唯一。</li>
+<li><strong>conninfo</strong> - 连接到发布者的连接字符串。</li>
+<li><strong>publication_name</strong> - 发布者上的发布名。</li>
+<li><strong>WITH</strong> - 指定订阅的可选参数。目前支持以下参数。<ul>
+<li><strong>copy_data (boolean)</strong> - 指定复制开始后是否应复制正在订阅的发布中的现有数据，默认 <code>true</code>。</li>
+<li><strong>create_slot (boolean)</strong> - 指定命令是否应在发布者上创建复制槽，默认 <code>true</code>。</li>
+<li><strong>enabled (boolean)</strong> - 指定订阅是应该主动复制，还是应该仅设置但尚未启动，默认值为 <code>true</code>。</li>
+<li><strong>slot_name (string)</strong> - 指定复制槽的名称。如果指定为 <code>NONE</code>，那么这个复制上将不会使用复制槽，这种情况下需要 <code>enabled</code> 和 <code>create_slot</code> 设置为 <code>false</code>。</li>
+<li><strong>syncronous_commit (enum)</strong> - 该参数将重写订阅重放进程的 <code>syncronous_commit</code> 参数。默认值为 <code>off</code>。<br>对于逻辑复制来说，该参数设置为 <code>off</code> 是安全的，如果订阅者由于缺少同步而丢失了事务，那么数据将再次从发布者发送。</li>
+<li><strong>binary (boolean)</strong> - 指定订阅是否将请求发布者以二进制格式（而不是文本）发送数据，默认值为 <code>false</code>。<br>当跨版本复制时，发布者可能对某种数据类型具有二进制发送功能，而订阅者却缺乏该类型的二进制接收功能。在这种情况下，数据传输将失败，因此不能使用 <code>binary</code> 选项。</li>
+<li><strong>connect (boolean)</strong> - 指定 <code>CREATE SUBSCRIPTION</code> 是否连接到发布者。若将该参数设置为 <code>false</code>,那么 <code>enabled</code>、<code>create_slot</code> 和 <code>copy_data</code> 的默认值将被设置为 <code>false</code>。</li>
+<li><strong>streaming (boolean)</strong> - 指定是否将正在进行的事务进行发布。默认情况下，所有的事务将在发布者进行完全编码，然后作为一个整体发送给订阅者。</li>
+</ul>
+</li>
+</ul>
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>接下来，我们将展示如何使用逻辑复制。首先我创建一个简单的表，并插入一条记录。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# CREATE TABLE t1 (a integer PRIMARY KEY, b integer);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# INSERT INTO t1 VALUES (1, 1);</span><br><span class="line">INSERT 0 1</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我们为这个表创建一个发布。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# CREATE PUBLICATION my_pub FOR TABLE t1;</span><br><span class="line">CREATE PUBLICATION</span><br></pre></td></tr></table></figure>
+
+<p>现在，发布已经创建完了，现在我们需要创建订阅。注意，我们在同一机器上的不通端口运行两个 PostgreSQL 数据库实例。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">postgres[8765]=# CREATE TABLE t1(a integer PRIMARY KEY, b integer);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE SUBSCRIPTION my_sub CONNECTION &#x27;host=localhost port=5432 dbname=postgres&#x27; PUBLICATION my_pub;</span><br><span class="line">NOTICE:  created replication slot &quot;my_sub&quot; on publisher</span><br><span class="line">CREATE SUBSCRIPTION</span><br></pre></td></tr></table></figure>
+
+<p>现在，我们可以验证数据是否被复制过来。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">postgres[8765]=# TABLE t1;</span><br><span class="line"> a | b</span><br><span class="line">---+---</span><br><span class="line"> 1 | 1</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我在验证数据更改之后是否被复制。首先，我们在发布者上插入一条记录，随后在订阅者上查看该记录是否被复制。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# INSERT INTO t1 VALUES (2, 2);</span><br><span class="line">INSERT 0 1</span><br><span class="line"></span><br><span class="line">postgres[8765]=# TABLE t1;</span><br><span class="line"> a | b</span><br><span class="line">---+---</span><br><span class="line"> 1 | 1</span><br><span class="line"> 2 | 2</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，数据被正确复制到订阅者。</p>
+<h2 id="分区表的流复制"><a href="#分区表的流复制" class="headerlink" title="分区表的流复制"></a>分区表的流复制</h2><p>这里对分区表的流复制特别说明一下，在 PostgreSQL 13 中，对于分区表流复制引入了一个新的参数 <code>publish_via_partition_root</code>，默认为 <code>false</code>。文档说明如下。</p>
+<blockquote>
+<p>This parameter determines whether changes in a partitioned table (or on its partitions)<br>contained in the publication will be published using the identity and schema of the<br>partitioned table rather than that of the individual partitions that are actually changed;<br>the latter is the default. Enabling this allows the changes to be replicated into a<br>non-partitioned table or a partitioned table consisting of a different set of partitions.</p>
+<p>If this is enabled, TRUNCATE operations performed directly on partitions are not replicated.</p>
+</blockquote>
+<h3 id="publish-via-partition-root-false"><a href="#publish-via-partition-root-false" class="headerlink" title="publish_via_partition_root (false)"></a>publish_via_partition_root (false)</h3><p>我们先来看看默认情况下，逻辑复制的分区表表现形式。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# CREATE TABLE parted_parent (a integer, b integer) PARTITION BY RANGE(a);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# CREATE TABLE parted_child01 PARTITION OF parted_parent FOR VALUES FROM (1) TO (10);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# CREATE TABLE parted_child02 PARTITION OF parted_parent FOR VALUES FROM (10) TO (20);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# INSERT INTO parted_parent VALUES (1, 1), (11, 11);</span><br><span class="line">INSERT 0 2</span><br><span class="line">postgres[5432]=# CREATE PUBLICATION my_parted_pub FOR TABLE parted_parent;</span><br><span class="line">CREATE PUBLICATION</span><br><span class="line"></span><br><span class="line">postgres[8765]=# CREATE TABLE parted_parent (a integer, b integer) PARTITION BY RANGE(a);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child01 PARTITION OF parted_parent FOR VALUES FROM (1) TO (10);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child02 PARTITION OF parted_parent FOR VALUES FROM (10) TO (20);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE SUBSCRIPTION my_parted_sub CONNECTION &#x27;host=localhost port=5432 dbname=postgres&#x27; PUBLICATION my_parted_pub;</span><br><span class="line">NOTICE:  created replication slot &quot;my_parted_sub&quot; on publisher</span><br><span class="line">CREATE SUBSCRIPTION</span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line"> 11 | 11</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，数据从发布者复制到了订阅者上。我们在插入数据看后续的更改是否可以复制。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# INSERT INTO parted_parent VALUES (2, 2);</span><br><span class="line">INSERT 0 1</span><br><span class="line"></span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line">  2 |  2</span><br><span class="line"> 11 | 11</span><br><span class="line">(3 rows)</span><br></pre></td></tr></table></figure>
+
+<p>一切正常，如果此时我们在发布者上新加一个分区表会如何呢？</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# CREATE TABLE parted_child03 PARTITION OF parted_parent FOR VALUES FROM (20) TO (30);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# INSERT INTO parted_parent VALUES (25, 25);</span><br><span class="line">INSERT 0 1</span><br><span class="line">postgres[5432]=# TABLE parted_parent ;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line">  2 |  2</span><br><span class="line"> 11 | 11</span><br><span class="line"> 25 | 25</span><br><span class="line">(4 rows)</span><br><span class="line"></span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child03 PARTITION OF parted_parent FOR VALUES FROM (20) TO (30);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# TABLE parted_parent ;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line">  2 |  2</span><br><span class="line"> 11 | 11</span><br><span class="line">(3 rows)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到新加入的分区子表没能将数据复制到订阅者上。我们在 <code>parted_child01</code> 上执行 <code>TRUNCATE</code> 看会发生什么情况。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# TRUNCATE parted_child01;</span><br><span class="line">TRUNCATE TABLE</span><br><span class="line">postgres[5432]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line"> 11 | 11</span><br><span class="line"> 25 | 25</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line"> 11 | 11</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>可以看到在分区子表上执行 <code>TRUNCATE</code>，其将复制到订阅者上进行相应的操作。那我们可以在订阅者上面不定义分区表，而是采用普通表来存储上游分区表的数据吗？</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">postgres[8765]=# DROP SUBSCRIPTION my_parted_sub;</span><br><span class="line">NOTICE:  dropped replication slot &quot;my_parted_sub&quot; on publisher</span><br><span class="line">DROP SUBSCRIPTION</span><br><span class="line">postgres[8765]=# DROP TABLE parted_parent;</span><br><span class="line">DROP TABLE</span><br><span class="line">postgres[8765]=# \d</span><br><span class="line">Did not find any relations.</span><br><span class="line">postgres[8765]=# CREATE TABLE parted_parent (a integer, b integer);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE SUBSCRIPTION my_parted_sub CONNECTION &#x27;host=localhost port=5432 dbname=postgres&#x27; PUBLICATION my_parted_pub;</span><br><span class="line">ERROR:  relation &quot;public.parted_child03&quot; does not exist</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，分区表不能通过逻辑复制汇总到一个普通表中，但我们仍然可以对其进行复制。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">postgres[8765]=# CREATE TABLE parted_child01 (a integer, b integer);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child02 (a integer, b integer);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child03 (a integer, b integer);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE SUBSCRIPTION my_parted_sub CONNECTION &#x27;host=localhost port=5432 dbname=postgres&#x27; PUBLICATION my_parted_pub01;</span><br><span class="line">NOTICE:  created replication slot &quot;my_parted_sub&quot; on publisher</span><br><span class="line">CREATE SUBSCRIPTION</span><br><span class="line">postgres[8765]=# table parted_parent ;</span><br><span class="line"> a | b</span><br><span class="line">---+---</span><br><span class="line">(0 rows)</span><br><span class="line"></span><br><span class="line">postgres[8765]=# table parted_child01 ;</span><br><span class="line"> a | b</span><br><span class="line">---+---</span><br><span class="line">(0 rows)</span><br><span class="line"></span><br><span class="line">postgres[8765]=# table parted_child02 ;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line"> 11 | 11</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres[8765]=# table parted_child03 ;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line"> 25 | 25</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>我们通过建立与分区表对于的表来进行复制，这样是可以到达复制的效果的，但是就丢失了分区表的关系。</p>
+<p>我们可以通过对订阅进行刷新来获取新加入的发布表的信息，如下所示。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ALTER SUBSCRIPTION my_parted_sub REFRESH PUBLICATION;</span><br></pre></td></tr></table></figure>
+
+<h3 id="publish-via-partition-root-true"><a href="#publish-via-partition-root-true" class="headerlink" title="publish_via_partition_root (true)"></a>publish_via_partition_root (true)</h3><p>现在，我们来看看当设置了 <code>publish_via_partition_root</code>，逻辑复制时分区表是怎样表现的。首先，我们清理一下环境。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">postgres[8765]=# drop subscription my_parted_sub;</span><br><span class="line">NOTICE:  dropped replication slot &quot;my_parted_sub&quot; on publisher</span><br><span class="line">DROP SUBSCRIPTION</span><br><span class="line">postgres[8765]=# drop table parted_parent, parted_child01, parted_child02, parted_child03;</span><br><span class="line">DROP TABLE</span><br><span class="line"></span><br><span class="line">postgres[5432]=# DROP PUBLICATION my_parted_pub;</span><br><span class="line">DROP PUBLICATION</span><br><span class="line">postgres[5432]=# drop table parted_parent;</span><br><span class="line">DROP TABLE</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们重复上面的操作。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# CREATE TABLE parted_parent (a integer, b integer) PARTITION BY RANGE(a);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# CREATE TABLE parted_child01 PARTITION OF parted_parent FOR VALUES FROM (1) TO (10);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# CREATE TABLE parted_child02 PARTITION OF parted_parent FOR VALUES FROM (10) TO (20);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# INSERT INTO parted_parent VALUES (1, 1), (11, 11);</span><br><span class="line">INSERT 0 2</span><br><span class="line">postgres[5432]=# CREATE PUBLICATION my_parted_pub FOR TABLE parted_parent WITH (publish_via_partition_root);</span><br><span class="line">CREATE PUBLICATION</span><br><span class="line"></span><br><span class="line">postgres[8765]=# CREATE TABLE parted_parent (a integer, b integer) PARTITION BY RANGE(a);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child01 PARTITION OF parted_parent FOR VALUES FROM (1) TO (10);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child02 PARTITION OF parted_parent FOR VALUES FROM (10) TO (20);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE SUBSCRIPTION my_parted_sub CONNECTION &#x27;host=localhost port=5432 dbname=postgres&#x27; PUBLICATION my_parted_pub;</span><br><span class="line">NOTICE:  created replication slot &quot;my_parted_sub&quot; on publisher</span><br><span class="line">CREATE SUBSCRIPTION</span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line"> 11 | 11</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>接着测试后续更改是否可以复制。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# INSERT INTO parted_parent VALUES (2, 2);</span><br><span class="line">INSERT 0 1</span><br><span class="line"></span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line">  2 |  2</span><br><span class="line"> 11 | 11</span><br><span class="line">(3 rows)</span><br></pre></td></tr></table></figure>
+
+<p>好像没有什么不同嘛！那新建的分区子表呢？</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# CREATE TABLE parted_child03 PARTITION OF parted_parent FOR VALUES FROM (20) TO (30);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[5432]=# INSERT INTO parted_parent VALUES (25, 25);</span><br><span class="line">INSERT 0 1</span><br><span class="line"></span><br><span class="line">postgres[8765]=# CREATE TABLE parted_child03 PARTITION OF parted_parent FOR VALUES FROM (20) TO (30);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line">  2 |  2</span><br><span class="line"> 11 | 11</span><br><span class="line"> 25 | 25</span><br><span class="line">(4 rows)</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，这里与上面表现不一致了，新加的分区子表的数据被复制过去了。这只是其中的一个不同，接着我们看看在分区子表上执行 <code>TRUNCATE</code>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# TRUNCATE parted_child01;</span><br><span class="line">TRUNCATE TABLE</span><br><span class="line">postgres[5432]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line"> 11 | 11</span><br><span class="line"> 25 | 25</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres[8765]=# TABLE parted_parent;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line">  1 |  1</span><br><span class="line">  2 |  2</span><br><span class="line"> 11 | 11</span><br><span class="line"> 25 | 25</span><br><span class="line">(4 rows)</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，发布者的 <code>parted_child01</code> 表被清空了，然而订阅者上的 <code>parted_child01</code> 并没有发生变化。这就完了么？当然没有，最后我们来看看订阅者上采用普通表是否可以汇总分区表数据。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">postgres[8765]=# CREATE TABLE parted_parent (a integer, b integer);</span><br><span class="line">CREATE TABLE</span><br><span class="line">postgres[8765]=# CREATE SUBSCRIPTION my_parted_sub CONNECTION &#x27;host=localhost port=5432 dbname=postgres&#x27; PUBLICATION my_parted_pub;</span><br><span class="line">NOTICE:  created replication slot &quot;my_parted_sub&quot; on publisher</span><br><span class="line">CREATE SUBSCRIPTION</span><br><span class="line">postgres[8765]=# TABLE parted_parent ;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line"> 11 | 11</span><br><span class="line"> 25 | 25</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>这次成功了，说明这种模式下，可以对上游的分区表进行数据汇总，当然我们在下游也可以采用不同的分区策略，一切都是 OK 的。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postgres[5432]=# INSERT INTO parted_parent VALUES (1, 1);</span><br><span class="line">INSERT 0 1</span><br><span class="line">postgres[5432]=# INSERT INTO parted_child01 VALUES (2, 2);</span><br><span class="line">INSERT 0 1</span><br><span class="line"></span><br><span class="line">postgres[8765]=# TABLE parted_parent ;</span><br><span class="line"> a  | b</span><br><span class="line">----+----</span><br><span class="line"> 11 | 11</span><br><span class="line"> 25 | 25</span><br><span class="line">  1 |  1</span><br><span class="line">  2 |  2</span><br><span class="line">(4 rows)</span><br></pre></td></tr></table></figure>
+
+<p>无论是对分区表或分区子表的数据更新同样被复制到订阅者上了。</p>
+<h2 id="Tips"><a href="#Tips" class="headerlink" title="Tips"></a>Tips</h2><p>上面的 psql 提示符是通过命令 <code>\set PROMPT1 &#39;%/[%&gt;]=%# &#39;</code> 进行更改的，其中 <code>%/</code> 表示当前数据库，<code>%&gt;</code> 表示监听的端口，<code>%#</code> 表示用户权限，您可以<a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/12/app-psql.html">参考 psql 文档获取更多的信息</a>。</p>
+<h2 id="更新"><a href="#更新" class="headerlink" title="更新"></a>更新</h2><ul>
+<li>2021-08-23 - 感谢熊灿灿指出本文中的 BUG，在 <code>publish_via_partition_root (false)</code> 中第一个代码段中第 16 行端口错误，原为 <code>5432</code>，应更正为 <code>8765</code>。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/13/sql-createpublication.html">https://www.postgresql.org/docs/13/sql-createpublication.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/13/sql-createsubscription.html">https://www.postgresql.org/docs/13/sql-createsubscription.html</a><br>[3] <a target="_blank" rel="noopener" href="https://www.enterprisedb.com/postgres-tutorials/logical-replication-postgresql-explained">https://www.enterprisedb.com/postgres-tutorials/logical-replication-postgresql-explained</a><br>[4] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/13/sql-altersubscription.html">https://www.postgresql.org/docs/13/sql-altersubscription.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 惯撞席
+
+<p>一乡人做巡捕官，值按院门，太守来见，跪报云：“太老官人进。”<br>按君怒，责之十下。<br>次日太守来，报云：“太公祖进。”<br>按君又责之。<br>至第三日，太守又来，自念乡语不可，通文又不可，乃报云：“前日来的，昨日来的，今日又来了。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/12/postgresql-logical-replication/" title="PostgreSQL 逻辑复制">https://blog.japinli.top/2020/12/postgresql-logical-replication/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/11/postgresql-row-level-security-v2/" rel="prev" title="再谈 PostgreSQL 行级安全策略">
+                  <i class="fa fa-chevron-left"></i> 再谈 PostgreSQL 行级安全策略
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/01/postgresql-idle-session-timeout/" rel="next" title="PostgreSQL 空闲会话超时">
+                  PostgreSQL 空闲会话超时 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

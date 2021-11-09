@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="LATERAL 连接是 PostgreSQL 和其他关系型数据库（如 Oracle、DB2 和 MS SQL）中鲜为人知的功能之一。然而，LATERAL 连接是一个非常有用的功能，本文将带你看看用它们能完成什么有意义的事情。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【译】理解 PostgreSQL 中的 LATERAL 连接">
+<meta property="og:url" content="https://blog.japinli.top/2021/07/understanding-lateral-joins-in-postgresql/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="LATERAL 连接是 PostgreSQL 和其他关系型数据库（如 Oracle、DB2 和 MS SQL）中鲜为人知的功能之一。然而，LATERAL 连接是一个非常有用的功能，本文将带你看看用它们能完成什么有意义的事情。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-18T10:11:00.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.463Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="翻译">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/07/understanding-lateral-joins-in-postgresql/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/07/understanding-lateral-joins-in-postgresql/","path":"2021/07/understanding-lateral-joins-in-postgresql/","title":"【译】理解 PostgreSQL 中的 LATERAL 连接"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>【译】理解 PostgreSQL 中的 LATERAL 连接 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-FROM"><span class="nav-number">1.</span> <span class="nav-text">深入理解 FROM</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LATERAL-%E8%BF%9E%E6%8E%A5%EF%BC%9A%E5%88%9B%E5%BB%BA%E7%A4%BA%E4%BE%8B%E6%95%B0%E6%8D%AE"><span class="nav-number">2.</span> <span class="nav-text">LATERAL 连接：创建示例数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C-LATERAL-%E8%BF%9E%E6%8E%A5"><span class="nav-number">3.</span> <span class="nav-text">执行 LATERAL 连接</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="nav-number">4.</span> <span class="nav-text">写在最后</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%91%E8%80%85%E8%91%97"><span class="nav-number">5.</span> <span class="nav-text">译者著</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/07/understanding-lateral-joins-in-postgresql/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          【译】理解 PostgreSQL 中的 LATERAL 连接
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-07-18 18:11:00" itemprop="dateCreated datePublished" datetime="2021-07-18T18:11:00+08:00">2021-07-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p><code>LATERAL</code> 连接是 PostgreSQL 和其他关系型数据库（如 Oracle、DB2 和 MS SQL）中鲜为人知的功能之一。然而，<code>LATERAL</code> 连接是一个非常有用的功能，本文将带你看看用它们能完成什么有意义的事情。</p>
+<span id="more"></span>
+
+<h2 id="深入理解-FROM"><a href="#深入理解-FROM" class="headerlink" title="深入理解 FROM"></a>深入理解 FROM</h2><p>在我们深入研究 <code>LATERAL</code> 之前，有必要从哲学的家的角度来考虑一下 <code>SELECT</code> 和 <code>FROM</code> 子句。例如：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> whatever <span class="keyword">FROM</span> tab;</span><br></pre></td></tr></table></figure>
+
+<p>本质上，我们可以将这个语句看作是一个循环。用伪代码来编写此 SQL 语句看起来类似下面的代码段：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">for x in tab</span><br><span class="line">loop</span><br><span class="line">     “do whatever”</span><br><span class="line">end loop</span><br></pre></td></tr></table></figure>
+
+<p>对于表中的没一条记录，我们做 <code>SELECT</code> 子句所说的事情。通常情况下，数据只是按原样返回。一个 <code>SELECT</code> 语句可以被看作是一个循环。当时，如果我们需要一个“嵌套”的循环呢？这就是 <code>LATERAL</code> 的用处。</p>
+<h2 id="LATERAL-连接：创建示例数据"><a href="#LATERAL-连接：创建示例数据" class="headerlink" title="LATERAL 连接：创建示例数据"></a>LATERAL 连接：创建示例数据</h2><p>让我们想象一个简单的例子。想象一下，我们有一系列产品，也有客户的愿望清单。现在的目标是为每个愿望清单找到最好的 3 种产品。下面的 SQL 代码段创建了一些样本数据。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t_product <span class="keyword">AS</span></span><br><span class="line">    <span class="keyword">SELECT</span>   id <span class="keyword">AS</span> product_id,</span><br><span class="line">             id <span class="operator">*</span> <span class="number">10</span> <span class="operator">*</span> random() <span class="keyword">AS</span> price,</span><br><span class="line">             <span class="string">&#x27;product &#x27;</span> <span class="operator">||</span> id <span class="keyword">AS</span> product</span><br><span class="line">    <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">1000</span>) <span class="keyword">AS</span> id;</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t_wishlist</span><br><span class="line">(</span><br><span class="line">    wishlist_id        <span class="type">int</span>,</span><br><span class="line">    username           text,</span><br><span class="line">    desired_price      <span class="type">numeric</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t_wishlist <span class="keyword">VALUES</span></span><br><span class="line">    (<span class="number">1</span>, <span class="string">&#x27;hans&#x27;</span>, <span class="string">&#x27;450&#x27;</span>),</span><br><span class="line">    (<span class="number">2</span>, <span class="string">&#x27;joe&#x27;</span>, <span class="string">&#x27;60&#x27;</span>),</span><br><span class="line">    (<span class="number">3</span>, <span class="string">&#x27;jane&#x27;</span>, <span class="string">&#x27;1500&#x27;</span>)</span><br><span class="line">;</span><br></pre></td></tr></table></figure>
+
+<p>产品表填充了 1000 种产品。价格是随机的，我们用一个相当有创意的名字来命名产品。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> t_product LIMIT <span class="number">10</span>;</span><br><span class="line"> product_id <span class="operator">|</span> price              <span class="operator">|</span> product</span><br><span class="line"><span class="comment">------------+--------------------+------------</span></span><br><span class="line">          <span class="number">1</span> <span class="operator">|</span> <span class="number">6.756567642432323</span>  <span class="operator">|</span> product <span class="number">1</span></span><br><span class="line">          <span class="number">2</span> <span class="operator">|</span> <span class="number">5.284467408540081</span>  <span class="operator">|</span> product <span class="number">2</span></span><br><span class="line">          <span class="number">3</span> <span class="operator">|</span> <span class="number">28.284196164210904</span> <span class="operator">|</span> product <span class="number">3</span></span><br><span class="line">          <span class="number">4</span> <span class="operator">|</span> <span class="number">13.543868035690423</span> <span class="operator">|</span> product <span class="number">4</span></span><br><span class="line">          <span class="number">5</span> <span class="operator">|</span> <span class="number">30.576923884383156</span> <span class="operator">|</span> product <span class="number">5</span></span><br><span class="line">          <span class="number">6</span> <span class="operator">|</span> <span class="number">26.572431211361902</span> <span class="operator">|</span> product <span class="number">6</span></span><br><span class="line">          <span class="number">7</span> <span class="operator">|</span> <span class="number">64.84599396020204</span>  <span class="operator">|</span> product <span class="number">7</span></span><br><span class="line">          <span class="number">8</span> <span class="operator">|</span> <span class="number">21.550701384168747</span> <span class="operator">|</span> product <span class="number">8</span></span><br><span class="line">          <span class="number">9</span> <span class="operator">|</span> <span class="number">28.995584553969174</span> <span class="operator">|</span> product <span class="number">9</span></span><br><span class="line">         <span class="number">10</span> <span class="operator">|</span> <span class="number">17.31335004787411</span>  <span class="operator">|</span> product <span class="number">10</span></span><br><span class="line">(<span class="number">10</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我们有一个愿望清单。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> t_wishlist;</span><br><span class="line"> wishlist_id <span class="operator">|</span> username <span class="operator">|</span> desired_price</span><br><span class="line"><span class="comment">-------------+----------+---------------</span></span><br><span class="line">           <span class="number">1</span> <span class="operator">|</span> hans     <span class="operator">|</span> <span class="number">450</span></span><br><span class="line">           <span class="number">2</span> <span class="operator">|</span> joe      <span class="operator">|</span> <span class="number">60</span></span><br><span class="line">           <span class="number">3</span> <span class="operator">|</span> jane     <span class="operator">|</span> <span class="number">1500</span></span><br><span class="line">(<span class="number">3</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>正如你所看到的，愿望清单属于一个用户，并且有一个我们想要建议的那三种产品的理想价格。</p>
+<h2 id="执行-LATERAL-连接"><a href="#执行-LATERAL-连接" class="headerlink" title="执行 LATERAL 连接"></a>执行 LATERAL 连接</h2><p>在提供了一些样本数据并将其加载到我们的 PostgreSQL 数据库后，我们可以接近并尝试提出解决方案。</p>
+<p>假设我们想为每个愿望找到前三个产品，可以使用下面的伪代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">for x in wishlist</span><br><span class="line">loop</span><br><span class="line">      for y in products order by price desc</span><br><span class="line">      loop</span><br><span class="line">           found++</span><br><span class="line">           if found &lt;= 3</span><br><span class="line">           then</span><br><span class="line">               return row</span><br><span class="line">           else</span><br><span class="line">               jump to next wish</span><br><span class="line">           end</span><br><span class="line">      end loop</span><br><span class="line">end loop</span><br></pre></td></tr></table></figure>
+
+<p>重要的是，我们需要两个循环。首先，我们需要遍历愿望列表，然后我们看一下排序后的产品列表，挑选 3 个，然后进入下一个愿望列表。</p>
+<p>让我们看看如何使用 <code>LATERAL</code> 连接来完成这个任务：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span>        <span class="operator">*</span></span><br><span class="line"><span class="keyword">FROM</span>      t_wishlist <span class="keyword">AS</span> w,</span><br><span class="line">    <span class="keyword">LATERAL</span>  (<span class="keyword">SELECT</span>      <span class="operator">*</span></span><br><span class="line">        <span class="keyword">FROM</span>       t_product <span class="keyword">AS</span> p</span><br><span class="line">        <span class="keyword">WHERE</span>       p.price <span class="operator">&lt;</span> w.desired_price</span><br><span class="line">        <span class="keyword">ORDER</span> <span class="keyword">BY</span> p.price <span class="keyword">DESC</span></span><br><span class="line">        LIMIT <span class="number">3</span></span><br><span class="line">       ) <span class="keyword">AS</span> x</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> wishlist_id, price <span class="keyword">DESC</span>;</span><br></pre></td></tr></table></figure>
+
+<p>我们将一步一步的解释这个查询。你在 <code>FROM</code> 子句中看到的第一件事是 <code>t_wishlist</code> 表。 <code>LATERAL</code> 现在可以做的是使用愿望清单中的记录来施展它的魔法。因此，对于愿望清单中的每条记录，我们都要挑选三个产品。为了弄清我们需要哪些产品，我们可以利用 <code>w.desired_price</code>。换句话说，这就像一个“带参数的连接”。<code>FROM</code> 子句可以看作我们伪代码中的“外循环”，<code>LATERAL</code> 可以被看作是“内循环”。</p>
+<p>结果集看起来如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"> wishlist_id | username | desired_price | product_id | price              | product</span><br><span class="line">-------------+----------+---------------+------------+--------------------+-------------</span><br><span class="line">           1 | hans     | 450           | 708        | 447.0511375753179  | product 708</span><br><span class="line">           1 | hans     | 450           | 126        | 443.6560873146138  | product 126</span><br><span class="line">           1 | hans     | 450           | 655        | 438.0566432022443  | product 655</span><br><span class="line">           2 | joe      | 60            | 40         | 59.32252841190291  | product 40</span><br><span class="line">           2 | joe      | 60            | 19         | 59.2142714048882   | product 19</span><br><span class="line">           2 | joe      | 60            | 87         | 58.78014573804254  | product 87</span><br><span class="line">           3 | jane     | 1500          | 687        | 1495.8794483743645 | product 687</span><br><span class="line">           3 | jane     | 1500          | 297        | 1494.4586352980593 | product 297</span><br><span class="line">           3 | jane     | 1500          | 520        | 1490.7849437550085 | product 520</span><br><span class="line">(9 rows)</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 为每个愿望清单返回三条记录，这正是我们想要的。这里重要的部分是在 <code>SELECT</code> 内部的 <code>LIMIT</code> 子句，而不是 <code>LATERAL</code>。因此，它限制的是每个愿望清单的行数，而不是总的行数。</p>
+<p>PostgreSQL 在优化 <code>LATERAL</code> 连接方面做的相当行。在我们的例子中，执行计划看起来很简单。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># explain <span class="keyword">SELECT</span>    <span class="operator">*</span></span><br><span class="line"><span class="keyword">FROM</span>    t_wishlist <span class="keyword">AS</span> w,</span><br><span class="line">        <span class="keyword">LATERAL</span> (<span class="keyword">SELECT</span> <span class="operator">*</span></span><br><span class="line">               <span class="keyword">FROM</span> t_product <span class="keyword">AS</span> p</span><br><span class="line">               <span class="keyword">WHERE</span> p.price <span class="operator">&lt;</span> w.desired_price</span><br><span class="line">               <span class="keyword">ORDER</span> <span class="keyword">BY</span> p.price <span class="keyword">DESC</span></span><br><span class="line">               LIMIT <span class="number">3</span></span><br><span class="line">               ) <span class="keyword">AS</span> x</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> wishlist_id, price <span class="keyword">DESC</span>;</span><br><span class="line">                                    QUERY PLAN</span><br><span class="line"><span class="comment">---------------------------------------------------------------------------------------</span></span><br><span class="line"> Sort (cost<span class="operator">=</span><span class="number">23428.53</span>.<span class="number">.23434</span><span class="number">.90</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">2550</span> width<span class="operator">=</span><span class="number">91</span>)</span><br><span class="line">   Sort Key: w.wishlist_id, p.price <span class="keyword">DESC</span></span><br><span class="line">   <span class="operator">-</span><span class="operator">&gt;</span> Nested Loop (cost<span class="operator">=</span><span class="number">27.30</span>.<span class="number">.23284</span><span class="number">.24</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">2550</span> width<span class="operator">=</span><span class="number">91</span>)</span><br><span class="line">      <span class="operator">-</span><span class="operator">&gt;</span> Seq Scan <span class="keyword">on</span> t_wishlist w (cost<span class="operator">=</span><span class="number">0.00</span>.<span class="number">.18</span><span class="number">.50</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">850</span> width<span class="operator">=</span><span class="number">68</span>)</span><br><span class="line">      <span class="operator">-</span><span class="operator">&gt;</span> Limit (cost<span class="operator">=</span><span class="number">27.30</span>.<span class="number">.27</span><span class="number">.31</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">3</span> width<span class="operator">=</span><span class="number">23</span>)</span><br><span class="line">            <span class="operator">-</span><span class="operator">&gt;</span> Sort (cost<span class="operator">=</span><span class="number">27.30</span>.<span class="number">.28</span><span class="number">.14</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">333</span> width<span class="operator">=</span><span class="number">23</span>)</span><br><span class="line">                  Sort Key: p.price <span class="keyword">DESC</span></span><br><span class="line">                  <span class="operator">-</span><span class="operator">&gt;</span> Seq Scan <span class="keyword">on</span> t_product p (cost<span class="operator">=</span><span class="number">0.00</span>.<span class="number">.23</span><span class="number">.00</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">333</span> width<span class="operator">=</span><span class="number">23</span>)</span><br><span class="line">                        <span class="keyword">Filter</span>: (price <span class="operator">&lt;</span> (w.desired_price)::<span class="type">double precision</span>)</span><br><span class="line">(<span class="number">9</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p><code>LATERAL</code> 连接是非常有用的，在许多情况下可以利用它来加速操作，或使代码更容易理解。</p>
+<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>如果你想了解更多关于一般的连接，如如你现在想要阅读更多关于 PostgreSQL 的信息，可以考虑看看 Laurenz Albe 关于 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/join-strategies-and-performance-in-postgresql/">PostgreSQL 的连接策略的优秀文章</a>。</p>
+<p>如果你想了解更多关于 PostgreSQL 优化器的一般情况，如果你想要了解更多关于优化和其他与 PostgreSQL 查询优化相关的重要主题，请查看我关于<a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/how-the-postgresql-query-optimizer-works/">优化器的博文</a>。</p>
+<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><ul>
+<li>本文翻译自 Hans-Jürgen Schönig 的 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/understanding-lateral-joins-in-postgresql/">UNDERSTANDING LATERAL JOINS IN POSTGRESQL</a>。</li>
+</ul>
+<div class="just-for-fun">
+笑林广记 - 发利市
+
+<p>一官新到任，祭仪门前毕，有未烬纸钱在地，官即取一锡锭藏好。<br>门子禀曰：“老爷这是纸钱，要他何用？”<br>官曰：“我知道，且等我发个利市者。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/postgresql-grouping-sets-rollup-cube/" rel="bookmark">【译】PostgreSQL 分组集：ROLLUP & CUBE</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/" rel="bookmark">【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/postgresql-security-things-to-avoid-in-real-life/" rel="bookmark">【译】PostgreSQL 安全：现实中需要避免的事情</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/turning-query-results-into-json-in-postgresql/" rel="bookmark">【译】PostgreSQL 查询结果转为 JSON 格式</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/07/understanding-lateral-joins-in-postgresql/" title="【译】理解 PostgreSQL 中的 LATERAL 连接">https://blog.japinli.top/2021/07/understanding-lateral-joins-in-postgresql/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E7%BF%BB%E8%AF%91/" rel="tag"># 翻译</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/" rel="prev" title="【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES">
+                  <i class="fa fa-chevron-left"></i> 【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="next" title="【译】PostgreSQL 中的 JOIN 策略及其性能">
+                  【译】PostgreSQL 中的 JOIN 策略及其性能 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

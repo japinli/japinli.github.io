@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="本文主要介绍 C 语言的词法元素，包括标识符、关键字、常量、操作符以及分隔符。其中关于操作符的一些更为详细的信息将在后续进行介绍。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="C 语言词法元素">
+<meta property="og:url" content="https://blog.japinli.top/2019/06/C-lexical-elements/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="本文主要介绍 C 语言的词法元素，包括标识符、关键字、常量、操作符以及分隔符。其中关于操作符的一些更为详细的信息将在后续进行介绍。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2019/06/C-lexical-elements/C_lexical_elements.png">
+<meta property="article:published_time" content="2019-06-01T14:31:18.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.251Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="C 语言">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2019/06/C-lexical-elements/C_lexical_elements.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2019/06/C-lexical-elements/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2019/06/C-lexical-elements/","path":"2019/06/C-lexical-elements/","title":"C 语言词法元素"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>C 语言词法元素 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%87%E8%AF%86%E7%AC%A6"><span class="nav-number">1.</span> <span class="nav-text">标识符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-number">2.</span> <span class="nav-text">关键字</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E9%87%8F"><span class="nav-number">3.</span> <span class="nav-text">常量</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B4%E5%9E%8B%E5%B8%B8%E9%87%8F"><span class="nav-number">3.1.</span> <span class="nav-text">整型常量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E5%B8%B8%E9%87%8F"><span class="nav-number">3.2.</span> <span class="nav-text">字符常量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%AE%E7%82%B9%E6%95%B0%E5%B8%B8%E9%87%8F"><span class="nav-number">3.3.</span> <span class="nav-text">浮点数常量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%B8%B8%E9%87%8F"><span class="nav-number">3.4.</span> <span class="nav-text">字符串常量</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%93%8D%E4%BD%9C%E7%AC%A6"><span class="nav-number">4.</span> <span class="nav-text">操作符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E9%9A%94%E7%AC%A6"><span class="nav-number">5.</span> <span class="nav-text">分隔符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2019/06/C-lexical-elements/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          C 语言词法元素
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-06-01 22:31:18" itemprop="dateCreated datePublished" datetime="2019-06-01T22:31:18+08:00">2019-06-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E7%BC%96%E7%A8%8B/" itemprop="url" rel="index"><span itemprop="name">编程</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>本文主要介绍 C 语言的词法元素，包括标识符、关键字、常量、操作符以及分隔符。其中关于操作符的一些更为详细的信息将在后续进行介绍。</p>
+<img src="/2019/06/C-lexical-elements/C_lexical_elements.png" class="">
+
+<span id="more"></span>
+
+<h2 id="标识符"><a href="#标识符" class="headerlink" title="标识符"></a>标识符</h2><p>标识符在 C 语言中由于命令变量、函数、新的数据类型以及预处理的字符序列（例如，宏定义）。它可以包含字符、数字以及下划线（<code>_</code>)，标识符是区分大小写的，并且不能以数字开始。需要注意的是，GNU 扩展可以在标识符中使用美元符号（<code>$</code>）。</p>
+<p>例如，下面的标识符是正确的：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">bool ok;</span><br><span class="line">int my_id;</span><br><span class="line">char *_name;</span><br></pre></td></tr></table></figure>
+
+<p>而下面的标识符则错误的：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">int 2id;</span><br><span class="line">char *#a;</span><br></pre></td></tr></table></figure>
+
+<h2 id="关键字"><a href="#关键字" class="headerlink" title="关键字"></a>关键字</h2><p>关键字是 C 语言保留的特殊标识符，这些标识符有特定的用处，因此不能用于其它用途。不同的标准下，C 语言支持的关键字有所不同。下表给出了不同标准下的关键字。</p>
+<table>
+<thead>
+<tr>
+<th>标准</th>
+<th>关键字</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ANSI C89</td>
+<td>auto, break, case, char, const, continue, default, do, double, else, enum, extern, float, for, goto, if, int, long, register, return, short, signed, sizeof, static, struct, switch, typedef, union, unsigned, void, volatile, while</td>
+</tr>
+<tr>
+<td>ISO C99</td>
+<td>inline, _Bool, _Complex, _Imaginary, restrict</td>
+</tr>
+<tr>
+<td>GUN 扩展</td>
+<td>__FUNCTION__, __PRETTY_FUNCTION__, __alignof, __alignof__, __asm, __asm__, __attribute, __attribute__, __builtin_offsetof, __builtin_va_arg, __complex, __complex__, __const, __extension__, __func__, __imag, __imag__, __inline, __inline__, __label__, __null, __real, __real__, __restrict, __restrict__, __signed, __signed__, __thread, __typeof, __volatile, __volatile__, restrict</td>
+</tr>
+</tbody></table>
+<h2 id="常量"><a href="#常量" class="headerlink" title="常量"></a>常量</h2><p>常量是一个数值或者字符值，例如，<code>5</code> 或者 <code>&#39;m&#39;</code>。所有的常量都有一个特定的数据类型，你可以显示地将其强制转换为某个特定类型或者你也可以让编译器选择默认的数据类型。C 语言包含四类常量：a. 整型常量；b. 字符常量；c. 浮点数常量；d. 字符串常量。</p>
+<h3 id="整型常量"><a href="#整型常量" class="headerlink" title="整型常量"></a>整型常量</h3><p>整型常量是一个数字组成的序列，它可以伴随一个前缀用于表示常量的基数，同时也可以带有一个后缀用以表示数据类型。C 语言提供了三种基数的表示方式：</p>
+<table>
+<thead>
+<tr>
+<th>基数</th>
+<th>前缀</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>十六进制</td>
+<td><code>0x</code> 或 <code>0X</code></td>
+<td><code>0x2f</code>, <code>0x88</code>, <code>0XAB43</code></td>
+</tr>
+<tr>
+<td>十进制</td>
+<td>无</td>
+<td><code>459</code>, <code>12</code>, <code>1293</code></td>
+</tr>
+<tr>
+<td>八进制</td>
+<td><code>0</code></td>
+<td><code>057</code>, <code>03</code>, <code>012</code></td>
+</tr>
+</tbody></table>
+<p>数据类型则可以通过字符 <code>u</code> 和 <code>l</code> 来表示：</p>
+<table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th>后缀</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无符号整型 （<code>unsigned</code>）</td>
+<td><code>u</code> 或 <code>U</code></td>
+<td><code>45U</code></td>
+</tr>
+<tr>
+<td>长整型（<code>long int</code>）</td>
+<td><code>l</code> 或 <code>L</code></td>
+<td><code>45L</code></td>
+</tr>
+<tr>
+<td>长长整型 （<code>long long int</code>）</td>
+<td><code>ll</code> 或 <code>LL</code></td>
+<td><code>45LL</code></td>
+</tr>
+</tbody></table>
+<p>长长整型（<code>long long int</code>）是在 ISO 99 和 GNU C 扩展中新加的数据类型。此外，我们可以通过将 <code>u</code> 和 <code>l</code> 组合起来形成无符号长整型数据类型。例如 <code>45ULL</code>。</p>
+<p><strong>备注：</strong> <code>u</code> 和 <code>l</code> 的顺序没有多大关系。</p>
+<h3 id="字符常量"><a href="#字符常量" class="headerlink" title="字符常量"></a>字符常量</h3><p>字符常量通常是有单引号包含起来的单个字符，例如，<code>A</code>。字符常量的默认数据类型为整型（<code>int</code> 类型）。一些字符无法用单个字符表示，因此需要进行转义。常见的转义字符如下所示：</p>
+<table>
+<thead>
+<tr>
+<th>转义字符</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>\\</code></td>
+<td>反斜杆字符</td>
+</tr>
+<tr>
+<td><code>\?</code></td>
+<td>问号字符</td>
+</tr>
+<tr>
+<td><code>\&#39;</code></td>
+<td>单引号</td>
+</tr>
+<tr>
+<td><code>\&quot;</code></td>
+<td>双引号</td>
+</tr>
+<tr>
+<td><code>\a</code></td>
+<td>警报</td>
+</tr>
+<tr>
+<td><code>\b</code></td>
+<td>退格字符</td>
+</tr>
+<tr>
+<td><code>\e</code></td>
+<td><ESC> 字符（GNU 扩展）</td>
+</tr>
+<tr>
+<td><code>\f</code></td>
+<td>表格填充</td>
+</tr>
+<tr>
+<td><code>\n</code></td>
+<td>换行符</td>
+</tr>
+<tr>
+<td><code>\r</code></td>
+<td>回车符</td>
+</tr>
+<tr>
+<td><code>\t</code></td>
+<td>水平制表符</td>
+</tr>
+<tr>
+<td><code>\v</code></td>
+<td>垂直制表符号</td>
+</tr>
+<tr>
+<td><code>\o</code>,<code>\oo</code>,<code>\ooo</code></td>
+<td>八进制数</td>
+</tr>
+<tr>
+<td><code>xh</code>,<code>\xhh</code>,<code>\xhhh</code>, <code>...</code></td>
+<td>十六进制数</td>
+</tr>
+</tbody></table>
+<p>虽然十六进制的表示方式后面可以跟任意多个数字，但是给定的字符集的字符数量是有限的。例如，常用扩展的 ASCII 字符集只有 256 个字符。如果你尝试给出一个超出字符集范围的十六进制字符表示，那么编译时将出错。（我测试过后发现其实有一个警告。）</p>
+<h3 id="浮点数常量"><a href="#浮点数常量" class="headerlink" title="浮点数常量"></a>浮点数常量</h3><p>浮点数常量（实数常量）由整数部分，小数点和小数部分组成，同样它可以有一个可选的数据类型后缀。在表示浮点数常量时，我们可以省略整数部分或小数部分，但不能同时省略。例如：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">double</span> a, b, c, d, e, f;</span><br><span class="line"></span><br><span class="line">a = <span class="number">4.7</span>;</span><br><span class="line">b = <span class="number">4.</span>;</span><br><span class="line">c = <span class="number">4</span>;</span><br><span class="line">d = <span class="number">.7</span>;</span><br><span class="line">e = <span class="number">0.7</span>;</span><br></pre></td></tr></table></figure>
+
+<p>需要注意的是在 <code>c = 4;</code> 的赋值语句中，整型常量 <code>4</code> 将自动的由整型转换为浮点型（<code>double</code> 类型）。此外，我们还可以用科学计数的方式来表示浮点数，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">double</span> x, y;</span><br><span class="line"></span><br><span class="line">x = <span class="number">5e2</span>;    <span class="comment">/* x 为 5 * 100，即 500.0 */</span></span><br><span class="line">y = <span class="number">5e-2</span>;   <span class="comment">/* y 为 5 * (1/100), 即 0.05 */</span></span><br></pre></td></tr></table></figure>
+
+<p>你可以在浮点数后面添加 <code>F</code> 或 <code>f</code> 来表示单精度浮点数（<code>float</code> 类型），如果在浮点数后面添加 <code>L</code> 或 <code>l</code> 则表示该常量的数据类型为 <code>long double</code>。默认情况下，浮点数的类型为 <code>double</code>。</p>
+<h3 id="字符串常量"><a href="#字符串常量" class="headerlink" title="字符串常量"></a>字符串常量</h3><p>字符串常量是由双引号包裹的零个或多个字符、数字以及转义字符序列。字符串常量的数据类型为字符数组。所有的字符串都包含一个空字符（<code>\0</code>）用来表示字符串结尾。字符串以字符数组的方式存储，它没有字符串长度的属性。字符串以末尾的空字符作为结束标志。两个相邻的字符串常量将会被连接为一个字符串常量，并且只保留最后一个字符串的空字符。</p>
+<p>由于字符串由双引号作为标示，因此我们在字符串中使用双引号时需要对其进行转义。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&quot;\&quot;Hello, world!\&quot;&quot;</span><br></pre></td></tr></table></figure>
+
+<p>如果一个字符串太长以致于不能放在一行中，我们可以使用反斜杠 <code>\</code> 来将其拆分为单独的行。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&quot;This is a long long long long long long long long long \</span><br><span class="line">long long long string.&quot;</span><br></pre></td></tr></table></figure>
+
+<p><strong>注意：</strong> 在反斜杠后面不能有任何字符，尤其要注意空白字符，如空格、制表符等。</p>
+<h2 id="操作符"><a href="#操作符" class="headerlink" title="操作符"></a>操作符</h2><p>操作符（运算符）是一个特殊标记，它对一个，两个或三个操作数执行操作，例如加法或减法。后续将给出更为详细的介绍。</p>
+<h2 id="分隔符"><a href="#分隔符" class="headerlink" title="分隔符"></a>分隔符</h2><p>分隔符用于分割标记（<code>tokens</code>）。分隔符本身也是一种标记。它们由单个字符组成并代表其自身，C 语言中的分隔符标记包括 <code>(</code>, <code>)</code>, <code>[</code>, <code>]</code>, <code>&#123;</code>, <code>&#125;</code>, <code>;</code>, <code>,</code>, <code>.</code>, <code>:</code>。空白也是一种分隔符，但它不属于标记。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Lexical-Elements">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Lexical-Elements</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/11/C-functions/" rel="bookmark">C 函数</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2020/01/C-program-structure-and-scope/" rel="bookmark">C 程序结构和范围</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/06/C-type-and-storage-class-specifiers/" rel="bookmark">C 语言类型及存储类限定符</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/06/C-data-types/" rel="bookmark">C 语言数据类型</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/10/C-statements/" rel="bookmark">C 语言语句</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2019/06/C-lexical-elements/" title="C 语言词法元素">https://blog.japinli.top/2019/06/C-lexical-elements/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/C-%E8%AF%AD%E8%A8%80/" rel="tag"># C 语言</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/05/postgresql-create-table-query-plan/" rel="prev" title="PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/06/C-data-types/" rel="next" title="C 语言数据类型">
+                  C 语言数据类型 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

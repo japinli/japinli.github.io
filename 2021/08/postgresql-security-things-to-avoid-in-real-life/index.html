@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="强化 PostgreSQL 变得越来越重要。如今，安全是王道，人们想知道如何确保 PostgreSQL 的安全。我们中的一些人可能还记得近年来发生在 MongoDB 身上的事情，我们当然希望在 PostgreSQL 世界中避免类似的安全问题。MongoDB 的遭遇实际上是令人震惊的：数以千计的数据库因为糟糕的默认安全设置而被勒索–这绝对是一场噩梦，不仅大大损害了 MongoDB 的声誉，也损害了整">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【译】PostgreSQL 安全：现实中需要避免的事情">
+<meta property="og:url" content="https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="强化 PostgreSQL 变得越来越重要。如今，安全是王道，人们想知道如何确保 PostgreSQL 的安全。我们中的一些人可能还记得近年来发生在 MongoDB 身上的事情，我们当然希望在 PostgreSQL 世界中避免类似的安全问题。MongoDB 的遭遇实际上是令人震惊的：数以千计的数据库因为糟糕的默认安全设置而被勒索–这绝对是一场噩梦，不仅大大损害了 MongoDB 的声誉，也损害了整">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/tde-architecture.png">
+<meta property="article:published_time" content="2021-08-08T00:20:32.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.444Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="翻译">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/tde-architecture.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/","path":"2021/08/postgresql-security-things-to-avoid-in-real-life/","title":"【译】PostgreSQL 安全：现实中需要避免的事情"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>【译】PostgreSQL 安全：现实中需要避免的事情 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E9%81%BF%E5%85%8D%E5%AE%BD%E6%9D%BE%E7%9A%84-listen-addresses-%E8%AE%BE%E7%BD%AE"><span class="nav-number">1.</span> <span class="nav-text">1. 避免宽松的 listen_addresses 设置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%9C%A8-pg-hba-conf-%E4%B8%AD%E4%BD%BF%E7%94%A8-trust"><span class="nav-number">2.</span> <span class="nav-text">2. 在 pg_hba.conf 中使用 trust</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%91%86%E8%84%B1-PostgreSQL-%E4%B8%AD%E7%9A%84-md5-%E5%AF%86%E7%A0%81"><span class="nav-number">3.</span> <span class="nav-text">3. 摆脱 PostgreSQL 中的 md5 密码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E5%A4%84%E7%90%86%E6%A8%A1%E5%BC%8F%E5%92%8C%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84-PUBLIC-%E6%9D%83%E9%99%90"><span class="nav-number">4.</span> <span class="nav-text">4. 处理模式和数据库的 PUBLIC 权限</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E9%81%BF%E5%85%8D-ALTER-USER-SET-PASSWORD"><span class="nav-number">5.</span> <span class="nav-text">5. 避免 ALTER USER ... SET PASSWORD ...</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E4%BD%BF%E7%94%A8-ALTER-DEFAULT-PRIVILEGES"><span class="nav-number">6.</span> <span class="nav-text">6. 使用 ALTER DEFAULT PRIVILEGES</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E4%BD%BF%E7%94%A8-SSL"><span class="nav-number">7.</span> <span class="nav-text">7. 使用 SSL</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E5%AE%89%E5%85%A8%E5%9C%B0%E7%BC%96%E5%86%99-SECURITY-DEFINER-%E5%87%BD%E6%95%B0"><span class="nav-number">8.</span> <span class="nav-text">8. 安全地编写 SECURITY DEFINER 函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E9%81%BF%E5%85%8D%E6%95%B0%E6%8D%AE%E5%BA%93%E5%87%BD%E6%95%B0%E4%B8%AD%E7%9A%84-SQL-%E6%B3%A8%E5%85%A5"><span class="nav-number">9.</span> <span class="nav-text">9. 避免数据库函数中的 SQL 注入</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E5%B0%BD%E5%8F%AF%E8%83%BD%E9%99%90%E5%88%B6%E8%B6%85%E7%BA%A7%E7%94%A8%E6%88%B7%E8%AE%BF%E9%97%AE"><span class="nav-number">10.</span> <span class="nav-text">10. 尽可能限制超级用户访问</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-%E5%AE%9A%E6%9C%9F%E6%9B%B4%E6%96%B0%E6%82%A8%E7%9A%84-PostgreSQL-%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="nav-number">11.</span> <span class="nav-text">11. 定期更新您的 PostgreSQL 数据库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12-%E5%8A%A0%E5%AF%86%E6%95%B4%E4%B8%AA%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%9APostgreSQL-TDE"><span class="nav-number">12.</span> <span class="nav-text">12. 加密整个服务器：PostgreSQL TDE</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E"><span class="nav-number">13.</span> <span class="nav-text">写在最后</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%91%E8%80%85%E6%B3%A8"><span class="nav-number">14.</span> <span class="nav-text">译者注</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          【译】PostgreSQL 安全：现实中需要避免的事情
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-08-08 08:20:32" itemprop="dateCreated datePublished" datetime="2021-08-08T08:20:32+08:00">2021-08-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>强化 PostgreSQL 变得越来越重要。如今，安全是王道，人们想知道如何确保 PostgreSQL 的安全。我们中的一些人可能还记得近年来发生在 <a target="_blank" rel="noopener" href="https://www.zdnet.com/article/hacker-ransoms-23k-mongodb-databases-and-threatens-to-contact-gdpr-authorities/">MongoDB 身上的事情</a>，我们当然希望在 PostgreSQL 世界中避免类似的安全问题。MongoDB 的遭遇实际上是令人震惊的：数以千计的数据库因为糟糕的默认安全设置而被勒索–这绝对是一场噩梦，不仅大大损害了 MongoDB 的声誉，也损害了整个行业的声誉。PostgreSQL 人员尽其所能避免在我们的生态系统中重复出现这种情况。</p>
+<p>当有人在谈论您的公司时，标签 <code>#ransomware</code> （勒索软件）并不是您想要看到的。为了避免一些最常见的问题，我们编制了一个 “PostgreSQL 最佳安全问题”，它可以作为改进设置的 12 个步骤的指南。</p>
+<span id="more"></span>
+
+<h2 id="1-避免宽松的-listen-addresses-设置"><a href="#1-避免宽松的-listen-addresses-设置" class="headerlink" title="1. 避免宽松的 listen_addresses 设置"></a>1. 避免宽松的 <code>listen_addresses</code> 设置</h2><p>PostgreSQL 是作为一个服务器进程运行的，人们想要连接到该数据库。问题是：这些连接是从哪里来的？在 <code>postgresql.conf</code> 中可以找到 <code>listen_addresses</code> 设置，它控制着这些绑定地址。</p>
+<p>换句话说：如果 <code>listen_addresses</code> 被设置为 <code>&#39;*&#39;</code>，PostgreSQL 将监听所有的网络设备，考虑这些连接并进入下一个阶段，即评估 <code>pg_hba.conf</code> 的内容。在所有设备上监听是一个问题，因为一个坏的行为者可以很容易地向您发送身份认证请求的垃圾邮件–那么灾难就只在一个 <code>pg_hba.conf</code> 条目之外。</p>
+<p>建议：</p>
+<ul>
+<li>如果只需要本地连接：<br>设置 <code>listen_addresses = &#39;localhost&#39;</code></li>
+<li>如果需要远程连接：<br>设置 <code>listen_addresses = &#39;localhost, &lt;IP of network device&gt;&#39;</code></li>
+</ul>
+<p>如果您根本不监听，您肯定会更安全。如果您已经限制网络访问，PostgreSQL 甚至不必拒绝您的连接。</p>
+<h2 id="2-在-pg-hba-conf-中使用-trust"><a href="#2-在-pg-hba-conf-中使用-trust" class="headerlink" title="2. 在 pg_hba.conf 中使用 trust"></a>2. 在 <code>pg_hba.conf</code> 中使用 <code>trust</code></h2><p>在处理了 <code>listen_addresses (= bind addresses)</code> 之后，PostgreSQL 将处理 <code>pg_hba.conf</code> 以确定是否允许连接。出现的主要问题是：在谈论 <code>pg_hba.conf</code> 的时候，有什么可能出错？好吧，有一些事情是值得一提的。</p>
+<p>我们经常看到的是，人们使用 <code>trust</code> 来确保人们无需密码即可连接到 PostgreSQL。如果您正在强化 PostgreSQL，那么使用 <code>trust</code> 基本上是最糟糕的事情。对于本地连接，<code>peer</code> 可能是一个有效的选择—— <code>trust</code> 当然不是。</p>
+<p>建议：</p>
+<ul>
+<li>如果您正在强化 PostgreSQL，请不要使用 <code>trust</code>（尤其不要用于远程连接）。</li>
+<li>改用 <code>scram-sha-256</code> 和 <code>SSL</code>。</li>
+<li>如果可能的话，尽量避免允许来自任何地方的连接的条目（网络掩码 <code>0.0.0.0/0</code>）。相反，将访问限制在那些真正需要访问的主机和子网中。</li>
+<li>不要创建允许连接到所有数据库或所有用户的 <code>pg_hba.conf</code> 条目。要有针对性。</li>
+<li>为文件中的每一行添加文档，以便您知道为什么需要该权限，谁要求的，以及在需要时与谁联系。否则，您几乎没有机会清理和删除不再需要的条目。此外，如果需要修改密码，您知道该与谁联系。</li>
+</ul>
+<h2 id="3-摆脱-PostgreSQL-中的-md5-密码"><a href="#3-摆脱-PostgreSQL-中的-md5-密码" class="headerlink" title="3. 摆脱 PostgreSQL 中的 md5 密码"></a>3. 摆脱 PostgreSQL 中的 <code>md5</code> 密码</h2><p>许多年来，<code>md5</code> 是 PostgreSQL 中进行密码验证的首选方法。然而，<code>md5</code> 的时代早已过去。你甚至可以从网上下载包含最常用的哈希值的现成文件，破解密码的速度更快。</p>
+<p>换句话说：忘记 <code>md5</code>，转而使用更强的哈希算法。如果您想知道如何从 <code>md5</code> 迁移到 <code>scram-sha-256</code>，请确保您<a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/from-md5-to-scram-sha-256-in-postgresql/">查看我们的帖子“在 PostgreSQL 中从 MD5 到 scram-sha-256”</a>。</p>
+<p>建议：</p>
+<ul>
+<li>使用 <code>scram-sha-256</code> 替代 <code>md5</code></li>
+</ul>
+<h2 id="4-处理模式和数据库的-PUBLIC-权限"><a href="#4-处理模式和数据库的-PUBLIC-权限" class="headerlink" title="4. 处理模式和数据库的 PUBLIC 权限"></a>4. 处理模式和数据库的 <code>PUBLIC</code> 权限</h2><p>在 PostgreSQL 中，有一个东西叫做 <code>PUBLIC</code>。它基本上相当于数据库中的 “UNIX世界”。正如您将看到的，它可能会引起一些问题–然而，这些问题是可以避免的。</p>
+<p>以下是通常发生的情况：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">postgres=# CREATE USER joe;</span><br><span class="line">CREATE ROLE</span><br><span class="line">postgres=# \c postgres joe</span><br><span class="line">You are now connected to database &quot;postgres&quot; as user &quot;joe&quot;.</span><br><span class="line">postgres=&gt; SELECT current_user;</span><br><span class="line">current_user</span><br><span class="line">--------------</span><br><span class="line">joe</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>我们已经创建了一个用户，并以 <code>joe</code> 的身份登录。我们在这里看到的是，<code>joe</code> 不被允许创建一个新的数据库，这正是我们所期望的。但是：<code>joe</code> 被允许连接到其他一些我们甚至至今都没有听说过的数据库。幸运的是，<code>joe</code> 不被允许读取这个数据库中的任何对象。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">postgres=&gt; CREATE DATABASE joedb;</span><br><span class="line">ERROR: permission denied to create database</span><br><span class="line">postgres=&gt; \c demo</span><br><span class="line">You are now connected to database &quot;demo&quot; as user &quot;joe&quot;.</span><br><span class="line">demo=&gt; SELECT * FROM t_demo;</span><br><span class="line">ERROR: permission denied for table t_demo</span><br></pre></td></tr></table></figure>
+
+<p>但是，默认情况下允许 <code>joe</code> 创建表（<code>public</code> 模式），这当然不是一个好主意：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">demo=&gt; CREATE TABLE bad_idea (id int);</span><br><span class="line">CREATE TABLE</span><br></pre></td></tr></table></figure>
+
+<p>因此，我们确定了两个关键问题：</p>
+<ul>
+<li>允许 <code>joe</code> 连接到其他数据库</li>
+<li><code>joe</code> 被允许向 <code>public</code> 模式发送垃圾（译者注：实际上就是创建一些对象，例如表）</li>
+</ul>
+<p>这比乍看之下更糟糕。经验表明，多年来在 PostgreSQL 中发现的大多数特权升级攻击载体都是通过在数据库中创建恶意对象来实现的。</p>
+<p>所以，我们必须修复它：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">demo=# REVOKE ALL ON DATABASE demo FROM public;</span><br><span class="line">REVOKE</span><br><span class="line">demo=# REVOKE ALL ON SCHEMA public FROM public;</span><br><span class="line">REVOKE</span><br></pre></td></tr></table></figure>
+
+<p>现在我们已经做到了，我们可以以 <code>joe</code> 的身份重新连接到演示数据库。在 psql 中，我们可以使用 <code>\c</code> 命令来做这件事。如果你使用的是图形用户界面，只需改变你的数据库连接并以用户 <code>joe</code> 的身份登录：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">demo=# \c demo joe</span><br><span class="line">FATAL: permission denied for database &quot;demo&quot;</span><br><span class="line">DETAIL: User does not have CONNECT privilege.</span><br><span class="line">Previous connection kept</span><br></pre></td></tr></table></figure>
+
+<p>首先，我们已经撤销了 <code>PUBLIC</code> 的权限，以确保数据库连接不再可行。然后我们修复 <code>public</code> 模式固定的权限。如您所见，连接不再可能。</p>
+<p>建议：</p>
+<ul>
+<li>从您的数据库权限中删除 <code>PUBLIC</code> 权限</li>
+<li>从您的 <code>public</code> 模式中移除 <code>PUBLIC</code> 权限</li>
+</ul>
+<p>从所有不需要临时权限的用户处撤销数据库上的临时权限也是一个好主意。某些权限提升攻击也适用于临时对象。此外，确保正确测试设置，以确保没有泄漏。</p>
+<h2 id="5-避免-ALTER-USER-SET-PASSWORD"><a href="#5-避免-ALTER-USER-SET-PASSWORD" class="headerlink" title="5. 避免 ALTER USER ... SET PASSWORD ..."></a>5. 避免 <code>ALTER USER ... SET PASSWORD ...</code></h2><p>在 PostgreSQL 中更改密码很容易。大多数人使用 <code>ALTER USER ... SET PASSWORD</code> 来做到这一点。但是，有一个问题：这条 SQL 语句最终会以 PLAIN 文本形式出现在您的数据库日志中，这当然是一个主要问题。</p>
+<p>建议：</p>
+<ul>
+<li>使用受信任的 PostgreSQL 客户端设施更改密码，而不是 <code>ALERT ROLE</code>。例如，psql具有 <code>\password</code>，pgAdmin 具有“更改密码”对话框。</li>
+</ul>
+<p>这项建议似乎很荒谬。然而，这背后有一些道理。要更改密码，可以通过协议支持绕过日志中的纯文本密码问题。通过直观地执行操作，而不是通过简单的 SQL，大多数 GUI 将为您解决问题。</p>
+<p><strong>提示：</strong> <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/products/cybertec-postgresql-enterprise-edition/">CYBERTEC PostgreSQL 企业版 (PGEE)</a> 甚至明确禁止 <code>ALTER USER ... SET PASSWORD</code> 以避免日志流中的风险密码。</p>
+<h2 id="6-使用-ALTER-DEFAULT-PRIVILEGES"><a href="#6-使用-ALTER-DEFAULT-PRIVILEGES" class="headerlink" title="6. 使用 ALTER DEFAULT PRIVILEGES"></a>6. 使用 <code>ALTER DEFAULT PRIVILEGES</code></h2><p>假设您正在运行一个应用程序。您的数据库包含 200 个表。权限是为无数用户完美设置的。假设我们想要更新这个应用程序，以便执行 DDL 来进行更改。但是如果有人犯了错误怎么办？如果权限设置不正确怎么办？小问题将开始积累。</p>
+<p>此问题的解决方案是 <code>ALTER DEFAULT PRIVILEGES</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">demo=# \h ALTER DEFAULT</span><br><span class="line">Command: ALTER DEFAULT PRIVILEGES</span><br><span class="line">Description: define default access privileges</span><br><span class="line">Syntax:</span><br><span class="line">ALTER DEFAULT PRIVILEGES</span><br><span class="line">[ FOR &#123; ROLE | USER &#125; target_role [, ...] ]</span><br><span class="line">[ IN SCHEMA schema_name [, ...] ]</span><br><span class="line">abbreviated_grant_or_revoke</span><br><span class="line"></span><br><span class="line">where abbreviated_grant_or_revoke is one of:</span><br><span class="line"></span><br><span class="line">GRANT &#123; &#123; SELECT | INSERT | UPDATE | DELETE |</span><br><span class="line">TRUNCATE | REFERENCES | TRIGGER &#125;</span><br><span class="line">[, ...] | ALL [ PRIVILEGES ] &#125;</span><br><span class="line">ON TABLES</span><br><span class="line">TO &#123; [ GROUP ] role_name | PUBLIC &#125; [, ...]</span><br><span class="line">[ WITH GRANT OPTION ]</span><br><span class="line">…</span><br></pre></td></tr></table></figure>
+
+<p>其思想是在创建对象之后不久就定义默认权限。无论何时创建数据库对象，默认权限都会自动生效并为您解决问题。在这种情况下，PostgreSQL 将通过自动设置新对象的权限，大大简化强化过程。</p>
+<p><strong>译者注：</strong> 这里的原文是 <code>The idea is to define default permissions long before objects are created.</code>，可能翻译的不是很准确。</p>
+<h2 id="7-使用-SSL"><a href="#7-使用-SSL" class="headerlink" title="7. 使用 SSL"></a>7. 使用 SSL</h2><p>SSL 是 PostgreSQL 安全领域中最重要的主题之一。如果您想强化 PostgreSQL 数据库，则无法绕过 SSL。</p>
+<p>PostgreSQL 提供各种级别的 SSL，并允许您加密客户端和服务器之间的连接。通常，我们建议至少使用 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/tls-demystifying-communication-encryption-in-postgresql/">TLS</a> 1.2 以确保足够高的安全级别。</p>
+<p>如果您想了解有关 SSL 的更多信息，并想知道如何设置它，请<a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/setting-up-ssl-authentication-for-postgresql/">查看我们的页面</a>。</p>
+<h2 id="8-安全地编写-SECURITY-DEFINER-函数"><a href="#8-安全地编写-SECURITY-DEFINER-函数" class="headerlink" title="8. 安全地编写 SECURITY DEFINER 函数"></a>8. 安全地编写 <code>SECURITY DEFINER</code> 函数</h2><p>存储过程和服务器端功能通常是一个主要的安全问题。 PostgreSQL 中有两种执行函数的方式：</p>
+<ul>
+<li>以“你是谁”的身份执行函数</li>
+<li>以代码作者身份执行函数</li>
+</ul>
+<p>默认情况下，函数以当前用户身份执行。换句话说：如果您当前是 <code>joe</code> 用户，该函数将作为 <code>joe</code> 运行。但是，有时以函数的作者身份运行代码，从而使用不同的安全设置会很有用。这样，您可以让具有低权限的用户以受控方式执行某些需要提升权限的操作。这样做的方法是在创建函数时使用 <code>SECURITY DEFINER</code> 选项。</p>
+<p>但是强大的工具也很危险，因此您必须仔细定义这些功能。有关详细信息，请阅读我们关于 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/abusing-security-definer-functions/">SECURITY DEFINER 函数</a>的文章。</p>
+<h2 id="9-避免数据库函数中的-SQL-注入"><a href="#9-避免数据库函数中的-SQL-注入" class="headerlink" title="9. 避免数据库函数中的 SQL 注入"></a>9. 避免数据库函数中的 SQL 注入</h2><p>SQL 注入不仅是应用程序（客户端）端的问题，它还会影响数据库中的过程代码。如果您想避免 SQL 注入，我们建议您继续阅读并了解更多信息。</p>
+<p>考虑这个愚蠢的函数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">CREATE FUNCTION tally(table_name text) RETURNS bigint</span><br><span class="line">LANGUAGE plpgsql AS</span><br><span class="line">$$DECLARE</span><br><span class="line">result bigint;</span><br><span class="line">BEGIN</span><br><span class="line">EXECUTE &#x27;SELECT count(*) FROM &#x27; || table_name</span><br><span class="line">INTO result;</span><br><span class="line">RETURN result;</span><br><span class="line">END;$$;</span><br></pre></td></tr></table></figure>
+
+<p>现在，任何可以控制提供给函数的参数的攻击者都可以发起拒绝服务攻击：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> tally(<span class="string">&#x27;generate_series(1, 100000000000000000000)&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>或者他们可以找出您帐户上的金额：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> tally(<span class="string">&#x27;generate_series(1, 1000000)</span></span><br><span class="line"><span class="string">UNION</span></span><br><span class="line"><span class="string">SELECT amount::bigint FROM account WHERE name = &#x27;&#x27;loser&#x27;&#x27;&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>使用通常的安全预防措施：</p>
+<ul>
+<li>仅在必要时使用动态 SQL。</li>
+<li>仅在必要时将字符串数据类型用于参数。</li>
+<li>始终使用 <code>format()</code> 来构造 SQL 查询字符串。</li>
+</ul>
+<h2 id="10-尽可能限制超级用户访问"><a href="#10-尽可能限制超级用户访问" class="headerlink" title="10. 尽可能限制超级用户访问"></a>10. 尽可能限制超级用户访问</h2><p>如果对安全关键系统具有管理访问权限的人数尽可能少，那总是好的。您想要走多远取决于您的安全需求：</p>
+<ul>
+<li>加固数据库机器，以便除数据库管理员之外的任何人都无法获得对机器的 shell 访问权限。任何作为 PostgreSQL 操作系统用户具有 shell 访问权限的人都可以完全控制数据库。</li>
+<li>为管理员使用个性化的超级用户帐户，以便您可以在需要时快速撤销对管理员的访问权限。</li>
+<li>仅在真正需要的地方使用超级用户。例如，复制连接或备份不需要超级用户。</li>
+<li>使用 <code>pg_hba.conf</code> 中的超级用户帐户限制访问。理想情况下，只允许本地连接。如果您不想这样做，请限制对管理员个人系统的访问。</li>
+<li>对于非常高的安全要求，请确保没有人知道超级用户密码，并将其放在至少只能由两个人打开的保险箱中。每次使用后更改密码。</li>
+</ul>
+<p>一般来说，使用超级用户是危险的。</p>
+<p>建议：</p>
+<ul>
+<li>永远不要以超级用户身份运行应用程序</li>
+<li>尽可能限制超级用户</li>
+</ul>
+<h2 id="11-定期更新您的-PostgreSQL-数据库"><a href="#11-定期更新您的-PostgreSQL-数据库" class="headerlink" title="11. 定期更新您的 PostgreSQL 数据库"></a>11. 定期更新您的 PostgreSQL 数据库</h2><p>最后，定期更新 PostgreSQL 很重要。请记住，大多数次要版本更新（例如 13.0 -&gt; 13.2 等）都带有与安全相关的更新，这些更新对于减少系统的攻击面至关重要。</p>
+<p>PostgreSQL 会定期提供安全更新，我们建议您尽快应用它们。</p>
+<h2 id="12-加密整个服务器：PostgreSQL-TDE"><a href="#12-加密整个服务器：PostgreSQL-TDE" class="headerlink" title="12. 加密整个服务器：PostgreSQL TDE"></a>12. 加密整个服务器：PostgreSQL TDE</h2><p>到目前为止，您已经学习了如何加密客户端和服务器之间的连接。但是，有时需要对包括存储在内的整个服务器进行加密。 PostgreSQL TDE 正是这样做的：</p>
+<img src="/2021/08/postgresql-security-things-to-avoid-in-real-life/tde-architecture.png" class="">
+
+<p>要了解更多信息，请查看我们关于 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/products/postgresql-transparent-data-encryption/">PostgreSQL TDE</a> 的网站。我们提供完全加密的堆栈来帮助您实现最大的 PostgreSQL 安全性。TDE 可免费使用（开源）。</p>
+<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>物化视图是包括 PostgreSQL 在内的大多数数据库的重要特性。它们可以帮助加速大型计算——或者至少可以缓存它们。</p>
+<p>如果您想确保<a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/pg_timetable-asynchronous-chain-execution/">您的物化视图是最新的</a>，如果您现在想阅读更多关于 PostgreSQL 的信息，请查看我们关于 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/?s=pg_timetable">pg_timetable 的博客</a>，该博客向您展示了如何在 PostgreSQL 中安排作业。为什么 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/products/pg_timetable/">pg_timetable</a> 如此有用？我们的调度程序确保相同的作业不能重叠，但如果相同的作业已经在运行，就不再执行。当您运行长作业时，这一点非常重要——特别是如果您想要使用物化视图的话。</p>
+<h2 id="译者注"><a href="#译者注" class="headerlink" title="译者注"></a>译者注</h2><ul>
+<li>本文本文翻译自 Hans-Jürgen Schönig 的 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/postgresql-security-things-to-avoid-in-real-life/">POSTGRESQL SECURITY: THINGS TO AVOID IN REAL LIFE</a>。</li>
+</ul>
+<div class="just-for-fun">
+笑林广记 - 糊涂
+
+<p>一青盲人涉讼，自诉眼瞎。<br>官曰：“你明明一双清白眼，如何诈瞎。”<br>答曰：“老爷看小人是清白的，小人看老爷却是糊涂得紧。”</p>
+</div>
+
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/postgresql-grouping-sets-rollup-cube/" rel="bookmark">【译】PostgreSQL 分组集：ROLLUP & CUBE</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/" rel="bookmark">【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/understanding-lateral-joins-in-postgresql/" rel="bookmark">【译】理解 PostgreSQL 中的 LATERAL 连接</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/turning-query-results-into-json-in-postgresql/" rel="bookmark">【译】PostgreSQL 查询结果转为 JSON 格式</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/" title="【译】PostgreSQL 安全：现实中需要避免的事情">https://blog.japinli.top/2021/08/postgresql-security-things-to-avoid-in-real-life/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E7%BF%BB%E8%AF%91/" rel="tag"># 翻译</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/08/golang-cron/" rel="prev" title="Golang cron v3 定时任务">
+                  <i class="fa fa-chevron-left"></i> Golang cron v3 定时任务
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/08/boyer-moore-majority-voting-algorithm/" rel="next" title="【译】Boyer-Moore 多数派投票算法">
+                  【译】Boyer-Moore 多数派投票算法 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

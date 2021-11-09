@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="Go 语言的 net&#x2F;http 包为我们提供了一个 HTTP 客户端和服务器的实现，通过它我们可以快速的搭建一个 HTTP 服务器，本文记录一下在编写 HTTP 服务器时关于设置 HTTP 响应头遇到的一个小问题。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Go 语言 http 响应头设置">
+<meta property="og:url" content="https://blog.japinli.top/2020/09/go-http-response-writer/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="Go 语言的 net&#x2F;http 包为我们提供了一个 HTTP 客户端和服务器的实现，通过它我们可以快速的搭建一个 HTTP 服务器，本文记录一下在编写 HTTP 服务器时关于设置 HTTP 响应头遇到的一个小问题。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-09-14T13:21:49.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.329Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="Go">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/09/go-http-response-writer/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/09/go-http-response-writer/","path":"2020/09/go-http-response-writer/","title":"Go 语言 http 响应头设置"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Go 语言 http 响应头设置 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%8F%8F%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">问题描述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">2.</span> <span class="nav-text">解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/09/go-http-response-writer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Go 语言 http 响应头设置
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-09-14 21:21:49" itemprop="dateCreated datePublished" datetime="2020-09-14T21:21:49+08:00">2020-09-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E7%BC%96%E7%A8%8B/" itemprop="url" rel="index"><span itemprop="name">编程</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>Go 语言的 <code>net/http</code> 包为我们提供了一个 HTTP 客户端和服务器的实现，通过它我们可以快速的搭建一个 HTTP 服务器，本文记录一下在编写 HTTP 服务器时关于设置 HTTP 响应头遇到的一个小问题。</p>
+<span id="more"></span>
+
+<h2 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h2><p>问题的表象是通过 <code>w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)</code> （<code>w</code> 为 <code>http.ResponseWriter</code> 对象）无法设置响应头的 <code>Content-Type</code> 为 <code>application/json</code>。下面是是一个简单的示例：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">        <span class="string">&quot;encoding/json&quot;</span></span><br><span class="line">        <span class="string">&quot;net/http&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Status <span class="keyword">struct</span> &#123;</span><br><span class="line">        Code    <span class="keyword">int</span></span><br><span class="line">        Message <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">hello</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">        res := Status&#123;Code: <span class="number">200</span>, Message: <span class="string">&quot;hello world!&quot;</span>&#125;</span><br><span class="line"></span><br><span class="line">        w.WriteHeader(<span class="number">200</span>)</span><br><span class="line">        w.Header().Set(<span class="string">&quot;Content-Type&quot;</span>, <span class="string">&quot;application/json&quot;</span>)</span><br><span class="line"></span><br><span class="line">        json.NewEncoder(w).Encode(&amp;res)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">        http.HandleFunc(<span class="string">&quot;/hello&quot;</span>, hello)</span><br><span class="line"></span><br><span class="line">        http.ListenAndServe(<span class="string">&quot;:8080&quot;</span>, <span class="literal">nil</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编译并运行上面的程序，随后我们去访问可以看到如下所示的响应。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ curl -i http://localhost:8080/hello</span><br><span class="line">HTTP/1.1 200 OK</span><br><span class="line">Date: Mon, 14 Sep 2020 09:40:11 GMT</span><br><span class="line">Content-Length: 38</span><br><span class="line">Content-Type: text/plain; charset=utf-8</span><br><span class="line"></span><br><span class="line">&#123;&quot;Code&quot;:200,&quot;Message&quot;:&quot;hello world!&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从响应的结果可以看到，<code>Content-Type</code> 并没有被设置为我想要的 <code>application/json</code>。</p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>通过测试我发现，经过如下修改，就可以正确的设置 HTTP 响应头。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/main.go b/main.go</span></span><br><span class="line"><span class="comment">index 8bec8e3..459fb77 100644</span></span><br><span class="line"><span class="comment">--- a/main.go</span></span><br><span class="line"><span class="comment">+++ b/main.go</span></span><br><span class="line"><span class="meta">@@ -13,8 +13,8 @@</span> type Status struct &#123;</span><br><span class="line"> func hello(w http.ResponseWriter, r *http.Request) &#123;</span><br><span class="line">        res := Status&#123;Code: 200, Message: &quot;hello world!&quot;&#125;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-       w.WriteHeader(200)</span></span><br><span class="line">        w.Header().Set(&quot;Content-Type&quot;, &quot;application/json&quot;)</span><br><span class="line"><span class="addition">+       w.WriteHeader(200)</span></span><br><span class="line"></span><br><span class="line">        json.NewEncoder(w).Encode(&amp;res)</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是测试输出。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ curl -i http://localhost:8080/hello</span><br><span class="line">HTTP/1.1 200 OK</span><br><span class="line">Content-Type: application/json</span><br><span class="line">Date: Mon, 14 Sep 2020 09:48:52 GMT</span><br><span class="line">Content-Length: 38</span><br><span class="line"></span><br><span class="line">&#123;&quot;Code&quot;:200,&quot;Message&quot;:&quot;hello world!&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是为什么呢？通过查看 <a target="_blank" rel="noopener" href="https://github.com/golang/go/blob/master/src/net/http/server.go#L100">Go 语言的源码</a>，发现了如下内容：</p>
+<blockquote>
+<p> type ResponseWriter interface {<br>     // Header returns the header map that will be sent by<br>     // WriteHeader. The Header map also is the mechanism with which<br>     // Handlers can set HTTP trailers.<br>     //<br>     // Changing the header map after a call to WriteHeader (or<br>     // Write) has no effect unless the modified headers are<br>     // trailers.<br>     //<br>     // There are two ways to set Trailers. The preferred way is to<br>     // predeclare in the headers which trailers you will later<br>     // send by setting the “Trailer” header to the names of the<br>     // trailer keys which will come later. In this case, those<br>     // keys of the Header map are treated as if they were<br>     // trailers. See the example. The second way, for trailer<br>     // keys not known to the Handler until after the first Write,<br>     // is to prefix the Header map keys with the TrailerPrefix<br>     // constant value. See TrailerPrefix.<br>     //<br>     // To suppress automatic response headers (such as “Date”), set<br>     // their value to nil.<br>     Header() Header<br> …<br>}</p>
+</blockquote>
+<p>从注释我们可以看到，在调用了 <code>WriteHeader()</code> 或者是 <code>Write()</code> 函数之后去改变响应头（trailers 响应头除外）是没有效果的。<br>其实，在 Go 的文档里面也出现了上述注释，只是在读文档的时候不够仔细，导致忽略了这一点。</p>
+<p>关于 HTTP Trailers 的相关说明可以参考<a target="_blank" rel="noopener" href="https://www.geeksforgeeks.org/http-headers-trailer/">这里</a>。</p>
+<p>我们从源码角度来做简要分析。首先，我们看看 <code>ResponseWriter</code> 是如何获取 <code>Header</code> 结构的，如下所示。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(w *response)</span> <span class="title">Header</span><span class="params">()</span> <span class="title">Header</span></span> &#123;</span><br><span class="line">        <span class="keyword">if</span> w.cw.header == <span class="literal">nil</span> &amp;&amp; w.wroteHeader &amp;&amp; !w.cw.wroteHeader &#123;</span><br><span class="line">                <span class="comment">// Accessing the header between logically writing it</span></span><br><span class="line">                <span class="comment">// and physically writing it means we need to allocate</span></span><br><span class="line">                <span class="comment">// a clone to snapshot the logically written state.</span></span><br><span class="line">                w.cw.header = w.handlerHeader.Clone()</span><br><span class="line">        &#125;</span><br><span class="line">        w.calledHeader = <span class="literal">true</span></span><br><span class="line">        <span class="keyword">return</span> w.handlerHeader</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的代码可以看出，我们在调用 <code>w.Header()</code> 函数获取的其实是 <code>w.handlerHeader</code>，因此，我们添加的 HTTP 响应头也是存放在该结构中的。接着我们在来看看 <code>w.WriteHeader()</code> 函数是如何实现的。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">func (w *response) WriteHeader(code int) &#123;</span><br><span class="line">        if w.conn.hijacked() &#123;</span><br><span class="line">                caller := relevantCaller()</span><br><span class="line">                w.conn.server.logf(&quot;http: response.WriteHeader on hijacked connection from %s (%s:%d)&quot;, caller.Function, path.Base(caller.File), caller.Line)</span><br><span class="line">                return</span><br><span class="line">        &#125;</span><br><span class="line">        if w.wroteHeader &#123;</span><br><span class="line">                caller := relevantCaller()</span><br><span class="line">                w.conn.server.logf(&quot;http: superfluous response.WriteHeader call from %s (%s:%d)&quot;, caller.Function, path.Base(caller.File), caller.Line)</span><br><span class="line">                return</span><br><span class="line">        &#125;</span><br><span class="line">        checkWriteHeaderCode(code)</span><br><span class="line">        w.wroteHeader = true</span><br><span class="line">        w.status = code</span><br><span class="line"></span><br><span class="line">        if w.calledHeader &amp;&amp; w.cw.header == nil &#123;</span><br><span class="line">                w.cw.header = w.handlerHeader.Clone()</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        if cl := w.handlerHeader.get(&quot;Content-Length&quot;); cl != &quot;&quot; &#123;</span><br><span class="line">                v, err := strconv.ParseInt(cl, 10, 64)</span><br><span class="line">                if err == nil &amp;&amp; v &gt;= 0 &#123;</span><br><span class="line">                        w.contentLength = v</span><br><span class="line">                &#125; else &#123;</span><br><span class="line">                        w.conn.server.logf(&quot;http: invalid Content-Length of %q&quot;, cl)</span><br><span class="line">                        w.handlerHeader.Del(&quot;Content-Length&quot;)</span><br><span class="line">                &#125;</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们注意到，<code>w.WriteHeader()</code> 将 <code>w.handlerHeader</code> 中的 HTTP 响应头克隆到了 <code>w.cw.header</code> 中（其中 <code>cw</code> 为 <code>*chunkWriter</code> 类型）。最终，<code>net/http</code> 是通过 <code>func (cw *chunkWriter) writeHeader(p []byte)</code>  函数来完成响应头的处理的，而这其中关于 HTTP 响应头，除了 Trailer 类型的响应头外，都是从 <code>cw.header</code>  中获取的，因此，在调用 <code>w.WriteHeader()</code> 之后，我们设置的非 Trailer 响应头是无效的。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://github.com/golang/go/blob/master/src/net/http/server.go">https://github.com/golang/go/blob/master/src/net/http/server.go</a><br>[2] <a target="_blank" rel="noopener" href="https://golang.org/pkg/net/http/">https://golang.org/pkg/net/http/</a><br>[3] <a target="_blank" rel="noopener" href="https://www.geeksforgeeks.org/http-headers-trailer/">https://www.geeksforgeeks.org/http-headers-trailer/</a></p>
+<div class="just-for-fun">
+笑林广记 - 原不识字
+
+<p>有延师教其子者，师至，主人曰：“家贫，多失礼于先生，奈何！”<br>师曰：“何言之谦，仆固无不可者。”<br>主人曰：“蔬食，可乎？”<br>曰：“可。”<br>主人曰：“家无藏获，凡洒扫庭除，启闭门户，劳先生为之，可乎？”<br>曰：“可。”<br>主人曰：“或家人妇子欲买零星杂物，屈先生一行，可乎？”<br>曰：“可。”<br>主人曰：“如此，幸甚！”<br>师曰：“仆亦有一言，愿主人勿讶焉。”<br>主人问何言？<br>师曰：“自愧幼时不学耳！”<br>主人曰：“何言之谦。”<br>师曰：“不敢欺，仆实不识一字。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2020/05/download-go-package/" rel="bookmark">Go 语言软件包下载</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/go-in-action/" rel="bookmark">Go 语言实战</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/golang-access-dm-database/" rel="bookmark">Go 访问达梦数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/golang-cron/" rel="bookmark">Golang cron v3 定时任务</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/09/go-http-response-writer/" title="Go 语言 http 响应头设置">https://blog.japinli.top/2020/09/go-http-response-writer/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Go/" rel="tag"># Go</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/08/postgresql-optimize-setitimer-system-calls/" rel="prev" title="PostgreSQL 优化 setitimer 系统调用">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 优化 setitimer 系统调用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/10/postgresql-palloc0/" rel="next" title="PostgreSQL palloc0 函数优化">
+                  PostgreSQL palloc0 函数优化 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

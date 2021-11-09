@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="当我们在使用 PostgreSQL 数据库并启用 statement_timeout 时，可以看到 setitimer() 函数的调用次数明显偏多。本文分析了 Thomas Munro 给出的关于 setitimer() 函数的优化。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 优化 setitimer 系统调用">
+<meta property="og:url" content="https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="当我们在使用 PostgreSQL 数据库并启用 statement_timeout 时，可以看到 setitimer() 函数的调用次数明显偏多。本文分析了 Thomas Munro 给出的关于 setitimer() 函数的优化。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-08-31T14:46:59.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.441Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/","path":"2020/08/postgresql-optimize-setitimer-system-calls/","title":"PostgreSQL 优化 setitimer 系统调用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 优化 setitimer 系统调用 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E5%87%86%E6%B5%8B%E8%AF%95"><span class="nav-number">1.</span> <span class="nav-text">基准测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A1%A5%E4%B8%81%E6%B5%8B%E8%AF%95"><span class="nav-number">2.</span> <span class="nav-text">补丁测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0"><span class="nav-number">4.</span> <span class="nav-text">更新</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 优化 setitimer 系统调用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-08-31 22:46:59" itemprop="dateCreated datePublished" datetime="2020-08-31T22:46:59+08:00">2020-08-31</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>当我们在使用 PostgreSQL 数据库并启用 <code>statement_timeout</code> 时，可以看到 <code>setitimer()</code> 函数的调用次数明显偏多。本文分析了 <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/CA%2BhUKG%2Bo6pbuHBJSGnud%3DTadsuXySWA7CCcPgCt2QE9F6_4iHQ%40mail.gmail.com">Thomas Munro 给出的关于 <code>setitimer()</code> 函数的优化</a>。</p>
+<span id="more"></span>
+
+<h2 id="基准测试"><a href="#基准测试" class="headerlink" title="基准测试"></a>基准测试</h2><p>为了方便分析，我们首先需要有一个基本的基准测试。我们使用下面的命令初始化数据库：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ initdb -D pgdata</span><br><span class="line">$ pg_ctl -l log -D pgdata start</span><br><span class="line">$ createdb testdb</span><br><span class="line">$ pgbench -i -s 10 testdb</span><br></pre></td></tr></table></figure>
+
+<p>接着修改配置 <code>statement_timeout</code>，将其设置为 <code>10s</code>，可以使用如下命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ psql postgres -c &quot;ALTER SYSTEM SET statement_timeout TO &#x27;10s&#x27;&quot;</span><br><span class="line">$ pg_ctl -l log -D pgdata start</span><br></pre></td></tr></table></figure>
+
+<p>接着我们使用 <code>pgbench -T60 -Mprepared -S testdb</code> 来进行测试，我们在另一个终端中通过 <code>strace</code> 来分析系统调用，可以得到如下结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ strace -c -p 31561</span><br><span class="line">strace: Process 31561 attached</span><br><span class="line">% time     seconds  usecs/call     calls    errors syscall</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line"> 41.11    0.334739           1    424545           sendto</span><br><span class="line"> 26.54    0.216100           1    424449           recvfrom</span><br><span class="line"> 24.33    0.198094           0    424448           setitimer</span><br><span class="line">  8.02    0.065268           1     71339           pread64</span><br><span class="line">  0.00    0.000000           0         1           epoll_ctl</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line">100.00    0.814201               1344782           total</span><br></pre></td></tr></table></figure>
+
+<p>从结果可以看到，整个测试过程中 <code>setitimer()</code> 系统调用调用了 424448 次。</p>
+<h2 id="补丁测试"><a href="#补丁测试" class="headerlink" title="补丁测试"></a>补丁测试</h2><p>接下来，我们将 patch 应用到 PostgreSQL 中，重新编译，并进行测试，其结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ strace -c -p 1375</span><br><span class="line">% time     seconds  usecs/call     calls    errors syscall</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line"> 54.16    0.351467           1    520065           sendto</span><br><span class="line"> 35.17    0.228279           0    519963           recvfrom</span><br><span class="line"> 10.67    0.069251           1     88036           pread64</span><br><span class="line">  0.00    0.000001           0         6           rt_sigreturn</span><br><span class="line">  0.00    0.000000           0         5           setitimer</span><br><span class="line">  0.00    0.000000           0         1           epoll_ctl</span><br><span class="line">------ ----------- ----------- --------- --------- ----------------</span><br><span class="line">100.00    0.648998               1128076           total</span><br></pre></td></tr></table></figure>
+
+<p>从结果可以看到，此时的 <code>setitimer()</code> 系统调用仅调用了 5 次，远比之前的次数低。从最终的统计结果来看，应用了补丁程序的 PostgreSQL 整个测试过程中的系统调用比原有的系统调用降低了约 16%。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>这个补丁程序的思路其实非常简单，实现起来也不复杂，整个 diff 文件不足 100 行。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/utils/misc/timeout.c b/src/backend/utils/misc/timeout.c</span></span><br><span class="line"><span class="comment">index f1c9518b0c..b5027815db 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/misc/timeout.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/misc/timeout.c</span></span><br><span class="line"><span class="meta">@@ -51,6 +51,13 @@</span> static bool all_timeouts_initialized = false;</span><br><span class="line"> static volatile int num_active_timeouts = 0;</span><br><span class="line"> static timeout_params *volatile active_timeouts[MAX_TIMEOUTS];</span><br><span class="line"></span><br><span class="line"><span class="addition">+/*</span></span><br><span class="line"><span class="addition">+ * State used to avoid installing a new timer interrupt when the previous one</span></span><br><span class="line"><span class="addition">+ * hasn&#x27;t fired yet, but isn&#x27;t too late.</span></span><br><span class="line"><span class="addition">+ */</span></span><br><span class="line"><span class="addition">+static TimestampTz sigalrm_due_at = PG_INT64_MAX;</span></span><br><span class="line"><span class="addition">+static volatile sig_atomic_t sigalrm_delivered = false;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> /*</span><br><span class="line">  * Flag controlling whether the signal handler is allowed to do anything.</span><br><span class="line">  * We leave this &quot;false&quot; when we&#x27;re not expecting interrupts, just in case.</span><br><span class="line"><span class="meta">@@ -195,12 +202,13 @@</span> schedule_alarm(TimestampTz now)</span><br><span class="line"> 		struct itimerval timeval;</span><br><span class="line"> 		long		secs;</span><br><span class="line"> 		int			usecs;</span><br><span class="line"><span class="addition">+		TimestampTz	nearest_timeout;</span></span><br><span class="line"></span><br><span class="line"> 		MemSet(&amp;timeval, 0, sizeof(struct itimerval));</span><br><span class="line"></span><br><span class="line"> 		/* Get the time remaining till the nearest pending timeout */</span><br><span class="line"><span class="deletion">-		TimestampDifference(now, active_timeouts[0]-&gt;fin_time,</span></span><br><span class="line"><span class="deletion">-							&amp;secs, &amp;usecs);</span></span><br><span class="line"><span class="addition">+		nearest_timeout = active_timeouts[0]-&gt;fin_time;</span></span><br><span class="line"><span class="addition">+		TimestampDifference(now, nearest_timeout, &amp;secs, &amp;usecs);</span></span><br><span class="line"></span><br><span class="line"> 		/*</span><br><span class="line"> 		 * It&#x27;s possible that the difference is less than a microsecond;</span><br><span class="line"><span class="meta">@@ -244,9 +252,18 @@</span> schedule_alarm(TimestampTz now)</span><br><span class="line"> 		 */</span><br><span class="line"> 		enable_alarm();</span><br><span class="line"></span><br><span class="line"><span class="addition">+		/*</span></span><br><span class="line"><span class="addition">+		 * Try to avoid having to set the interval timer, if we already know</span></span><br><span class="line"><span class="addition">+		 * that there is an undelivered signal due at the same time or sooner.</span></span><br><span class="line"><span class="addition">+		 */</span></span><br><span class="line"><span class="addition">+		if (nearest_timeout &gt;= sigalrm_due_at &amp;&amp; !sigalrm_delivered)</span></span><br><span class="line"><span class="addition">+			return;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 		/* Set the alarm timer */</span><br><span class="line"> 		if (setitimer(ITIMER_REAL, &amp;timeval, NULL) != 0)</span><br><span class="line"> 			elog(FATAL, &quot;could not enable SIGALRM timer: %m&quot;);</span><br><span class="line"><span class="addition">+		sigalrm_due_at = nearest_timeout;</span></span><br><span class="line"><span class="addition">+		sigalrm_delivered = false;</span></span><br><span class="line"> 	&#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -266,6 +283,8 @@</span> handle_sig_alarm(SIGNAL_ARGS)</span><br><span class="line"> &#123;</span><br><span class="line"> 	int			save_errno = errno;</span><br><span class="line"></span><br><span class="line"><span class="addition">+	sigalrm_delivered = true;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 	/*</span><br><span class="line"> 	 * Bump the holdoff counter, to make sure nothing we call will process</span><br><span class="line"> 	 * interrupts directly. No timeout handler should do that, but these</span><br><span class="line"><span class="meta">@@ -591,8 +610,9 @@</span> disable_timeouts(const DisableTimeoutParams *timeouts, int count)</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> /*</span><br><span class="line"><span class="deletion">- * Disable SIGALRM and remove all timeouts from the active list,</span></span><br><span class="line"><span class="deletion">- * and optionally reset their timeout indicators.</span></span><br><span class="line"><span class="addition">+ * Remove all timeouts from the active list, and optionally reset their timeout</span></span><br><span class="line"><span class="addition">+ * indicators.  Leave any existing itimer installed, because it may allow us to</span></span><br><span class="line"><span class="addition">+ * avoid having to set it again soon.</span></span><br><span class="line">  */</span><br><span class="line"> void</span><br><span class="line"> disable_all_timeouts(bool keep_indicators)</span><br><span class="line"><span class="meta">@@ -601,20 +621,6 @@</span> disable_all_timeouts(bool keep_indicators)</span><br><span class="line"></span><br><span class="line"> 	disable_alarm();</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	/*</span></span><br><span class="line"><span class="deletion">-	 * Only bother to reset the timer if we think it&#x27;s active.  We could just</span></span><br><span class="line"><span class="deletion">-	 * let the interrupt happen anyway, but it&#x27;s probably a bit cheaper to do</span></span><br><span class="line"><span class="deletion">-	 * setitimer() than to let the useless interrupt happen.</span></span><br><span class="line"><span class="deletion">-	 */</span></span><br><span class="line"><span class="deletion">-	if (num_active_timeouts &gt; 0)</span></span><br><span class="line"><span class="deletion">-	&#123;</span></span><br><span class="line"><span class="deletion">-		struct itimerval timeval;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-		MemSet(&amp;timeval, 0, sizeof(struct itimerval));</span></span><br><span class="line"><span class="deletion">-		if (setitimer(ITIMER_REAL, &amp;timeval, NULL) != 0)</span></span><br><span class="line"><span class="deletion">-			elog(FATAL, &quot;could not disable SIGALRM timer: %m&quot;);</span></span><br><span class="line"><span class="deletion">-	&#125;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"> 	num_active_timeouts = 0;</span><br><span class="line"></span><br><span class="line"> 	for (i = 0; i &lt; MAX_TIMEOUTS; i++)</span><br></pre></td></tr></table></figure>
+
+<p>其基本思想是通过 alarm 来取代频繁地调用 <code>setitimer()</code> 函数，而不是针对每个 timeout 都去调用 <code>setitimer()</code> 函数，这真的是将性能挖掘到了极限啊！</p>
+<p>变量 <code>sigalrm_due_at</code> 记录了最近一个定时器的到期时间，<code>sigalrm_delivered</code> 则记录是否已经触发了 sigalrm 信号。当最近的定时器的超时时间大于或等于 <code>sigalrm_due_at</code> 并且不存在没有交付的定时器时，它将不会对其调用 <code>setitimer()</code> 来设置定时器。</p>
+<h2 id="更新"><a href="#更新" class="headerlink" title="更新"></a>更新</h2><ul>
+<li><strong>2020-11-21</strong> - 最近该功能在被 Review 的时候发现一个问题，由于我们仅设置了最近的一个 timeout，那么当 <code>handle_sig_alarm()</code> 被中断时，可能出现后续的 timeout 无法正常工作，因此我们需要在故障恢复的时候重新调用 <code>setitimer()</code> 函数设置 timeout，<a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/2B9BB40C-DDEA-4CDB-B37E-C2738E739416%40hotmail.com">详细实现</a>。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/" title="PostgreSQL 优化 setitimer 系统调用">https://blog.japinli.top/2020/08/postgresql-optimize-setitimer-system-calls/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/08/next-8-0-0-recent-posts/" rel="prev" title="Hexo NexT (v8.x) 主题添加近期文章">
+                  <i class="fa fa-chevron-left"></i> Hexo NexT (v8.x) 主题添加近期文章
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/09/go-http-response-writer/" rel="next" title="Go 语言 http 响应头设置">
+                  Go 语言 http 响应头设置 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

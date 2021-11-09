@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 在插入数据的时候除了维护用户的属性列外，还有几个隐藏的系统属性列，如 ctid、xmin 和 xmax 等。如下图所示：   从上图中我们可以看到，系统属性列其编号（即 attnum ）为负数，而用户自定义的属性列其编号则为正数（由 1 开始）。本文将介绍如何在 PostgreSQL 中添加自定义系统属性。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 系统属性添加">
+<meta property="og:url" content="https://blog.japinli.top/2019/08/postgresql-system-attribute/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 在插入数据的时候除了维护用户的属性列外，还有几个隐藏的系统属性列，如 ctid、xmin 和 xmax 等。如下图所示：   从上图中我们可以看到，系统属性列其编号（即 attnum ）为负数，而用户自定义的属性列其编号则为正数（由 1 开始）。本文将介绍如何在 PostgreSQL 中添加自定义系统属性。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2019/08/postgresql-system-attribute/sysattr.png">
+<meta property="og:image" content="https://blog.japinli.top/2019/08/postgresql-system-attribute/result.png">
+<meta property="article:published_time" content="2019-08-30T14:51:05.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.450Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2019/08/postgresql-system-attribute/sysattr.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2019/08/postgresql-system-attribute/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2019/08/postgresql-system-attribute/","path":"2019/08/postgresql-system-attribute/","title":"PostgreSQL 系统属性添加"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 系统属性添加 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B1%9E%E6%80%A7%E5%88%97"><span class="nav-number">1.</span> <span class="nav-text">属性列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E5%B1%9E%E6%80%A7"><span class="nav-number">2.</span> <span class="nav-text">系统属性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E7%B3%BB%E7%BB%9F%E5%B1%9E%E6%80%A7%E5%88%97"><span class="nav-number">3.</span> <span class="nav-text">创建系统属性列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2019/08/postgresql-system-attribute/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 系统属性添加
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-08-30 22:51:05" itemprop="dateCreated datePublished" datetime="2019-08-30T22:51:05+08:00">2019-08-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 在插入数据的时候除了维护用户的属性列外，还有几个隐藏的系统属性列，如 <code>ctid</code>、<code>xmin</code> 和 <code>xmax</code> 等。如下图所示：</p>
+<img src="/2019/08/postgresql-system-attribute/sysattr.png" class="" title="PostgreSQL 系统属性">
+
+<p>从上图中我们可以看到，系统属性列其编号（即 <code>attnum</code> ）为负数，而用户自定义的属性列其编号则为正数（由 1 开始）。本文将介绍如何在 PostgreSQL 中添加自定义系统属性。</p>
+<span id="more"></span>
+
+<h2 id="属性列"><a href="#属性列" class="headerlink" title="属性列"></a>属性列</h2><p>PostgreSQL 为每个属性列都在系统表 <code>pg_attribute</code> 中记录了一个元组，<a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/12/catalog-pg-attribute.html">见官网文档</a>。这里我们需要对几个常见的列有所认识，这也是本文后续要使用到的。</p>
+<style>
+table th:nth-of-type(1) {
+    width: 15%;
+}
+table th:nth-of-type(2) {
+    width: 80%;
+}
+</style>
+
+<table>
+<thead>
+<tr>
+<th>属性列</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>attname</strong></td>
+<td>属性列的名称。</td>
+</tr>
+<tr>
+<td><strong>atttypid</strong></td>
+<td>属性列的数据类型的 OID，引用 <code>pg_type</code> 表的 <code>oid</code> 字段（外键约束）。</td>
+</tr>
+<tr>
+<td><strong>attlen</strong></td>
+<td>此属性列的数据类型长度，<code>pg_type</code> 表的 <code>typlen</code> 字段的副本。</td>
+</tr>
+<tr>
+<td><strong>attnum</strong></td>
+<td>属性列编号数。用户定义的普通属性列的编号从 1 开始。系统属性列列（例如 <code>ctid</code>）则为负数。</td>
+</tr>
+<tr>
+<td><strong>attcacheoff</strong></td>
+<td>存储中始终为 -1，但是当加载到内存中的行描述符时，可能会更新该行描述符以缓存行中属性的偏移量。</td>
+</tr>
+<tr>
+<td><strong>atttypmod</strong></td>
+<td>记录在创建表时提供的特定于类型的数据（例如，<code>varchar</code> 类型的最大长度）。它被传递给特定类型的输入函数和长度强制函数。对于不需要 <code>atttypmod</code> 的类型，该值通常为 -1。</td>
+</tr>
+<tr>
+<td><strong>attbyval</strong></td>
+<td>数据类型是否按值传递，<code>pg_type</code> 表的 <code>typbyval</code> 字段的副本。</td>
+</tr>
+<tr>
+<td><strong>attstorage</strong></td>
+<td>通常是此列类型的 <code>pg_type</code> 表的 <code>typstorage</code> 字段的副本。对于 TOAST-able 数据类型，可以在创建列后更改此值以控制存储策略。</td>
+</tr>
+<tr>
+<td><strong>attalign</strong></td>
+<td>数据类型的对其方式，<code>pg_type</code> 表的 <code>typalign</code> 的副本。<br/><code>c</code> 表示按照 <code>char</code> 类型对齐（即不需要对齐）；<code>s</code> 按 <code>short</code> 类型对齐（在大多数机器上是 2 字节对齐）；<code>i</code> 表示按照 <code>int</code> 类型对齐（通常是 4 字节对齐）；<code>d</code> 表示按照 <code>double</code> 类型对齐（通常是 8 字节对齐，但并不全是）。</td>
+</tr>
+<tr>
+<td><strong>attnotnull</strong></td>
+<td>该属性列是否具有非空约束。</td>
+</tr>
+<tr>
+<td><strong>attislocal</strong></td>
+<td>该属性列在表中是本地定义。请注意，属性列可以是本地定义并同时继承。</td>
+</tr>
+</tbody></table>
+<p>其实整个属性列都是通过 <code>FormData_pg_attribute</code> 结果来记录的，它定义在 <code>src/include/catalog/pg_attribute.h</code> 头文件中。</p>
+<h2 id="系统属性"><a href="#系统属性" class="headerlink" title="系统属性"></a>系统属性</h2><p>PostgreSQL 的系统属性是在 <code>src/backend/catalog/heap.c</code> 源文件中定义的，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a1 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;ctid&quot;</span>&#125;,</span><br><span class="line">    .atttypid = TIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(ItemPointerData),</span><br><span class="line">    .attnum = SelfItemPointerAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">false</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;s&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a2 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;xmin&quot;</span>&#125;,</span><br><span class="line">    .atttypid = XIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(TransactionId),</span><br><span class="line">    .attnum = MinTransactionIdAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">true</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a6 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;tableoid&quot;</span>&#125;,</span><br><span class="line">    .atttypid = OIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(Oid),</span><br><span class="line">    .attnum = TableOidAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">true</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute *SysAtt[] = &#123;&amp;a1, &amp;a2, &amp;a3, &amp;a4, &amp;a5, &amp;a6&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，属性列的编号是通过宏来定义的，例如 <code>TableOidAttributenumber</code>，这些宏的定义在 <code>src/include/access/sysattr.h</code> 头文件中定义，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Attribute numbers for the system-defined attributes</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SelfItemPointerAttributeNumber                  (-1)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MinTransactionIdAttributeNumber                 (-2)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MinCommandIdAttributeNumber                     (-3)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxTransactionIdAttributeNumber                 (-4)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxCommandIdAttributeNumber                     (-5)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TableOidAttributeNumber                         (-6)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> FirstLowInvalidHeapAttributeNumber              (-7)</span></span><br></pre></td></tr></table></figure>
+
+<p><code>atttypid</code> 则是在 <code>src/include/catalog/pg_type.dat</code> 文件中声明，并在编译时由 perl 转换为 <code>pg_type_d.h</code> 文件中的宏定义。</p>
+<p>最终这些系统属性列将被保存在 <code>SysAttr</code> 全局数组中。用户在建立表时，PostgreSQL 通过 <code>AddNewAttributeTuples</code> 函数向 <code>pg_attribute</code> 插入属性列信息，随后在加入系统属性信息，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; natts; i++)</span><br><span class="line">&#123;</span><br><span class="line">    attr = TupleDescAttr(tupdesc, i);</span><br><span class="line">    <span class="comment">/* Fill in the correct relation OID */</span></span><br><span class="line">    attr-&gt;attrelid = new_rel_oid;</span><br><span class="line">    <span class="comment">/* Make sure this is OK, too */</span></span><br><span class="line">    attr-&gt;attstattarget = <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    InsertPgAttributeTuple(rel, attr, indstate);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Add dependency info */</span></span><br><span class="line">    myself.classId = RelationRelationId;</span><br><span class="line">    myself.objectId = new_rel_oid;</span><br><span class="line">    myself.objectSubId = i + <span class="number">1</span>;</span><br><span class="line">    referenced.classId = TypeRelationId;</span><br><span class="line">    referenced.objectId = attr-&gt;atttypid;</span><br><span class="line">    referenced.objectSubId = <span class="number">0</span>;</span><br><span class="line">    recordDependencyOn(&amp;myself, &amp;referenced, DEPENDENCY_NORMAL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* The default collation is pinned, so don&#x27;t bother recording it */</span></span><br><span class="line">    <span class="keyword">if</span> (OidIsValid(attr-&gt;attcollation) &amp;&amp;</span><br><span class="line">        attr-&gt;attcollation != DEFAULT_COLLATION_OID)</span><br><span class="line">    &#123;</span><br><span class="line">        referenced.classId = CollationRelationId;</span><br><span class="line">        referenced.objectId = attr-&gt;attcollation;</span><br><span class="line">        referenced.objectSubId = <span class="number">0</span>;</span><br><span class="line">        recordDependencyOn(&amp;myself, &amp;referenced, DEPENDENCY_NORMAL);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Next we add the system attributes.  Skip OID if rel has no OIDs. Skip</span></span><br><span class="line"><span class="comment"> * all for a view or type relation.  We don&#x27;t bother with making datatype</span></span><br><span class="line"><span class="comment"> * dependencies here, since presumably all these types are pinned.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">if</span> (relkind != RELKIND_VIEW &amp;&amp; relkind != RELKIND_COMPOSITE_TYPE)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; (<span class="keyword">int</span>) lengthof(SysAtt); i++)</span><br><span class="line">    &#123;</span><br><span class="line">        FormData_pg_attribute attStruct;</span><br><span class="line"></span><br><span class="line">        <span class="built_in">memcpy</span>(&amp;attStruct, SysAtt[i], <span class="keyword">sizeof</span>(FormData_pg_attribute));</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Fill in the correct relation OID in the copied tuple */</span></span><br><span class="line">        attStruct.attrelid = new_rel_oid;</span><br><span class="line"></span><br><span class="line">        InsertPgAttributeTuple(rel, &amp;attStruct, indstate);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="创建系统属性列"><a href="#创建系统属性列" class="headerlink" title="创建系统属性列"></a>创建系统属性列</h2><p>现在，我们对系统属性列的工作方式有所了解了，接下来就可以创建自定义系统属性列。首先我们声明一个属性列的编号，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> InfomaskAttributeNumber                         (-7)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> FirstLowInvalidHeapAttributeNumber              (-8)</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>注意；</strong> 不要忘记更新 <code>FirstLowInvalidHeapAttributeNumber</code> 的值。</p>
+<p>接着，我们需要声明属性列，并将其添加到 <code>SysAtt</code> 数组中，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a7 = &#123;</span><br><span class="line">        .attname = &#123;<span class="string">&quot;infomask&quot;</span>&#125;,</span><br><span class="line">        .atttypid = INT2OID,</span><br><span class="line">        .attlen = <span class="keyword">sizeof</span>(uint16),</span><br><span class="line">        .attnum = InfomaskAttributeNumber,</span><br><span class="line">        .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">        .atttypmod = <span class="number">-1</span>,</span><br><span class="line">        .attbyval = <span class="literal">true</span>,</span><br><span class="line">        .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">        .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">        .attnotnull = <span class="literal">true</span>,</span><br><span class="line">        .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute *SysAtt[] = &#123;&amp;a1, &amp;a2, &amp;a3, &amp;a4, &amp;a5, &amp;a6, &amp;a7&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>此时，我们就基本完成了属性列的添加。当然，为了能够查询，我还需要在两个地方做修改，它们均位于 <code>src/backend/access/common/heaptuple.c</code> 文件中。首先在函数 <code>heap_attisnull</code> 中增加我们的属性列：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">heap_attisnull</span><span class="params">(HeapTuple tup, <span class="keyword">int</span> attnum, TupleDesc tupleDesc)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * We allow a NULL tupledesc for relations not expected to have missing</span></span><br><span class="line"><span class="comment">         * values, such as catalog relations and indexes.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        Assert(!tupleDesc || attnum &lt;= tupleDesc-&gt;natts);</span><br><span class="line">        <span class="keyword">if</span> (attnum &gt; (<span class="keyword">int</span>) HeapTupleHeaderGetNatts(tup-&gt;t_data))</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">if</span> (tupleDesc &amp;&amp; TupleDescAttr(tupleDesc, attnum - <span class="number">1</span>)-&gt;atthasmissing)</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (attnum &gt; <span class="number">0</span>)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">if</span> (HeapTupleNoNulls(tup))</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                <span class="keyword">return</span> att_isnull(attnum - <span class="number">1</span>, tup-&gt;t_data-&gt;t_bits);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">switch</span> (attnum)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">case</span> TableOidAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> SelfItemPointerAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MinTransactionIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MinCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxTransactionIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> InfomaskAttributeNumber:</span><br><span class="line">                        <span class="comment">/* these are never null */</span></span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                        elog(ERROR, <span class="string">&quot;invalid attnum: %d&quot;</span>, attnum);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接着，在 <code>heap_getsysattr</code> 函数中添加如何获取 <code>infomask</code> 的值，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">heap_getsysattr</span><span class="params">(HeapTuple tup, <span class="keyword">int</span> attnum, TupleDesc tupleDesc, <span class="keyword">bool</span> *isnull)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        Datum           result;</span><br><span class="line"></span><br><span class="line">        Assert(tup);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Currently, no sys attribute ever reads as NULL. */</span></span><br><span class="line">        *isnull = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">switch</span> (attnum)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">case</span> SelfItemPointerAttributeNumber:</span><br><span class="line">                        <span class="comment">/* pass-by-reference datatype */</span></span><br><span class="line">                        result = PointerGetDatum(&amp;(tup-&gt;t_self));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MinTransactionIdAttributeNumber:</span><br><span class="line">                        result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmin(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MaxTransactionIdAttributeNumber:</span><br><span class="line">                        result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmax(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MinCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxCommandIdAttributeNumber:</span><br><span class="line"></span><br><span class="line">                        <span class="comment">/*</span></span><br><span class="line"><span class="comment">                         * cmin and cmax are now both aliases for the same field, which</span></span><br><span class="line"><span class="comment">                         * can in fact also be a combo command id.  XXX perhaps we should</span></span><br><span class="line"><span class="comment">                         * return the &quot;real&quot; cmin or cmax if possible, that is if we are</span></span><br><span class="line"><span class="comment">                         * inside the originating transaction?</span></span><br><span class="line"><span class="comment">                         */</span></span><br><span class="line">                        result = CommandIdGetDatum(HeapTupleHeaderGetRawCommandId(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> TableOidAttributeNumber:</span><br><span class="line">                        result = ObjectIdGetDatum(tup-&gt;t_tableOid);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> InfomaskAttributeNumber:</span><br><span class="line">                        result = UInt16GetDatum(tup-&gt;t_data-&gt;t_infomask);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                        elog(ERROR, <span class="string">&quot;invalid attnum: %d&quot;</span>, attnum);</span><br><span class="line">                        result = <span class="number">0</span>;                     <span class="comment">/* keep compiler quiet */</span></span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后，编译、初始化并启动数据库，效果如下图所示：</p>
+<img src="/2019/08/postgresql-system-attribute/result.png" class="" title="效果图">
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/12/catalog-pg-attribute.html">https://www.postgresql.org/docs/12/catalog-pg-attribute.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/12/catalog-pg-type.html">https://www.postgresql.org/docs/12/catalog-pg-type.html</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2019/08/postgresql-system-attribute/" title="PostgreSQL 系统属性添加">https://blog.japinli.top/2019/08/postgresql-system-attribute/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2019/08/git-skip-ssl-verify/" rel="prev" title="Git 跳过 SSL 验证">
+                  <i class="fa fa-chevron-left"></i> Git 跳过 SSL 验证
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2019/09/postgresql-database-size-monitor/" rel="next" title="PostgreSQL 数据库大小监控">
+                  PostgreSQL 数据库大小监控 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

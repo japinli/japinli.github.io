@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近发现 PostgreSQL 在更新组合类型构成的 domain 数组将导致数据库崩溃。在写这篇文章的时候这个 bug 已经被修复了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 更新组合类型的 domain 类型数组导致崩溃">
+<meta property="og:url" content="https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近发现 PostgreSQL 在更新组合类型构成的 domain 数组将导致数据库崩溃。在写这篇文章的时候这个 bug 已经被修复了。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/commit.png">
+<meta property="article:published_time" content="2021-10-22T14:14:55.000Z">
+<meta property="article:modified_time" content="2021-10-25T13:57:06.575Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/commit.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/","path":"2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/","title":"PostgreSQL 更新组合类型的 domain 类型数组导致崩溃"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 更新组合类型的 domain 类型数组导致崩溃 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">现象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 更新组合类型的 domain 类型数组导致崩溃
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-10-22 22:14:55" itemprop="dateCreated datePublished" datetime="2021-10-22T22:14:55+08:00">2021-10-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>11k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>10 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近发现 PostgreSQL 在更新组合类型构成的 domain 数组将导致数据库崩溃。在写这篇文章的时候这个 bug 已经被修复了。</p>
+<img src="/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/commit.png" class="">
+
+<span id="more"></span>
+
+<h2 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h2><p>为了复现这个问题，我们使用 <a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=998d060f3db79c6918cb4a547695be150833f9a4">998d060f3d</a> 的代码来进行复现。首先，我们通过下面的 SQL 准备一个基本的测试环境。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> TYPE comptype <span class="keyword">AS</span> (cf1 <span class="type">int</span>, cf2 <span class="type">int</span>);</span><br><span class="line"><span class="keyword">CREATE</span> DOMAIN dcomptype <span class="keyword">AS</span> comptype <span class="keyword">CHECK</span> ((<span class="keyword">value</span>).cf1 <span class="operator">&gt;</span> <span class="number">0</span>);</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> dcomptable (f1 dcomptype[]);</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们向表中插入数据，此时将导致 coredump。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">INSERT</span> <span class="keyword">INTO</span> dcomptable (f1[<span class="number">0</span>].cf1) <span class="keyword">VALUES</span> (<span class="number">4</span>);</span><br><span class="line">server closed the connection unexpectedly</span><br><span class="line">        This probably means the server terminated abnormally</span><br><span class="line">        before <span class="keyword">or</span> while processing the request.</span><br><span class="line">The connection <span class="keyword">to</span> the server was lost. Attempting reset: Failed.</span><br><span class="line"><span class="operator">!</span>?<span class="operator">&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>日志如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">2021-10-20 11:14:22.313 CST [649100] LOG:  server process (PID 649976) was terminated by signal 11: Segmentation fault</span><br><span class="line">2021-10-20 11:14:22.313 CST [649100] DETAIL:  Failed process was running: insert into dcomptable (f1[0].cf1) values (4);</span><br><span class="line">2021-10-20 11:14:22.313 CST [649100] LOG:  terminating any other active server processes</span><br><span class="line">2021-10-20 11:14:22.319 CST [649100] LOG:  all server processes terminated; reinitializing</span><br><span class="line">2021-10-20 11:14:22.340 CST [649984] LOG:  database system was interrupted; last known up at 2021-10-20 11:11:20 CST</span><br><span class="line">2021-10-20 11:14:22.361 CST [649984] LOG:  database system was not properly shut down; automatic recovery in progress</span><br><span class="line">2021-10-20 11:14:22.369 CST [649984] LOG:  redo starts at 0/149E670</span><br><span class="line">2021-10-20 11:14:22.370 CST [649984] LOG:  invalid record length at 0/149E6A8: wanted 24, got 0</span><br><span class="line">2021-10-20 11:14:22.370 CST [649984] LOG:  redo done at 0/149E670 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s</span><br><span class="line">2021-10-20 11:14:22.409 CST [649100] LOG:  database system is ready to accept connections</span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>当程序崩溃后，堆栈信息如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line">(gdb) bt</span><br><span class="line">#0  0x000055c22ce2d24d in pg_detoast_datum (datum=0x0)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/utils/fmgr/fmgr.c:1724</span><br><span class="line">#1  0x000055c22c9f238c in ExecEvalFieldStoreDeForm (state=0x55c22dc94688, op=0x55c22dc94968, econtext=0x55c22dc94388)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/executor/execExprInterp.c:3153</span><br><span class="line">#2  0x000055c22c9ee477 in ExecInterpExpr (state=0x55c22dc94688, econtext=0x55c22dc94388, isnull=0x7ffe292151ef)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/executor/execExprInterp.c:1437</span><br><span class="line">#3  0x000055c22c9ef382 in ExecInterpExprStillValid (state=0x55c22dc94688, econtext=0x55c22dc94388,</span><br><span class="line">    isNull=0x7ffe292151ef) at /home/px/Codes/postgres/Debug/../src/backend/executor/execExprInterp.c:1824</span><br><span class="line">#4  0x000055c22ca4808b in ExecEvalExprSwitchContext (state=0x55c22dc94688, econtext=0x55c22dc94388,</span><br><span class="line">    isNull=0x7ffe292151ef) at /home/px/Codes/postgres/Debug/../src/include/executor/executor.h:339</span><br><span class="line">#5  0x000055c22ca48103 in ExecProject (projInfo=0x55c22dc94680)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/include/executor/executor.h:373</span><br><span class="line">#6  0x000055c22ca48338 in ExecResult (pstate=0x55c22dc94270)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/executor/nodeResult.c:136</span><br><span class="line">#7  0x000055c22ca0505e in ExecProcNodeFirst (node=0x55c22dc94270)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/executor/execProcnode.c:463</span><br><span class="line">#8  0x000055c22ca4030f in ExecProcNode (node=0x55c22dc94270)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/include/executor/executor.h:257</span><br><span class="line">#9  0x000055c22ca4429d in ExecModifyTable (pstate=0x55c22dc93d98)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/executor/nodeModifyTable.c:2425</span><br><span class="line">#10 0x000055c22ca0505e in ExecProcNodeFirst (node=0x55c22dc93d98)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/executor/execProcnode.c:463</span><br><span class="line">#11 0x000055c22c9f903a in ExecProcNode (node=0x55c22dc93d98)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/include/executor/executor.h:257</span><br><span class="line">#12 0x000055c22c9fba73 in ExecutePlan (estate=0x55c22dc93b20, planstate=0x55c22dc93d98, use_parallel_mode=false,</span><br><span class="line">    operation=CMD_INSERT, sendTuples=false, numberTuples=0, direction=ForwardScanDirection, dest=0x55c22dbf5968,</span><br><span class="line">    execute_once=true) at /home/px/Codes/postgres/Debug/../src/backend/executor/execMain.c:1551</span><br><span class="line">#13 0x000055c22c9f9714 in standard_ExecutorRun (queryDesc=0x55c22dbf6a80, direction=ForwardScanDirection, count=0,</span><br><span class="line">    execute_once=true) at /home/px/Codes/postgres/Debug/../src/backend/executor/execMain.c:361</span><br><span class="line">#14 0x000055c22c9f9523 in ExecutorRun (queryDesc=0x55c22dbf6a80, direction=ForwardScanDirection, count=0,</span><br><span class="line">    execute_once=true) at /home/px/Codes/postgres/Debug/../src/backend/executor/execMain.c:305</span><br><span class="line">#15 0x000055c22cc69a81 in ProcessQuery (plan=0x55c22dbf5878,</span><br><span class="line">    sourceText=0x55c22dbce2f0 &quot;insert into dcomptable (f1[0].cf1) values (4);&quot;, params=0x0, queryEnv=0x0,</span><br><span class="line">    dest=0x55c22dbf5968, qc=0x7ffe29215780) at /home/px/Codes/postgres/Debug/../src/backend/tcop/pquery.c:160</span><br><span class="line">#16 0x000055c22cc6b5ba in PortalRunMulti (portal=0x55c22dc358e0, isTopLevel=true, setHoldSnapshot=false,</span><br><span class="line">    dest=0x55c22dbf5968, altdest=0x55c22dbf5968, qc=0x7ffe29215780)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/tcop/pquery.c:1274</span><br><span class="line">#17 0x000055c22cc6aad2 in PortalRun (portal=0x55c22dc358e0, count=9223372036854775807, isTopLevel=true,</span><br><span class="line">    run_once=true, dest=0x55c22dbf5968, altdest=0x55c22dbf5968, qc=0x7ffe29215780)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/tcop/pquery.c:788</span><br><span class="line">#18 0x000055c22cc63cbf in exec_simple_query (</span><br><span class="line">    query_string=0x55c22dbce2f0 &quot;insert into dcomptable (f1[0].cf1) values (4);&quot;)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/tcop/postgres.c:1214</span><br><span class="line">#19 0x000055c22cc688e0 in PostgresMain (dbname=0x55c22dbf9798 &quot;postgres&quot;, username=0x55c22dbc9d98 &quot;px&quot;)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/tcop/postgres.c:4497</span><br><span class="line">#20 0x000055c22cb92c91 in BackendRun (port=0x55c22dbf7560)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/postmaster/postmaster.c:4573</span><br><span class="line">#21 0x000055c22cb92576 in BackendStartup (port=0x55c22dbf7560)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/postmaster/postmaster.c:4301</span><br><span class="line">#22 0x000055c22cb8e5cb in ServerLoop () at /home/px/Codes/postgres/Debug/../src/backend/postmaster/postmaster.c:1801</span><br><span class="line">#23 0x000055c22cb8dd64 in PostmasterMain (argc=1, argv=0x55c22dbc7d40)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/postmaster/postmaster.c:1473</span><br><span class="line">#24 0x000055c22ca82599 in main (argc=1, argv=0x55c22dbc7d40)</span><br><span class="line">    at /home/px/Codes/postgres/Debug/../src/backend/main/main.c:198</span><br></pre></td></tr></table></figure>
+
+<p>这里 <code>pg_detoast_datum()</code> 函数的值为空导致了崩溃，函数 <code>pg_detoast_datum()</code> 由 <code>DatumGetHeapTupleHeader()</code> 调用，如下所示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * heap_deform_tuple needs a HeapTuple not a bare HeapTupleHeader. We</span></span><br><span class="line"><span class="comment"> * set all the fields in the struct just in case.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">Datum       tupDatum = *op-&gt;resvalue;</span><br><span class="line">HeapTupleHeader tuphdr;</span><br><span class="line">HeapTupleData tmptup;</span><br><span class="line"></span><br><span class="line">tuphdr = DatumGetHeapTupleHeader(tupDatum);</span><br><span class="line">tmptup.t_len = HeapTupleHeaderGetDatumLength(tuphdr);</span><br><span class="line">ItemPointerSetInvalid(&amp;(tmptup.t_self));</span><br><span class="line">tmptup.t_tableOid = InvalidOid;</span><br><span class="line">tmptup.t_data = tuphdr;</span><br><span class="line"></span><br><span class="line">heap_deform_tuple(&amp;tmptup, tupDesc,</span><br><span class="line">                  op-&gt;d.fieldstore.values,</span><br><span class="line">                  op-&gt;d.fieldstore.nulls);</span><br></pre></td></tr></table></figure>
+
+<p>然而这里 <code>tupDatum</code> 是空的，因此，为了避免出现崩溃，我们可以在这里加上一个判断，如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/executor/execExprInterp.c b/src/backend/executor/execExprInterp.c</span></span><br><span class="line"><span class="comment">index eb49817cee..1ce14097d8 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/executor/execExprInterp.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/executor/execExprInterp.c</span></span><br><span class="line"><span class="meta">@@ -3150,6 +3150,10 @@</span> ExecEvalFieldStoreDeForm(ExprState *state, ExprEvalStep *op, ExprContext *econte</span><br><span class="line">                HeapTupleHeader tuphdr;</span><br><span class="line">                HeapTupleData tmptup;</span><br><span class="line"></span><br><span class="line"><span class="addition">+               if (DatumGetPointer(tupDatum) == NULL)</span></span><br><span class="line"><span class="addition">+                       return;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line">                tuphdr = DatumGetHeapTupleHeader(tupDatum);</span><br><span class="line">                tmptup.t_len = HeapTupleHeaderGetDatumLength(tuphdr);</span><br><span class="line">                ItemPointerSetInvalid(&amp;(tmptup.t_self));</span><br></pre></td></tr></table></figure>
+
+<p>重新编译执行测试 SQL 语句。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">INSERT</span> <span class="keyword">INTO</span> dcomptable (f1[<span class="number">0</span>].cf1) <span class="keyword">VALUES</span> (<span class="number">4</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">1</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> dcomptable;</span><br><span class="line">       f1</span><br><span class="line"><span class="comment">----------------</span></span><br><span class="line"> [<span class="number">0</span>:<span class="number">0</span>]<span class="operator">=</span>&#123;&quot;(4,)&quot;&#125;</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>似乎一切都正常了，然而真的是这样么？我们来尝试一下更新语句。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># UPDATE dcomptable <span class="keyword">SET</span> f1[<span class="number">0</span>].cf2 <span class="operator">=</span> <span class="number">10</span>;</span><br><span class="line">UPDATE <span class="number">1</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> dcomptable;</span><br><span class="line">       f1</span><br><span class="line"><span class="comment">-----------------</span></span><br><span class="line"> [<span class="number">0</span>:<span class="number">0</span>]<span class="operator">=</span>&#123;&quot;(,10)&quot;&#125;</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>WTF? 为什么 <code>f1[0].cf1</code> 的值丢失了呢？我们尝试同时更新 <code>cf1</code> 和 <code>cf2</code>，看看会发生什么。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># UPDATE dcomptable <span class="keyword">SET</span> f1[<span class="number">0</span>].cf2 <span class="operator">=</span> <span class="number">1</span>, f1[<span class="number">0</span>].cf1 <span class="operator">=</span> <span class="number">2</span>;</span><br><span class="line">UPDATE <span class="number">1</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> dcomptable;</span><br><span class="line">       f1</span><br><span class="line"><span class="comment">----------------</span></span><br><span class="line"> [<span class="number">0</span>:<span class="number">0</span>]<span class="operator">=</span>&#123;&quot;(2,)&quot;&#125;</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这里仅仅保留了最后一个值（<code>f1[0].cf1</code>）。</p>
+<p>因此，这就迫使我们重新思考上面的 patch 的正确性了（当时并没有那么仔细的想过这个问题）。为什么当初这里并没有判断 <code>tupDatum</code> 是否为空呢？是否存在某种前提，从而可以断定这里不会存在空的情况呢？</p>
+<p>到这里，Tom Lane 大神站出来了。</p>
+<blockquote>
+<p>This patch seems quite misguided to me.  The proximate cause of<br>the crash is that we’re arriving at ExecEvalFieldStoreDeForm with<br>*op-&gt;resnull and *op-&gt;resvalue both zero, which is a completely<br>invalid situation for a pass-by-reference datatype; so something<br>upstream of this messed up.  Even if there were an argument for<br>acting as though that were a valid NULL value, this patch fails to<br>do so; that’d require setting all the output fieldstore.nulls[]<br>entries to true, which you didn’t.</p>
+</blockquote>
+<p>大意就是在 <code>ExecEvalFieldStoreDeForm()</code> 函数中不应该出现 <code>*op-&gt;resnull</code> 和 <code>*op-&gt;resvalue</code> 同时为空的情况，换言之，若出现这种情况，那么肯定是上层某个地方出错了。随后，大神也给出了解释。</p>
+<blockquote>
+<p>After some digging around, I see where the issue actually is:<br>the expression tree we’re dealing with looks like</p>
+<pre><code>             &#123;SUBSCRIPTINGREF
+             :refexpr
+                &#123;VAR
+                &#125;
+             :refassgnexpr
+                &#123;COERCETODOMAIN
+                :arg
+                   &#123;FIELDSTORE
+                   :arg
+                      &#123;CASETESTEXPR
+                      &#125;
+                   &#125;
+                &#125;
+             &#125;
+</code></pre>
+<p>The array element we intend to replace has to be passed down to<br>the CaseTestExpr, but that isn’t happening.  That’s because<br>isAssignmentIndirectionExpr fails to recognize a tree like<br>this, so ExecInitSubscriptingRef doesn’t realize it needs to<br>arrange for that.</p>
+</blockquote>
+<p>这是由于 <code>isAssignmentIndirectionExpr()</code> 在处理间接表达式是遗忘了 <code>domain</code> 数组类型导致的。最终的解决方案如下：</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/executor/execExpr.c b/src/backend/executor/execExpr.c</span></span><br><span class="line"><span class="comment">index 81b9d87bad..33ef39e2d4 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/executor/execExpr.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/executor/execExpr.c</span></span><br><span class="line"><span class="meta">@@ -3092,11 +3092,14 @@</span> ExecInitSubscriptingRef(ExprEvalStep *scratch, SubscriptingRef *sbsref,</span><br><span class="line">  * (We could use this in FieldStore too, but in that case passing the old</span><br><span class="line">  * value is so cheap there&#x27;s no need.)</span><br><span class="line">  *</span><br><span class="line"><span class="deletion">- * Note: it might seem that this needs to recurse, but it does not; the</span></span><br><span class="line"><span class="deletion">- * CaseTestExpr, if any, will be directly the arg or refexpr of the top-level</span></span><br><span class="line"><span class="deletion">- * node.  Nested-assignment situations give rise to expression trees in which</span></span><br><span class="line"><span class="deletion">- * each level of assignment has its own CaseTestExpr, and the recursive</span></span><br><span class="line"><span class="deletion">- * structure appears within the newvals or refassgnexpr field.</span></span><br><span class="line"><span class="addition">+ * Note: it might seem that this needs to recurse, but in most cases it does</span></span><br><span class="line"><span class="addition">+ * not; the CaseTestExpr, if any, will be directly the arg or refexpr of the</span></span><br><span class="line"><span class="addition">+ * top-level node.  Nested-assignment situations give rise to expression</span></span><br><span class="line"><span class="addition">+ * trees in which each level of assignment has its own CaseTestExpr, and the</span></span><br><span class="line"><span class="addition">+ * recursive structure appears within the newvals or refassgnexpr field.</span></span><br><span class="line"><span class="addition">+ * There is an exception, though: if the array is an array-of-domain, we will</span></span><br><span class="line"><span class="addition">+ * have a CoerceToDomain as the refassgnexpr, and we need to be able to look</span></span><br><span class="line"><span class="addition">+ * through that.</span></span><br><span class="line">  */</span><br><span class="line"> static bool</span><br><span class="line"> isAssignmentIndirectionExpr(Expr *expr)</span><br><span class="line"><span class="meta">@@ -3117,6 +3120,12 @@</span> isAssignmentIndirectionExpr(Expr *expr)</span><br><span class="line">                if (sbsRef-&gt;refexpr &amp;&amp; IsA(sbsRef-&gt;refexpr, CaseTestExpr))</span><br><span class="line">                        return true;</span><br><span class="line">        &#125;</span><br><span class="line"><span class="addition">+       else if (IsA(expr, CoerceToDomain))</span></span><br><span class="line"><span class="addition">+       &#123;</span></span><br><span class="line"><span class="addition">+               CoerceToDomain *cd = (CoerceToDomain *) expr;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+               return isAssignmentIndirectionExpr(cd-&gt;arg);</span></span><br><span class="line"><span class="addition">+       &#125;</span></span><br><span class="line">        return false;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>再次测试，一切正常。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># UPDATE dcomptable <span class="keyword">SET</span> f1[<span class="number">0</span>].cf2 <span class="operator">=</span> <span class="number">1</span>, f1[<span class="number">0</span>].cf1 <span class="operator">=</span> <span class="number">2</span>;</span><br><span class="line">UPDATE <span class="number">1</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> dcomptable;</span><br><span class="line">       f1</span><br><span class="line"><span class="comment">-----------------</span></span><br><span class="line"> [<span class="number">0</span>:<span class="number">0</span>]<span class="operator">=</span>&#123;&quot;(2,1)&quot;&#125;</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># UPDATE dcomptable <span class="keyword">SET</span> f1[<span class="number">0</span>].cf2 <span class="operator">=</span> <span class="number">10</span>;</span><br><span class="line">UPDATE <span class="number">1</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> dcomptable;</span><br><span class="line">        f1</span><br><span class="line"><span class="comment">------------------</span></span><br><span class="line"> [<span class="number">0</span>:<span class="number">0</span>]<span class="operator">=</span>&#123;&quot;(2,10)&quot;&#125;</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<div class="just-for-fun">
+笑林广记 - 家属
+
+<p>官坐堂，众后中有撒一响屁者。<br>官即叫：“拿来！”<br>隶禀曰：“老爷，屁是一阵风，吹散没影踪，叫小的如何拿得？”<br>官怒云：“为何徇情卖放，定要拿到。”<br>皂无奈，只得取干屎回销：“禀老爷，正犯是走了，拿得家属在此。”</p>
+</div>
+
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/" title="PostgreSQL 更新组合类型的 domain 类型数组导致崩溃">https://blog.japinli.top/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="prev" title="PostgreSQL 发布者与订阅者不同的 datestyle 导致失败">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 发布者与订阅者不同的 datestyle 导致失败
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

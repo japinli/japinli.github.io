@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。   本文将对该功能进行简要介绍。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 13 - backtrace 功能预览">
+<meta property="og:url" content="https://blog.japinli.top/2020/08/postgresql-backtrace/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。   本文将对该功能进行简要介绍。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2020/08/postgresql-backtrace/backtrace.png">
+<meta property="article:published_time" content="2020-08-15T12:30:43.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.386Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2020/08/postgresql-backtrace/backtrace.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/08/postgresql-backtrace/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/08/postgresql-backtrace/","path":"2020/08/postgresql-backtrace/","title":"PostgreSQL 13 - backtrace 功能预览"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 13 - backtrace 功能预览 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">2.</span> <span class="nav-text">使用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/08/postgresql-backtrace/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 13 - backtrace 功能预览
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-08-15 20:30:43" itemprop="dateCreated datePublished" datetime="2020-08-15T20:30:43+08:00">2020-08-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。</p>
+<img src="/2020/08/postgresql-backtrace/backtrace.png" class="" title="Backtrace 提交记录">
+
+<p>本文将对该功能进行简要介绍。</p>
+<span id="more"></span>
+
+<h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>PostgreSQL 13 数据库提供了一个参数 <code>backtrace_functions</code> 来控制堆栈信息的生成，该参数是包含C函数名称的逗号分隔列表。如果出现错误，并且该错误是由 <code>backtrace_functions</code> 中的 C 函数引发的，那么将会把堆栈信息记录到服务器日志文件中。这个选项可以方便我们调试特定区域的源代码。</p>
+<p>目前并非所有平台都支持 backtrace 功能，并且其堆栈信息的质量也取决于编译选项。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SET backtrace_functions TO &#x27;ProcessUtility,ExecutorStart&#x27;;</span><br></pre></td></tr></table></figure>
+
+<p>该参数仅超级用户可以设置，它可以在 postgresql.conf 中进行全局设置，也可以针对某个会话进行设置。</p>
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>在这里我们通过创建一个不存在的类型来演示如何使用 backtrace 功能。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">postgres=# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，我们输入的数据类型不存在，下面是服务器端的日志信息。总的来说信息是很有限的，我们无法得知更多的细节。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">2020-08-15 18:03:35.857 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:03:35.857 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
+
+<p>现在我们来试试 backtrace 大法。首先我们可以通过搜索源码的方法确定当前错误是来自那个内部的 C 函数。这里我们确定它是由 <code>typenameType()</code> 函数抱出来的。那么我们可以按如下方式进行操作。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">postgres=# SET backtrace_functions TO &#x27;typenameType&#x27;;</span><br><span class="line">SET</span><br><span class="line">postgres=# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
+
+<p>虽然在用户看来并没有什么区别，但是服务器日志里面多出了一下内容：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">2020-08-15 18:09:25.079 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] BACKTRACE:</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(typenameType+0xb9) [0x563456c5f509]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x1dcbbc) [0x563456c60bbc]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(transformCreateStmt+0x4da) [0x563456c6412a]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d88c8) [0x563456e5c8c8]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(standard_ProcessUtility+0x230) [0x563456e5b7e0]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5012) [0x563456e59012]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5a93) [0x563456e59a93]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PortalRun+0x161) [0x563456e5a611]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d2017) [0x563456e56017]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostgresMain+0x1ede) [0x563456e5842e]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x355cda) [0x563456dd9cda]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostmasterMain+0xeff) [0x563456ddadef]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(main+0x4a4) [0x563456b45e94]</span><br><span class="line">        /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xe7) [0x7f5502994b97]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(_start+0x2a) [0x563456b45f5a]</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
+
+<p>从上面的 backtrace 可以看到整个流程是如何一步一步走到 <code>typenameType()</code> 函数的。Backtrace 的每一行都包含函数的名称，函数内的偏移位置，以及栈帧的返回地址。在某些栈帧上，函数名称并没有出现，取而代之的是一个地址，这些函数是静态函数，它们的名字不会被导出，不过我们也可能通过它们的地址来获取其对应的函数名称。例如，<code>typenameType()</code> 函数的上层函数只是一个地址，我们并不知道其对应的函数是什么，这时我们可以使用下面的命令来进行转换：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line 0x1dcbbc -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000001dcbbc</span><br><span class="line">transformColumnDefinition</span><br><span class="line">parse_utilcmd.c:?</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 <code>0x1dcbbc</code> 这个地址对应的是 <code>transformColumnDefinition()</code> 函数，它位于 <code>parse_utilcmd.c</code> 文件中。由于这里是采用的 <code>-O2</code> 优化，没能查看到更多的信息，如果我们使用 <code>-O0</code>，那么其查询的信息将更为丰富，如下所示：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line +0x2525e6 -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000002525e6</span><br><span class="line">transformColumnDefinition</span><br><span class="line">/home/japin/Codes/postgresql/Debug/../src/backend/parser/parse_utilcmd.c:568</span><br></pre></td></tr></table></figure>
+
+<p>上面两次查看的地址不一致是因为重新编译生成的文件不同导致的。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>现在我们对于 backtrace 的功能有了基本的了解，接下来我们来看看它是如何实现的。</p>
+<p>该功能是通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 这两个简单的函数来生成堆栈信息，<code>backtrace()</code> 函数仅返回所有栈帧的返回地址，接着调用 <code>backtrace_symbols()</code> 函数来将这些地址转换为描述这个函数的字符串，PostgreSQL backtrace功能的其核心代码主要集中在 <code>set_backtrace()</code> 函数中，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Compute backtrace data and add it to the supplied ErrorData.  num_skip</span></span><br><span class="line"><span class="comment"> * specifies how many inner frames to skip.  Use this to avoid showing the</span></span><br><span class="line"><span class="comment"> * internal backtrace support functions in the backtrace.  This requires that</span></span><br><span class="line"><span class="comment"> * this and related functions are not inlined.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">set_backtrace</span><span class="params">(ErrorData *edata, <span class="keyword">int</span> num_skip)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	StringInfoData errtrace;</span><br><span class="line"></span><br><span class="line">	initStringInfo(&amp;errtrace);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> HAVE_BACKTRACE_SYMBOLS</span></span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">void</span>	   *buf[<span class="number">100</span>];</span><br><span class="line">		<span class="keyword">int</span>			nframes;</span><br><span class="line">		<span class="keyword">char</span>	  **strfrms;</span><br><span class="line"></span><br><span class="line">		nframes = backtrace(buf, lengthof(buf));</span><br><span class="line">		strfrms = backtrace_symbols(buf, nframes);</span><br><span class="line">		<span class="keyword">if</span> (strfrms == <span class="literal">NULL</span>)</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = num_skip; i &lt; nframes; i++)</span><br><span class="line">			appendStringInfo(&amp;errtrace, <span class="string">&quot;\n%s&quot;</span>, strfrms[i]);</span><br><span class="line">		<span class="built_in">free</span>(strfrms);</span><br><span class="line">	&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	appendStringInfoString(&amp;errtrace,</span><br><span class="line">						   <span class="string">&quot;backtrace generation is not supported by this installation&quot;</span>);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	edata-&gt;backtrace = errtrace.data;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>set_backtrace()</code> 函数通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 函数来获取堆栈信息，并将其添加到 <code>edata-&gt;backtrace</code> 字段中（方便后续处理），<code>num_skip</code> 参数指定了需要跳过的内部栈的数量，这是由于我们报错的地方实际上并不是 <code>set_backtrace()</code> 函数位置，而是在调用该函数的位置（可能是一层或多层），因此，我们需要定位到真实报错的地方，从这个地方开始输出堆栈信息。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html">https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/devel/runtime-config-developer.html">https://www.postgresql.org/docs/devel/runtime-config-developer.html</a><br>[3] <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190">https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/08/postgresql-backtrace/" title="PostgreSQL 13 - backtrace 功能预览">https://blog.japinli.top/2020/08/postgresql-backtrace/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/08/postgresql-shared-relations/" rel="prev" title="PostgreSQL 共享表">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 共享表
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/08/next-8-0-0-recent-posts/" rel="next" title="Hexo NexT (v8.x) 主题添加近期文章">
+                  Hexo NexT (v8.x) 主题添加近期文章 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

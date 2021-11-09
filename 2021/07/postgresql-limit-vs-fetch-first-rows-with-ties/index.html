@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="在 SQL 和 PostgreSQL 社区中，大多数人都使用过许多数据库引擎提供的 LIMIT 子句。然而，很多人不知道的是，LIMIT&#x2F;OFFSET 是不符合标准的，因此不能移植。处理 LIMIT 的正确方法基本上是使用 SELECT ... FETCH FIRST ROWS。然而，还有更多的东西没有被发现。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES">
+<meta property="og:url" content="https://blog.japinli.top/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="在 SQL 和 PostgreSQL 社区中，大多数人都使用过许多数据库引擎提供的 LIMIT 子句。然而，很多人不知道的是，LIMIT&#x2F;OFFSET 是不符合标准的，因此不能移植。处理 LIMIT 的正确方法基本上是使用 SELECT ... FETCH FIRST ROWS。然而，还有更多的东西没有被发现。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-17T04:24:39.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.429Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="翻译">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/","path":"2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/","title":"【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#LIMIT-vs-FETCH-FIRST-ROWS"><span class="nav-number">1.</span> <span class="nav-text">LIMIT vs. FETCH FIRST ROWS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#FETCH-FIRST-%E2%80%A6-ROWS-WITH-TIES"><span class="nav-number">2.</span> <span class="nav-text">FETCH FIRST … ROWS WITH TIES</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#WITH-TIES-%E7%AE%A1%E7%90%86%E9%99%84%E5%8A%A0%E5%88%97"><span class="nav-number">3.</span> <span class="nav-text">WITH TIES - 管理附加列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%91%E8%80%85%E8%91%97"><span class="nav-number">4.</span> <span class="nav-text">译者著</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-07-17 12:24:39" itemprop="dateCreated datePublished" datetime="2021-07-17T12:24:39+08:00">2021-07-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>在 SQL 和 PostgreSQL 社区中，大多数人都使用过许多数据库引擎提供的 <code>LIMIT</code> 子句。然而，很多人不知道的是，<code>LIMIT/OFFSET</code> 是不符合标准的，因此不能移植。处理 LIMIT 的正确方法基本上是使用 <code>SELECT ... FETCH FIRST ROWS</code>。然而，还有更多的东西没有被发现。</p>
+<span id="more"></span>
+
+<h2 id="LIMIT-vs-FETCH-FIRST-ROWS"><a href="#LIMIT-vs-FETCH-FIRST-ROWS" class="headerlink" title="LIMIT vs. FETCH FIRST ROWS"></a>LIMIT vs. FETCH FIRST ROWS</h2><p>在我们深入研究一些更高级的功能之前，我们需要看看如何使用 <code>LIMIT</code> 和 <code>FETCH FIRST ROWS</code>。为了演示这个功能，我编译了一个简单的数据集：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t_test (id <span class="type">int</span>);</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span></span><br><span class="line">test<span class="operator">=</span># <span class="keyword">INSERT</span> <span class="keyword">INTO</span> t_test</span><br><span class="line"><span class="keyword">VALUES</span>  (<span class="number">1</span>), (<span class="number">2</span>), (<span class="number">3</span>), (<span class="number">3</span>),</span><br><span class="line">(<span class="number">4</span>), (<span class="number">4</span>), (<span class="number">5</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">7</span></span><br><span class="line">test<span class="operator">=</span># <span class="keyword">TABLE</span> t_test;</span><br><span class="line"> id</span><br><span class="line"><span class="comment">----</span></span><br><span class="line">  <span class="number">1</span></span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">  <span class="number">4</span></span><br><span class="line">  <span class="number">4</span></span><br><span class="line">  <span class="number">5</span></span><br><span class="line">(<span class="number">7</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>我们的数据集有 7 条简单的行。让我们看看如果我们使用 <code>LIMIT</code> 会发生什么：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> t_test LIMIT <span class="number">3</span>;</span><br><span class="line"> id</span><br><span class="line"><span class="comment">----</span></span><br><span class="line">  <span class="number">1</span></span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">(<span class="number">3</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，将返回前三条记录。请注意，我们在这里讨论的是任何行。只要能先找到的就会被返回。没有什么特别的顺序。</p>
+<p>与 ANSI SQL 兼容的写法如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span></span><br><span class="line">           <span class="keyword">FROM</span>  t_test</span><br><span class="line">           <span class="keyword">FETCH</span> <span class="keyword">FIRST</span> <span class="number">3</span> <span class="keyword">ROWS</span> <span class="keyword">ONLY</span>;</span><br><span class="line"> id</span><br><span class="line"><span class="comment">----</span></span><br><span class="line">  <span class="number">1</span></span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">(<span class="number">3</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>许多人可能以前从未使用过或见过这种语法，但这实际上是处理 <code>LIMIT</code> 的“正确”方法。</p>
+<p>然而，还有一点。如果在 <code>LIMIT</code> 子句中使用 <code>NULL</code> 会怎样？其结果可能会让你吃惊：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> t_test LIMIT <span class="keyword">NULL</span>;</span><br><span class="line"> id</span><br><span class="line"><span class="comment">----</span></span><br><span class="line">  <span class="number">1</span></span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">  <span class="number">4</span></span><br><span class="line">  <span class="number">4</span></span><br><span class="line">  <span class="number">5</span></span><br><span class="line">(<span class="number">7</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>数据库引擎不知道什么时候停止返回行。记住，<code>NULL</code> 是未定义的，所以它并不意味着零。因此，所有的行都会被返回。你必须牢记这一点，以避免不愉快的意外……</p>
+<h2 id="FETCH-FIRST-…-ROWS-WITH-TIES"><a href="#FETCH-FIRST-…-ROWS-WITH-TIES" class="headerlink" title="FETCH FIRST … ROWS WITH TIES"></a>FETCH FIRST … ROWS WITH TIES</h2><p><code>WITH TIES</code> 功能是在 PostgreSQL 13 版本中引入的，它修复了一个常见的问题：处理重复的数据。如果你取了前几行，PostgreSQL 会在固定的行数上停止。然而，如果同样的数据一次又一次地出现，会发生什么？这里有一个例子：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span></span><br><span class="line">           <span class="keyword">FROM</span>  t_test</span><br><span class="line">           <span class="keyword">ORDER</span> <span class="keyword">BY</span> id</span><br><span class="line">           <span class="keyword">FETCH</span> <span class="keyword">FIRST</span> <span class="number">3</span> <span class="keyword">ROWS</span> <span class="keyword">WITH</span> TIES;</span><br><span class="line"> id</span><br><span class="line"><span class="comment">----</span></span><br><span class="line">  <span class="number">1</span></span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">  <span class="number">3</span></span><br><span class="line">(<span class="number">4</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，我们实际上得到了 4 行记录，而不仅仅是 3 行。原因是最后一个值在第 3 行之后又出现了，所以 PostgreSQL 觉得把它也包括进去。这里需要注意的是，<code>ORDER BY</code> 字句是需要的，如果没有，其结果是随机的。因此，如果你想要包括某一类的所有记录，而不是停留在一个固定的行数上，这时 <code>WITH TIES</code> 就很重要了。</p>
+<p>假设再增加一行记录：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">INSERT</span> <span class="keyword">INTO</span> t_test <span class="keyword">VALUES</span> (<span class="number">2</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">1</span></span><br><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span></span><br><span class="line">           <span class="keyword">FROM</span>  t_test</span><br><span class="line">           <span class="keyword">ORDER</span> <span class="keyword">BY</span> id</span><br><span class="line">           <span class="keyword">FETCH</span> <span class="keyword">FIRST</span> <span class="number">3</span> <span class="keyword">ROWS</span> <span class="keyword">WITH</span> TIES;</span><br><span class="line"> id</span><br><span class="line"><span class="comment">----</span></span><br><span class="line">  <span class="number">1</span></span><br><span class="line">  <span class="number">2</span></span><br><span class="line">  <span class="number">2</span></span><br><span class="line">(<span class="number">3</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在这种情况下，我们确实得到了 3 行记录，因为它不是关于值为 3 类型的数据，而是真正关于数据集末尾的额外的、相同的数据。</p>
+<h2 id="WITH-TIES-管理附加列"><a href="#WITH-TIES-管理附加列" class="headerlink" title="WITH TIES - 管理附加列"></a>WITH TIES - 管理附加列</h2><p>到目前为止，我们已经了解了一些关于只使用一列的最简单情况。然而，这与真实情况相差甚远。在真正的工作应用中，你肯定会有不止一列。因此，让我们增加一个：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">ALTER</span> <span class="keyword">TABLE</span> t_test</span><br><span class="line">           <span class="keyword">ADD</span> <span class="keyword">COLUMN</span> x <span class="type">numeric</span> <span class="keyword">DEFAULT</span> random();</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span></span><br><span class="line">test<span class="operator">=</span># <span class="keyword">TABLE</span> t_test;</span><br><span class="line"> id <span class="operator">|</span>       x</span><br><span class="line"><span class="comment">----+--------------------</span></span><br><span class="line">  <span class="number">1</span> <span class="operator">|</span>  <span class="number">0.258814135879447</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span>  <span class="number">0.561647200043165</span></span><br><span class="line">  <span class="number">3</span> <span class="operator">|</span>  <span class="number">0.340481941960185</span></span><br><span class="line">  <span class="number">3</span> <span class="operator">|</span>  <span class="number">0.999635345010109</span></span><br><span class="line">  <span class="number">4</span> <span class="operator">|</span>  <span class="number">0.467043266494571</span></span><br><span class="line">  <span class="number">4</span> <span class="operator">|</span>  <span class="number">0.742426363498449</span></span><br><span class="line">  <span class="number">5</span> <span class="operator">|</span> <span class="number">0.0611112678267247</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span>  <span class="number">0.496917052156565</span></span><br><span class="line">(<span class="number">8</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>LIMIT</code> 的情况下，没有任何变化。然而，<code>WITH TIES</code> 在这里有点特殊：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span></span><br><span class="line">            <span class="keyword">FROM</span>  t_test</span><br><span class="line">            <span class="keyword">ORDER</span> <span class="keyword">BY</span> id</span><br><span class="line">            <span class="keyword">FETCH</span> <span class="keyword">FIRST</span> <span class="number">4</span> <span class="keyword">ROWS</span> <span class="keyword">WITH</span> TIES;</span><br><span class="line"> id <span class="operator">|</span>       x</span><br><span class="line"><span class="comment">----+-------------------</span></span><br><span class="line">  <span class="number">1</span> <span class="operator">|</span> <span class="number">0.258814135879447</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span> <span class="number">0.561647200043165</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span> <span class="number">0.496917052156565</span></span><br><span class="line">  <span class="number">3</span> <span class="operator">|</span> <span class="number">0.999635345010109</span></span><br><span class="line">  <span class="number">3</span> <span class="operator">|</span> <span class="number">0.340481941960185</span></span><br><span class="line">(<span class="number">5</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在这里你得到了 5 行记录。第 5 行被添加是因为 <code>id = 3</code> 出现了不止一次。注意 <code>ORDER BY</code> 子句：我们按 <code>id</code> 排序。因此，<code>id</code> 列与 <code>WITH TIES</code> 有关。</p>
+<p>我们来看看当 <code>ORDER BY</code> 子句被扩展时会发生什么：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">test<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span></span><br><span class="line">           <span class="keyword">FROM</span>  t_test</span><br><span class="line">           <span class="keyword">ORDER</span> <span class="keyword">BY</span> id, x</span><br><span class="line">           <span class="keyword">FETCH</span> <span class="keyword">FIRST</span> <span class="number">4</span> <span class="keyword">ROWS</span> <span class="keyword">WITH</span> TIES;</span><br><span class="line"> id <span class="operator">|</span>       x</span><br><span class="line"><span class="comment">----+-------------------</span></span><br><span class="line">  <span class="number">1</span> <span class="operator">|</span> <span class="number">0.258814135879447</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span> <span class="number">0.496917052156565</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span> <span class="number">0.561647200043165</span></span><br><span class="line">  <span class="number">3</span> <span class="operator">|</span> <span class="number">0.340481941960185</span></span><br><span class="line">(<span class="number">4</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>我们按两列进行排序。因此，只有在两列都相同的情况下，<code>WITH TIES</code> 才会增加行数，而在我们的例子中，情况并非如此。</p>
+<p><code>WITH TIES</code> 是 PostgreSQL 提供的一个奇妙的新功能。然而，它不仅仅是用来限制数据的。如果你是一个窗口函数的爱好者，你也可以利用 <code>WITH TIES</code>，就像我的<a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/timeseries-exclude-ties-current-row-and-group/">另一篇博文</a>中所展示的那样，它涵盖了 PostgreSQL 所提供的高级 SQL 功能。</p>
+<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><ul>
+<li>本文翻译自 Hans-Jürgen Schönig 的 <a target="_blank" rel="noopener" href="https://www.cybertec-postgresql.com/en/postgresql-limit-vs-fetch-first-rows-with-ties/">POSTGRESQL: LIMIT VS FETCH FIRST ROWS … WITH TIES</a>。</li>
+<li><strong>Hans-Jürgen Schönig</strong> 从 90 年代起就有使用 PostgreSQL 的经验。他是 CYBERTEC 的首席执行官和技术负责人，该公司是该领域的市场领导者之一，自 2000 年以来为全球无数的客户提供服务。</li>
+</ul>
+<div class="just-for-fun">
+笑林广记 - 比职
+
+<p>甲乙两同年初中。甲选馆职，乙授县令。<br>甲一日乃骄语之曰：“吾位列清华，身依宸禁，与年兄做有司者，资格悬殊。他不具论，即选拜客用大字帖儿，身份体面，何啻天渊。”<br>乙曰：“你帖上能用几字，岂如我告示中的字，不更大许多？晓谕通告，百姓无不凛遵恪守，年兄却无用处。”<br>甲曰：“然则金瓜黄盖，显赫炫耀，兄可有否？”<br>乙曰：“弟牌棍清道，列满街衢，何止多兄数倍？”<br>甲曰：“太史图章，名标上苑，年兄能无羡慕乎？”<br>乙曰：“弟有朝廷印信，生杀之权，惟吾操纵，视年兄身居冷曹，图章私刻，谁来惧你？”<br>甲不觉词遁，乃曰：“总之翰林声价值千金。”<br>乙笑曰：“吾坐堂时百姓口称青天老爷，岂仅千金而已耶！”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/postgresql-grouping-sets-rollup-cube/" rel="bookmark">【译】PostgreSQL 分组集：ROLLUP & CUBE</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/postgresql-security-things-to-avoid-in-real-life/" rel="bookmark">【译】PostgreSQL 安全：现实中需要避免的事情</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/understanding-lateral-joins-in-postgresql/" rel="bookmark">【译】理解 PostgreSQL 中的 LATERAL 连接</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/turning-query-results-into-json-in-postgresql/" rel="bookmark">【译】PostgreSQL 查询结果转为 JSON 格式</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/" title="【译】PostgreSQL LIMIT 与 FETCH FIRST ROWS ... WITH TIES">https://blog.japinli.top/2021/07/postgresql-limit-vs-fetch-first-rows-with-ties/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E7%BF%BB%E8%AF%91/" rel="tag"># 翻译</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/06/oracle-desdecrypt-to-postgresql/" rel="prev" title="Oracle 迁移 PostgreSQL - DESDecrypt 函数">
+                  <i class="fa fa-chevron-left"></i> Oracle 迁移 PostgreSQL - DESDecrypt 函数
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/07/understanding-lateral-joins-in-postgresql/" rel="next" title="【译】理解 PostgreSQL 中的 LATERAL 连接">
+                  【译】理解 PostgreSQL 中的 LATERAL 连接 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

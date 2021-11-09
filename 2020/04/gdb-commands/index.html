@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="在上一篇文章中，我们介绍了如何进入和退出 GDB，以及一些基本的配置，本文主要介绍 GDB 的命令语法、与命令相关的配置，如何对命令进行补全、有关命令的选项以及如何获取命令的帮助信息。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GDB 命令">
+<meta property="og:url" content="https://blog.japinli.top/2020/04/gdb-commands/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="在上一篇文章中，我们介绍了如何进入和退出 GDB，以及一些基本的配置，本文主要介绍 GDB 的命令语法、与命令相关的配置，如何对命令进行补全、有关命令的选项以及如何获取命令的帮助信息。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-07T14:09:34.000Z">
+<meta property="article:modified_time" content="2021-10-14T03:13:55.327Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="gdb">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2020/04/gdb-commands/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2020/04/gdb-commands/","path":"2020/04/gdb-commands/","title":"GDB 命令"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>GDB 命令 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">35</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">93</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%91%BD%E4%BB%A4%E8%AF%AD%E6%B3%95"><span class="nav-number">1.</span> <span class="nav-text">命令语法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%91%BD%E4%BB%A4%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">命令配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%91%BD%E4%BB%A4%E8%A1%A5%E5%85%A8"><span class="nav-number">3.</span> <span class="nav-text">命令补全</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%91%BD%E4%BB%A4%E9%80%89%E9%A1%B9"><span class="nav-number">4.</span> <span class="nav-text">命令选项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%AE%E5%8A%A9"><span class="nav-number">5.</span> <span class="nav-text">帮助</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">93</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2020/04/gdb-commands/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          GDB 命令
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-04-07 22:09:34" itemprop="dateCreated datePublished" datetime="2020-04-07T22:09:34+08:00">2020-04-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>在<a href="/2020/01/getting-in-and-out-of-gdb/" title="上一篇">上一篇</a>文章中，我们介绍了如何进入和退出 GDB，以及一些基本的配置，本文主要介绍 GDB 的命令语法、与命令相关的配置，如何对命令进行补全、有关命令的选项以及如何获取命令的帮助信息。</p>
+<span id="more"></span>
+
+<h2 id="命令语法"><a href="#命令语法" class="headerlink" title="命令语法"></a>命令语法</h2><p>GDB 命令是一个单行的输入，这一行是没有限制的。GDB 命令的语法是命令名后跟参数。例如，命令 <code>step</code> 可以跟一个参数代表步进的次数，如 <code>step 5</code>。我们也可以使用不带参数的 <code>step</code> 命令，某些命令不允许带参数。</p>
+<p>如果 GDB 命令的名称缩写没有歧义的话，我们可以简写命令名称。在某些情况下，我们甚至可以不明确的缩写。例如，即使有其他命令以 <code>s</code> 开头，GDB 也将 <code>s</code> 定义为 <code>step</code>。我们可以通过将缩写用作 <code>help</code> 命令的参数来测试缩写。</p>
+<p>如果输入空行（即输入 <code>RET</code> 回车键）的话则表示重复之前的命令。某些命令（例如，<code>run</code> 命令）不会以这种方式重复，这些命令通常我们也不需要它重复执行。用户定义的命令可以禁用这个功能。</p>
+<p>当我们使用 <code>RET</code> 来重复 <code>list</code> 和 <code>x</code> 命令时，它们会构造新的参数而不是使用之前输入的参数。这样可以很容易的查看源码和内存。</p>
+<p>GDB 还可以通过另一种方式使用 <code>RET</code>：以类似于通用实用程序的方式对冗长的输出进行分区。</p>
+<p>任何位于 <code>#</code> 字符之后的文本都是注释的内容，这通常在命令文件中非常有用。</p>
+<h2 id="命令配置"><a href="#命令配置" class="headerlink" title="命令配置"></a>命令配置</h2><p>许多命令都可以由命令特定的变量或者配置来更改其行为。我们可以使用 <code>set</code> 子命令来修改配置。例如，<code>print</code> 命令（查看数据）打印数组的内容取决于 <code>set print elements NUMBER-OF-ELEMENTS</code> 和 <code>set print array-indexes</code> 以及其他配置。</p>
+<p>我们可以在 GDB 启动时加载的 gdbinit 文件中更改这些设置。这些配置也可以在 gdb 回话中临时修改。例如，要更改要打印的数组元素的限制，可以执行以下操作：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(GDB) set print elements 10</span><br><span class="line">(GDB) print some_array</span><br><span class="line">$1 = &#123;0, 10, 20, 30, 40, 50, 60, 70, 80, 90...&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的命令 <code>set print elements 10</code> 将默认打印的数组大小由 200 修改为 10。如果仅打算将此限制 10 用于打印 some_array，则我们需要将其设置回默认值 200 。</p>
+<p>某些命令允许使用命令选项来覆盖设置。例如，<code>print</code> 命令支持一系列选项来覆盖相关的全局设置。上面的命令我们可以使用下面的命令来实现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(GDB) print -elements 10 -- some_array</span><br><span class="line">$1 = &#123;0, 10, 20, 30, 40, 50, 60, 70, 80, 90...&#125;</span><br></pre></td></tr></table></figure>
+
+<p>或者，我们可以在命令调用期间使用 <code>with</code> 命令来临时更改设置，即 <code>with setting [value] [-- command]</code> 或者 <code>w setting [value] [-- command]</code>，在命令执行期间临时将 <code>setting</code> 设置为 <code>value</code>。其中 <code>setting</code> 是任何可以使用 <code>set</code> 命令修改的配置。如果没有提供 <code>command</code>，那么将会重复执行上一条命令。如果指定了 <code>command</code>，那么必须使用 <code>--</code> 来分割设置和命令。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(GDB) with print array on -- print some_array</span><br></pre></td></tr></table></figure>
+
+<p>等同于</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(GDB) set print array on</span><br><span class="line">(GDB) print some_array</span><br><span class="line">(GDB) set print array off</span><br></pre></td></tr></table></figure>
+<p>当我们覆盖自定义命令或者使用 Python 和 Guile 时非常有用。<br>如果我们需要为一个命令临时修改多个设置，我们可以使用嵌套的 <code>with</code> 命令，例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">with language ada -- with print elements 10</span><br></pre></td></tr></table></figure>
+
+<p>上面的命令临时地将语言设置为 <code>ada</code> 并且设置数组和字符串的输出限制为 10。</p>
+<h2 id="命令补全"><a href="#命令补全" class="headerlink" title="命令补全"></a>命令补全</h2><p>当只有一个候选的命令时，GDB 可以补全用户输入的命令，任何时候，GDB 都可以查看用户可能输入的命令。这对于 GDB 的命令、子命令、命令选项以及程序的符号名都是有效的。</p>
+<p>当我们需要补全命令时，我们可以直接输入 <code>TAB</code>。如果只有一种可能性，则 GDB 会填入单词，并等待我们完成命令（或按 <code>RET</code> 键输入）。例如，如果我们输入：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(gdb) info bre TAB</span><br></pre></td></tr></table></figure>
+
+<p>GDB 将会补全 <code>bre</code> 为 <code>breakpoints</code>，因为对于 <code>info</code> 的子命令并且以 <code>bre</code> 开头的只有 <code>breakpoints</code> 一个候选项：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(gdb) info breakpoints</span><br></pre></td></tr></table></figure>
+
+<p>此时，我们可以输入 <code>RET</code> 来执行 <code>info breakpoints</code> 命令，或者如果 <code>breakpoints</code> 不是我们期望的命令，我们可以使用退格键删除补全的内容，并输入我们想要的命令。（如果我们确定想要执行的命令就是 <code>info breakpoints</code>，我们可以在输入 <code>info bre</code> 之后立即输入 <code>RET</code> 来执行这条命令，这就是利用了 GDB 命令缩写的功能。）</p>
+<p>如果我们在输入 <code>TAB</code> 进行补全时，候选项不止一个，那么 GDB 会发出铃声，我们可以尝试输入更多的字符来补全信息，或者再次输入 <code>TAB</code> 来查看可能的候选项。如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b make_ TAB</span><br><span class="line"></span><br><span class="line">GDB sounds bell; press TAB again, to see:</span><br><span class="line"></span><br><span class="line">make_a_section_from_file     make_environ</span><br><span class="line">make_abs_section             make_function_type</span><br><span class="line">make_blockvector             make_pointer_type</span><br><span class="line">make_cleanup                 make_reference_type</span><br><span class="line">make_command                 make_symbol_completion_list</span><br><span class="line">(gdb) b make_</span><br></pre></td></tr></table></figure>
+
+<p>当我么输入 <code>make_</code> 并按 <code>TAB</code> 键时，由于存在多个候选项，因此 GDB 将会发出铃声，当我么再次输入 <code>TAB</code> 时，GDB 会显示可能的候选项。随后，GDB 会赋值用户的输入并继续等待用户输入。</p>
+<p>如果我们只是想要第一时间看到可能的候选项，我们可以直接输入 <code>M-?</code> 而不是连续输入两次 <code>TAB</code>。<code>M-?</code> 是 <code>META ?</code> 的简写。我们可以通过按 <code>ESC+?</code> 来达到相同的目的。</p>
+<p>如果候选项非常大，GDB 将尽可能多的输出候选项。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b mTABTAB</span><br><span class="line">main</span><br><span class="line">&lt;... the rest of the possible completions ...&gt;</span><br><span class="line">*** List may be truncated, max-completions reached. ***</span><br><span class="line">(gdb) b m</span><br></pre></td></tr></table></figure>
+
+<p>我们可以通过下面的命令来控制候选项的数量：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">set max-completions limit</span><br><span class="line">set max-completions unlimited</span><br></pre></td></tr></table></figure>
+
+<p>上面的命令用于设置显示的最大的候选项数量。当达到最大的限制时，GDB 将不会在显示其他可能的候选项。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">show max-completions</span><br></pre></td></tr></table></figure>
+
+<p>显示候选项限制。</p>
+<p>有时我们输入的内容逻辑上属于一个完整的内容，但是它包含了特殊字符，例如括号等。为了让补全在这种情况下也可以正常工作，我们需要使用单引号将其包裹起来。例如在补全 C++ 中模版名时经常会遇到这种情况，在正常情况下，GDB 会将 <code>&lt;</code> 视为一个分隔符，并假定它是小于符号。</p>
+<p>如下所示，当我们需要使用 <code>print</code> 或者 <code>call</code> 命令调用 C++ 模版函数时，我们需要区分使用那个版本，如 <code>name&lt;int&gt;()</code> 或 <code>name&lt;float&gt;()</code>。为了在这种情况下使用补全共鞥，我们需要在函数名称之前键入 <code>&#39;</code> ，随后在使用补全的快捷键：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(gdb) p &#x27;func&lt; M-?</span><br><span class="line">func&lt;int&gt;()    func&lt;float&gt;()</span><br><span class="line">(gdb) p &#x27;func&lt;</span><br></pre></td></tr></table></figure>
+
+<p>但是在设置断点时，我们并不需要这样做，这是因为 GDB 知道我们需要在函数上设置断点：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b func&lt; M-?</span><br><span class="line">func&lt;int&gt;()    func&lt;float&gt;()</span><br><span class="line">(gdb) b func&lt;</span><br></pre></td></tr></table></figure>
+
+<p>这对于 C++ 中的重载函数也是一样的。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b bubble( M-?</span><br><span class="line">bubble(int)    bubble(double)</span><br><span class="line">(gdb) b bubble(dou M-?</span><br><span class="line">bubble(double)</span><br></pre></td></tr></table></figure>
+
+<p>GDB 提供了 <code>set overload-resolution off</code> 来禁止重载函数的解析。</p>
+<p>当 GDB 在补全结构体的成员时，他将尝试补全除了左侧之外可用的字段名称，例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">(gdb) p gdb_stdout.M-?</span><br><span class="line">magic                to_fputs             to_rewind</span><br><span class="line">to_data              to_isatty            to_write</span><br><span class="line">to_delete            to_put               to_write_async_safe</span><br><span class="line">to_flush             to_read</span><br></pre></td></tr></table></figure>
+
+<p>上面的 <code>gdb_stdout</code> 变量在 GDB 源码中的定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ui_file</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">   <span class="keyword">int</span> *magic;</span><br><span class="line">   ui_file_flush_ftype *to_flush;</span><br><span class="line">   ui_file_write_ftype *to_write;</span><br><span class="line">   ui_file_write_async_safe_ftype *to_write_async_safe;</span><br><span class="line">   ui_file_fputs_ftype *to_fputs;</span><br><span class="line">   ui_file_read_ftype *to_read;</span><br><span class="line">   ui_file_delete_ftype *to_delete;</span><br><span class="line">   ui_file_isatty_ftype *to_isatty;</span><br><span class="line">   ui_file_rewind_ftype *to_rewind;</span><br><span class="line">   ui_file_put_ftype *to_put;</span><br><span class="line">   <span class="keyword">void</span> *to_data;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="命令选项"><a href="#命令选项" class="headerlink" title="命令选项"></a>命令选项</h2><p>GDB 的某些命令支持一个 <code>-</code> 给出命令选项，例如，<code>print -pretty</code>。与命令名称一样，命令选项也可以采用缩写的形式，前提是这个缩写不会导致歧义，同时，我梦也可以用 <code>TAB</code> 来补全命令选项（或者是查看可能的命令选项）。</p>
+<p>GDB 某些命令将原始输入作为参数。例如，<code>print</code> 命令可以处理 GDB 支持的任何语言的表达式。在这些命令中，原始输入可能以 <code>-</code> 开始，因此这可能会与命令选项产生混淆，例如， <code>print -p</code> （它可以是 <code>print -pretty</code> 的缩写或者取变量 <code>p</code> 的相反数），因此如果我们的命令中包含选项，我们需要使用 <code>--</code> 来分割命令选项和参数。</p>
+<p>例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(gdb) print -object on -pretty off -element unlimited -- *myptr</span><br><span class="line">(gdb) p -o -p 0 -e u -- *myptr</span><br></pre></td></tr></table></figure>
+
+<p>上面两条命令是等价的。</p>
+<p>我们可以使用补全功能来查看命令可用的选项，如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">(gdb) print -TABTAB</span><br><span class="line">-address         -max-depth       -raw-values      -union</span><br><span class="line">-array           -null-stop       -repeats         -vtbl</span><br><span class="line">-array-indexes   -object          -static-members</span><br><span class="line">-elements        -pretty          -symbol</span><br></pre></td></tr></table></figure>
+
+<p>补全功能同样也能给出命令选项的参数，如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(gdb) print -elements TABTAB</span><br><span class="line">NUMBER     unlimited</span><br></pre></td></tr></table></figure>
+
+<p>在上面的示例中，选项期望输入一个整数（如，100），而不是文本 <code>NUMBER</code>。</p>
+<h2 id="帮助"><a href="#帮助" class="headerlink" title="帮助"></a>帮助</h2><p>在 GDB 中，我们可以使用 <code>help</code> 命令来获取帮助信息。我们可以使用不带参数的 <code>help</code>（缩写为 <code>h</code>）来显示命令分类类的简短列表。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">(gdb) help</span><br><span class="line">List of classes of commands:</span><br><span class="line"></span><br><span class="line">aliases -- Aliases of other commands</span><br><span class="line">breakpoints -- Making program stop at certain points</span><br><span class="line">data -- Examining data</span><br><span class="line">files -- Specifying and examining files</span><br><span class="line">internals -- Maintenance commands</span><br><span class="line">obscure -- Obscure features</span><br><span class="line">running -- Running the program</span><br><span class="line">stack -- Examining the stack</span><br><span class="line">status -- Status inquiries</span><br><span class="line">support -- Support facilities</span><br><span class="line">tracepoints -- Tracing of program execution without</span><br><span class="line">               stopping the program</span><br><span class="line">user-defined -- User-defined commands</span><br><span class="line"></span><br><span class="line">Type &quot;help&quot; followed by a class name for a list of</span><br><span class="line">commands in that class.</span><br><span class="line">Type &quot;help&quot; followed by command name for full</span><br><span class="line">documentation.</span><br><span class="line">Command name abbreviations are allowed if unambiguous.</span><br><span class="line">(gdb)</span><br></pre></td></tr></table></figure>
+
+<p>我们使用 <code>help class</code> 可以获取命令分类下的命令信息。例如，我们可以查看 <code>status</code> 分类。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">(gdb) help status</span><br><span class="line">Status inquiries.</span><br><span class="line"></span><br><span class="line">List of commands:</span><br><span class="line"></span><br><span class="line">info -- Generic command for showing things</span><br><span class="line">        about the program being debugged</span><br><span class="line">show -- Generic command for showing things</span><br><span class="line">        about the debugger</span><br><span class="line"></span><br><span class="line">Type &quot;help&quot; followed by command name for full</span><br><span class="line">documentation.</span><br><span class="line">Command name abbreviations are allowed if unambiguous.</span><br><span class="line">(gdb)</span><br></pre></td></tr></table></figure>
+
+<p><code>help command</code> 则可以查看具体命令的使用。</p>
+<p><code>apropos [-v] regexp</code> 命令可以在所有 GDB 命令中搜索与正则表达式匹配的命令。<code>-v</code> 是详细的意思。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">apropos alias</span><br><span class="line">alias -- Define a new command that is an alias of an existing command</span><br><span class="line">aliases -- Aliases of other commands</span><br><span class="line">d -- Delete some breakpoints or auto-display expressions</span><br><span class="line">del -- Delete some breakpoints or auto-display expressions</span><br><span class="line">delete -- Delete some breakpoints or auto-display expressions</span><br></pre></td></tr></table></figure>
+
+<p><code>complete args</code> 命令用于获取所有以 <code>args</code> 开始的命令。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">(gdb) complete i</span><br><span class="line">if</span><br><span class="line">ignore</span><br><span class="line">inferior</span><br><span class="line">info</span><br><span class="line">init-if-undefined</span><br><span class="line">interpreter-exec</span><br><span class="line">interrupt</span><br><span class="line">(gdb)</span><br></pre></td></tr></table></figure>
+
+<p>除了 <code>help</code> 命令之外，我们还可以使用 <code>info</code> 和 <code>show</code> 命令来获取程序或 GDB 的状态。</p>
+<ul>
+<li><code>info</code> - 该命令可以缩写为 <code>i</code>，它用于获取当前程序的状态。例如，我们可以使用它来函数的参数 <code>info args</code>，查看当前使用的寄存器 <code>info registers</code>，或者是查看当前设置的断点信息 <code>info breakpoints</code>。我们可以使用 <code>help info</code> 来查看所有 <code>info</code> 的子命令。</li>
+<li><code>set</code> - 我们可以使用 <code>set</code> 命令给环境变量赋值。例如，我们可以使用 <code>set prompt $</code> 将 GDB 命令提示符号修改为 <code>$</code> 符。</li>
+<li><code>show</code> - 与 <code>info</code> 命令不通，<code>show</code> 用来查看 GDB 自身的状态。我们可以改变大多数我们可以使用 <code>show</code> 命令查看的内容。例如，我们可以使用 <code>set radix</code> 命令设置系统编号，并使用 <code>show radix</code> 来查询当前值。</li>
+</ul>
+<p>为了获取所有可以设置的参数，我们可以使用没有参数的 <code>show</code> 命令，或者 <code>info set</code> 命令，它们是等效的。</p>
+<p>有几个 <code>show</code> 的子命令是无法使用 <code>set</code> 命令进行修改的。</p>
+<ul>
+<li><code>show version</code> - 查看当前 GDB 的版本信息。</li>
+<li><code>show copying</code> &amp; <code>info copying</code> - 显示有关复制 GDB 的权限的信息。</li>
+<li><code>show warranty</code> &amp; <code>info warranty</code> - 显示 GNU “NO WARRANTY” 声明。</li>
+<li><code>show configuration</code> - 显示编译 GDB 时的详细配置信息。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://sourceware.org/gdb/current/onlinedocs/gdb/Commands.html#Commands">https://sourceware.org/gdb/current/onlinedocs/gdb/Commands.html#Commands</a></p>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/06/GDB-on-MacOS-Mojave/" rel="bookmark">MacOS Mojave 上 GDB 调试配置</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2020/01/getting-in-and-out-of-gdb/" rel="bookmark">GDB 基本使用</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2020/04/gdb-commands/" title="GDB 命令">https://blog.japinli.top/2020/04/gdb-commands/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/gdb/" rel="tag"># gdb</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/04/postgresql-large-object/" rel="prev" title="PostgreSQL 大对象">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 大对象
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/05/seafile-with-onlyoffice/" rel="next" title="Seafile 与 OnlyOffice 在线预览 Office 文档">
+                  Seafile 与 OnlyOffice 在线预览 Office 文档 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">423k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">6:24</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
