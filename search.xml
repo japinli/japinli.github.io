@@ -630,31 +630,6 @@
       </tags>
   </entry>
   <entry>
-    <title>非超级用户下运行 Solaris SMF 服务</title>
-    <url>/2019/10/SMF-on-Solaris-under-non-superuser/</url>
-    <content><![CDATA[<p>今天在 Solaris 上遇到一个问题，我需要在非超级用户下运行某个服务。默认情况下，通过 SMF 管理的都是在 root 用户下运行的，但是我们可以通过修改配置文件来使其运行到特定用户下。</p>
-<span id="more"></span>
-
-<p>例如，我们有如下一个配置文件（部分）：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>现在，我们想要 <code>exec_binary</code> 在 <code>tom</code> 用户下运行，那么我们需要加入 <code>method_credential</code> 元素，如下所示：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_credential</span> <span class="attr">user</span>=<span class="string">&quot;tom&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>这样，我们便可以在 <code>tom</code> 用户下运行 <code>exec_binary</code> 的服务了，这里需要注意 <code>method_credential</code> 的位置，它需要位于 <code>method_environment</code> 之前，否则将出现如下问题。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">element method_context: validity error : Element method_context content does not follow the DTD, expecting ((method_profile | method_credential)? , method_environment?), got (method_environment method_credential )</span><br><span class="line">svccfg: Document is not valid.</span><br></pre></td></tr></table></figure>
-
-<p>我们可通过查看 <code>/usr/share/lib/xml/dtd/service_bundle.dtd.1</code> 文件来了解更多的 SMF 配置信息。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/">https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/</a><br>[2] <a href="https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html">https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Solaris</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</title>
     <url>/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/</url>
     <content><![CDATA[<p>本文简要记录一下如何将 Oracle 数据库中的 <code>sys_connect_by_path()</code> 函数迁移到 PostgreSQL 数据库中。</p>
@@ -687,6 +662,31 @@
       <tags>
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>非超级用户下运行 Solaris SMF 服务</title>
+    <url>/2019/10/SMF-on-Solaris-under-non-superuser/</url>
+    <content><![CDATA[<p>今天在 Solaris 上遇到一个问题，我需要在非超级用户下运行某个服务。默认情况下，通过 SMF 管理的都是在 root 用户下运行的，但是我们可以通过修改配置文件来使其运行到特定用户下。</p>
+<span id="more"></span>
+
+<p>例如，我们有如下一个配置文件（部分）：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>现在，我们想要 <code>exec_binary</code> 在 <code>tom</code> 用户下运行，那么我们需要加入 <code>method_credential</code> 元素，如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_credential</span> <span class="attr">user</span>=<span class="string">&quot;tom&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>这样，我们便可以在 <code>tom</code> 用户下运行 <code>exec_binary</code> 的服务了，这里需要注意 <code>method_credential</code> 的位置，它需要位于 <code>method_environment</code> 之前，否则将出现如下问题。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">element method_context: validity error : Element method_context content does not follow the DTD, expecting ((method_profile | method_credential)? , method_environment?), got (method_environment method_credential )</span><br><span class="line">svccfg: Document is not valid.</span><br></pre></td></tr></table></figure>
+
+<p>我们可通过查看 <code>/usr/share/lib/xml/dtd/service_bundle.dtd.1</code> 文件来了解更多的 SMF 配置信息。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/">https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/</a><br>[2] <a href="https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html">https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Solaris</tag>
       </tags>
   </entry>
   <entry>
@@ -1187,181 +1187,6 @@
 <li><code>show configuration</code> - 显示编译 GDB 时的详细配置信息。</li>
 </ul>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://sourceware.org/gdb/current/onlinedocs/gdb/Commands.html#Commands">https://sourceware.org/gdb/current/onlinedocs/gdb/Commands.html#Commands</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>gdb</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>GDB 基本使用</title>
-    <url>/2020/01/getting-in-and-out-of-gdb/</url>
-    <content><![CDATA[<p>在工作中经常使用 GDB 来调试程序，但是一直都没有系统的进行学习过，为此，我打算对其进行一个系统的学习，学习的主要材料来自 GNU GDB 文档 <a href="https://sourceware.org/gdb/current/onlinedocs/gdb/">Debugging with GDB</a>。</p>
-<p>本文主要包括如何运行以及退出 GDB，通常，我们使用 <code>gdb</code> 即可进入 GDB，而 <code>quit</code> 命令或者 <code>Ctrl-d</code> 快捷键便可以退出 GDB。</p>
-<span id="more"></span>
-
-<h2 id="运行-GDB"><a href="#运行-GDB" class="headerlink" title="运行 GDB"></a>运行 GDB</h2><p>通过在命令行中输入 <code>gdb</code> 就可以进入到 GDB，此时，GDB 将读取用户输入的命令并执行，这其实就是一个交互式的界面，读取用户命令，执行用户命令，再读取用户命令，直到用户输入退出指令执行退出操作。</p>
-<p>我们还可以在 <code>gdb</code> 运行时指定一系列参数和选项，从而指定更多关于我们调试环境的一些设置。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program</span></span><br></pre></td></tr></table></figure>
-
-<p>上面是最常用的 GDB 使用方式，它指定我们将要调试的可执行程序。此外，我们还可以指定调试的程序以及一个 core 文件：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program core</span></span><br></pre></td></tr></table></figure>
-
-<p>如果我们要调试正在运行的程序，我们还可以使用进程 ID 或者 <code>-p</code> 选项作为第二个参数：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program 1234</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gdb -p 1234</span></span><br></pre></td></tr></table></figure>
-
-<p>上面的命令将使用 GDB 附加到进程 ID 为 <code>1234</code> 的进程上，如果使用 <code>-p</code> 选项，我们可以省略 <code>program</code> 程序名。</p>
-<p>我们可以选择使用 <code>--args</code> 来向调试的程序传递参数，该选项将终止可选参数的处理。例如：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb --args gcc -O2 -c foo.c</span></span><br></pre></td></tr></table></figure>
-
-<p>上面的命令将使用 GDB 调试 gcc 程序，并将 <code>-O2 -c foo.c</code> 作为 <code>gcc</code> 的命令行参数。</p>
-<p>GDB 运行时会输出类似下面的信息：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ gdb</span><br><span class="line">GNU gdb (GDB) 8.3</span><br><span class="line">Copyright (C) 2019 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.</span><br><span class="line">Type &quot;show copying&quot; and &quot;show warranty&quot; for details.</span><br><span class="line">This GDB was configured as &quot;x86_64-apple-darwin18.5.0&quot;.</span><br><span class="line">Type &quot;show configuration&quot; for configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">    &lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line"></span><br><span class="line">For help, type &quot;help&quot;.</span><br><span class="line">Type &quot;apropos word&quot; to search for commands related to &quot;word&quot;.</span><br></pre></td></tr></table></figure>
-
-<p>我们可以使用 <code>--slient</code> 或者 <code>-q/--quite</code> 选项来抑制这些信息的输出。还有很多关于 GDB 的命令行选项，我们可以通过 <code>gdb -help</code> 来获取其使用方法。</p>
-<h3 id="文件选择"><a href="#文件选择" class="headerlink" title="文件选择"></a>文件选择</h3><p>当 GDB 运行时，它将读取选项以外的所有参数以指定可执行文件和 core 文件（或者进程 ID）中读取其它参数。这与分别由 <code>-se</code> 和 <code>-c</code> （或者 <code>-p</code>）指定参数相同。（GDB 将第一个没有选项关联的参数视为与 <code>-se</code> 后跟参数等效；将第二个没有选项关联的参数视为与 <code>-c</code> 或者 <code>-p</code> 后跟参数等效。）如果第二个参数以数字开始，GDB 首先尝试将其附加为一个进程，如果失败了，GDB 则试图将其作为一个 core 文件来打开。如果我们有一个以数字开始的 core 文件，那么我们可以为期添加前缀（如 <code>./</code>）来避免 GDB 将其视为一个进程 ID。</p>
-<p>如果 GDB 不支持配置 core 文件，例如对于大多是嵌入式目标，那么 GDB 将输出日志并忽略第二个参数。</p>
-<p>大多数 GDB 选项都有长，短选项两种形式；如果我们截断了长格式，只要足够 GDB 区分歧义，那么它也是能识别的。</p>
-<style>
-table th:nth-of-type(1) {
-    width: 35%;
-}
-table th:nth-of-type(2) {
-    width: 65%;
-}
-</style>
-
-<table>
-<thead>
-<tr>
-<th>选项</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>-symbols file</code>, <br/><code>-s file</code></td>
-<td>从文件 <code>file</code> 中读取符号表</td>
-</tr>
-<tr>
-<td><code>-exec file</code>, <br/><code>-e file</code></td>
-<td>使用文件 <code>file</code> 作为可执行文件在适当时执行，并与核心转储一起检查纯数据</td>
-</tr>
-<tr>
-<td><code>-se file</code></td>
-<td>从文件 <code>file</code> 中读取符号表，并将其用作可执行文件</td>
-</tr>
-<tr>
-<td><code>-core file</code>, <br/><code>-c file</code></td>
-<td>使用文件 <code>file</code> 作为 coredump 文件进行检查</td>
-</tr>
-<tr>
-<td><code>-pid number</code>, <br/><code>-p number</code></td>
-<td>与 <code>attach</code> 命令一样，附加到进程 ID 为 <code>number</code> 的进程</td>
-</tr>
-<tr>
-<td><code>-command file</code>, <br/><code>-x file</code></td>
-<td>执行 <code>file</code> 文件中的命令，该文件的内容与 <code>source</code> 命令的内容相同</td>
-</tr>
-<tr>
-<td><code>-eval-command command</code>, <br/><code>-ex command</code></td>
-<td>执行单个的 GDB 命令，可多次使用，也可以与 <code>-x</code> 交叉使用</td>
-</tr>
-<tr>
-<td><code>-init-command file</code>, <br/><code>-ix file</code></td>
-<td>在加载 <code>inferior</code> 之前（在加载 <code>gdbinit</code> 文件之后）执行 <code>file</code> 文件内的 GDB 命令</td>
-</tr>
-<tr>
-<td><code>-init-eval-command command</code>,<br/> <code>-iex command</code></td>
-<td>在加载 <code>inferior</code> 之前（在加载 <code>gdbinit</code> 文件之后）执行单个 GDB 命令</td>
-</tr>
-<tr>
-<td><code>-directory directory</code>, <br/><code>-d directory</code></td>
-<td>将目录 <code>directory</code> 作为源码或脚本的搜索路径</td>
-</tr>
-<tr>
-<td><code>-r</code>, <br/><code>-readnow</code></td>
-<td>立即读取每个符号文件的整个符号表，而不是默认值，默认值是根据需要逐步读取它。这会使启动速度变慢，但会使以后的操作变快</td>
-</tr>
-<tr>
-<td><code>--readnever</code></td>
-<td>不要读取每个符号文件的符号调试信息。这使启动速度更快，但以无法执行符号调试为代价。DWARF展开信息也不会被读取，这意味着 backtrace 可能变得不完整或不准确。这种用法通常是用户只关心程序的执行顺序。</td>
-</tr>
-</tbody></table>
-<h3 id="选择模式"><a href="#选择模式" class="headerlink" title="选择模式"></a>选择模式</h3><p>我们可以在不同模式下运行 GBD，例如，批处理模式或者静默模式。</p>
-<ul>
-<li><p><code>-nx, -n</code> 不要执行初始化文件中的命令。GDB 包含三个初始化文件，它们按照如下的顺序加载：</p>
-<ul>
-<li><code>system.gdbinit</code> - 系统级别的初始化文件，它由编译时选项 <code>--with-system-gdbinit</code> 指定的位置。GDB 会在命令行选项处理之前加载此文件。</li>
-<li><code>system.gdbinit.d</code> - 这是系统级别的初始化目录。它由编译时选项 <code>--with-system-gdbinit-dir</code> 指定。此处的文件将在 <code>system.gdbinit</code> 文件之后、命令行选项之前进行加载，该目录下可能存在多个文件，它们按字母顺序进行加载。文件需要具有公认的脚本语言扩展名（<code>.py/.scm</code>）或以 <code>.gdb</code> 扩展名（将其视为普通的 GDB 命令）命名。GDB 不会递归的加载该目录下的子目录。</li>
-<li><code>~/.gdbinit</code> - 用户家目录初始化文件，它在 <code>system.gdbinit</code> 之后，命令行选项处理之前加载。</li>
-<li><code>./.gdbinit</code> - 当前目录的初始化文件。它最后被加载，除了 <code>-x</code> 和 <code>-nx</code> 命令行选项之外。<code>-x</code> 和 <code>-ex</code> 是最后被处理的，在 <code>./.gdbinit</code> 之后加载。</li>
-</ul>
-</li>
-<li><p><code>-nh</code> 不要执行来自用户家目录下的初始化文件（即 <code>~/.gdbinit</code>）中的命令。</p>
-</li>
-<li><p><code>-quite, -silent, -q</code> 静默模式，不输出介绍信息和版权信息。在批处理模式下也不会输出这些信息。</p>
-</li>
-<li><p><code>-batch</code> 批处理模式。在处理完由 <code>-x</code> 指定的所有命令文件（如果没有使用 <code>-n</code> 选项，也将处理初始化文件中的命令）并退出，正常返回 0，非 0 表示出现错误。批处理模式将会禁止分页功能，即终端的宽度和高度没有限制，类似于 <code>set confirm off</code>。</p>
-</li>
-<li><p><code>-cd directory</code> 使用 <code>directory</code> 作为工作目录，而不是当前目录作为工作目录。</p>
-</li>
-<li><p><code>-data-directory directory, -D directory</code> 使用 <code>directory</code> 作为 GDB 运行时的数据目录，这个目录包含了 GDB 的辅助文件。</p>
-</li>
-</ul>
-<p>此处只列出了部分选项，更多选项<a href="https://sourceware.org/gdb/current/onlinedocs/gdb/Mode-Options.html#Mode-Options">请看这里</a>。</p>
-<h3 id="GDB-在启动时都做了什么"><a href="#GDB-在启动时都做了什么" class="headerlink" title="GDB 在启动时都做了什么"></a>GDB 在启动时都做了什么</h3><p>下面是有关 GDB 在会话启动过程中执行的操作的说明：</p>
-<ol>
-<li><p>设置命令行指定的命令解释器。</p>
-</li>
-<li><p>读取系统级别的初始化文件以及系统级别的初始化目录，并执行这些文件中的命令。这些文件以 <code>.gdb</code> 结尾（包含 GDB 命令）或者 GDB 支持的脚本语言的后缀结尾。</p>
-</li>
-<li><p>读取用户级别的初始化文件并执行其中的命令。</p>
-</li>
-<li><p>执行由 <code>-iex</code> 或 <code>-ix</code> 选项指定的命令文件或命令，按照指定的顺序执行。</p>
-</li>
-<li><p>处理命令行选项和操作数。</p>
-</li>
-<li><p>读取并执行来自当前工作目录下的初始化文件（需要 <code>set auto-load local-gdbinit</code> 设置为 <code>on</code>）。仅在当前目录不是用户家目录时才会执行。因此，我们可以在调用 GDB 的目录中拥有多个初始化文件，一个初始化文件位于用户家目录中，而另一个文件特定于要调试的程序目录。</p>
-</li>
-<li><p>如果命令行选项指定了待调试的程序，或者需要附加的进程，或者 core 文件，GDB 会加载为程序或其加载的共享库提供的有自动加载的脚本。<br>如果我们想要禁用启动时自动加载脚本，可以按如下方式使用：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ gdb -iex &quot;set auto-load python-scripts off&quot; myprogname</span><br></pre></td></tr></table></figure>
-
-<p>选项 <code>-ex</code> 不会有效，这是因为它加载的时间太晚了，以致于来不及关闭自动加载功能。</p>
-</li>
-<li><p>按顺序执行来自 <code>-ex</code> 和 <code>-x</code> 选项指定的命令。</p>
-</li>
-<li><p>读取历史文件中的历史文件。</p>
-</li>
-</ol>
-<p>初始化文件使用的语法与命令文件相同，并且 GDB 处理的方式也一样。用户家目录的初始化文件设置选项可以影响后续选项的处理。如果使用了 <code>-nx</code> 选项，那么将不会执行初始化文件中的命令。</p>
-<p>通过 <code>gdb --help</code> 可以看到 GDB 启动时加载的初始化文件列表。</p>
-<h2 id="退出-GDB"><a href="#退出-GDB" class="headerlink" title="退出 GDB"></a>退出 GDB</h2><p>我们可以使用 <code>quit [expression]</code> 或者 <code>q [expression]</code> 退出 GDB。如果没有指定 <code>expression</code> 表达式，GDB 将正常终止；否则他将使用表达式 <code>experssion</code> 的结果作为错误码。</p>
-<p>中断（通常是 <code>Ctrl-c</code>）不会退出 GDB，而是终止正在运行的 GDB 命令，并返回到 GDB 的命令行。如果您一直在使用 GDB 来控制连接的进程或设备，则可以使用 <code>detach</code> 命令释放它。</p>
-<h2 id="Shell-命令"><a href="#Shell-命令" class="headerlink" title="Shell 命令"></a>Shell 命令</h2><p>如果我们想要在调试期间执行 shell 命令，我们没有必要离开或者挂起 GDB；我们可以直接使用 SHELL 命令。</p>
-<p>我们可以使用 <code>shell command-string</code> 或者 <code>!command-string</code> 来执行标准的 shell 命令。需要注意的是在 <code>!</code> 和 <code>command-string</code> 之间没有空格。如果存在空格，那么将使用环境变量 <code>SHELL</code> 来运行 shell 命令。否则，GDB 将使用默认的 shell（Unix 系统为 /bin/sh，Windows 平台为 COMMAND.COM 等）。</p>
-<p>编译工具 <code>make</code> 总是在开发环境中，因此，在 GDB 中我们不必为 <code>make</code> 使用 <code>shell</code> 命令。</p>
-<ul>
-<li><p><code>make make-args</code> -  将以给定的参数执行 <code>make</code> 命令，这等同于 <code>shell make make-args</code>。</p>
-</li>
-<li><p><code>pipe [command] | shell_command</code> 和 <code>| [command] | shell_command</code> - 命令执行 <code>command</code> 命令并将结果重定向到 <code>shell_command</code> 中。</p>
-</li>
-<li><p><code>pipe -d delim command delim shell_command</code> 和<code>| -d delim command delim shell_command</code> - 与上面的命令相似，不同的是我们可以指定分割符 <code>delim</code>。例如：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">(gdb) p var</span><br><span class="line">$1 = &#123;</span><br><span class="line">  black = 144,</span><br><span class="line">  red = 233,</span><br><span class="line">  green = 377,</span><br><span class="line">  blue = 610,</span><br><span class="line">  white = 987</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">(gdb) pipe p var | wc</span><br><span class="line">      7      19      80</span><br><span class="line">(gdb) | p var | wc -l</span><br><span class="line">7</span><br><span class="line"></span><br><span class="line">(gdb) p /x var</span><br><span class="line">$4 = &#123;</span><br><span class="line">  black = 0x90,</span><br><span class="line">  red = 0xe9,</span><br><span class="line">  green = 0x179,</span><br><span class="line">  blue = 0x262,</span><br><span class="line">  white = 0x3db</span><br><span class="line">&#125;</span><br><span class="line">(gdb) || grep red</span><br><span class="line">  red =&gt; 0xe9,</span><br><span class="line"></span><br><span class="line">(gdb) | -d ! echo this contains a | char\n ! sed -e &#x27;s/|/PIPE/&#x27;</span><br><span class="line">this contains a PIPE char</span><br><span class="line">(gdb) | -d xxx echo this contains a | char!\n xxx sed -e &#x27;s/|/PIPE/&#x27;</span><br><span class="line">this contains a PIPE char!</span><br><span class="line">(gdb)</span><br></pre></td></tr></table></figure></li>
-</ul>
-<p>变量 <code>$_shell_exitcode</code> 和 <code>$_shell_exitsignal</code> 可以方便的检查 <code>shell</code>, <code>make</code>, <code>pipe</code> 和 <code>|</code> 最后一个 shell 命令的退出状态。</p>
-<h2 id="日志输出"><a href="#日志输出" class="headerlink" title="日志输出"></a>日志输出</h2><p>我们可能想要将 GDB 的输出保存在文件中，GDB 提供多个命令来控制日志的输出。</p>
-<ul>
-<li><code>set logging on</code> - 启用日志。</li>
-<li><code>set logging off</code> - 禁用日志。</li>
-<li><code>set logging file filename</code> - 改变当前日志文件名。默认为 gdb.txt。</li>
-<li><code>set logging overwrite [on|off]</code> - 默认情况下，GDB 将采用追加的方法写日志文件。我们可以通过设置该参数来改变其行为。</li>
-<li><code>set logging redirect [on|off]</code> - 默认情况下，GDB 会同时输出到终端和日志文件中，如果设置 <code>redirect</code>，那么只会输出到日志文件。如果是使用多个 TUI 模式，在 GDB 的命令窗口没有输出，也就无法输出到日志文件中。</li>
-<li><code>set logging debugredirect [on|off]</code> - 默认情况下，GDB 的调试输出同时输出到终端和日志文件中，如果设置了 <code>debugredirect</code>，那么就只会输出到日志文件中。GDB 8.1 没有这个命令。</li>
-<li><code>show logging</code> - 显示当前日志配置。</li>
-</ul>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://sourceware.org/gdb/current/onlinedocs/gdb">https://sourceware.org/gdb/current/onlinedocs/gdb</a></p>
 ]]></content>
       <categories>
         <category>杂项</category>
@@ -2085,6 +1910,38 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>LaTeX 页码设置</title>
+    <url>/2019/03/latex-page-numbering/</url>
+    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
+<span id="more"></span>
+
+<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
+<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
+<ul>
+<li><strong>empty</strong> - 没有页眉和页脚</li>
+<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
+<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
+<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
+</ul>
+<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
+<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
+<ul>
+<li><strong>arabic</strong> - 阿拉伯数字</li>
+<li><strong>roman</strong> - 小写的罗马数字</li>
+<li><strong>Roman</strong> - 大写的罗马数字</li>
+<li><strong>alph</strong> - 小写的字符形式</li>
+<li><strong>Alph</strong> - 大写的字符形式</li>
+</ul>
+<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">\documentclass&#123;article&#125;</span><br><span class="line"></span><br><span class="line">\usepackage&#123;fontspec, xunicode, xlextra&#125;</span><br><span class="line">\usepackage&#123;xeCJK&#125;</span><br><span class="line"></span><br><span class="line">\title&#123;\LaTeX 页码设置&#125;</span><br><span class="line">\author&#123;Japinli&#125;</span><br><span class="line"></span><br><span class="line">\begin&#123;document&#125;</span><br><span class="line">\maketitle</span><br><span class="line">\thispagestyle&#123;empty&#125; % 当前页不显示页码</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\pagestyle&#123;headings&#125;</span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;Roman&#125;</span><br><span class="line"></span><br><span class="line">\section*&#123;前言&#125;</span><br><span class="line">学习如何在\LaTeX 中设置页码。</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\tableofcontents</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;arabic&#125;</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格&#125;</span><br><span class="line"></span><br><span class="line">\LaTeX 中包含五种页码风格，分别是\emph&#123;arabic&#125;，\emph&#123;roman&#125;，\emph&#123;Roman&#125;，</span><br><span class="line">\emph&#123;alph&#125;和\emph&#123;Alph&#125;。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格说明&#125;</span><br><span class="line"></span><br><span class="line">\emph&#123;arabic&#125;代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;roman&#125;代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Roman&#125;代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;alph&#125;代表小写的字符类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Alph&#125;代表大写的字符类型。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格设置&#125;</span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用\emph&#123;\textbackslash pagenumbering\&#123;sytle\&#125;&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line">\end&#123;document&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>排版</category>
+      </categories>
+      <tags>
+        <tag>LaTeX</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</title>
     <url>/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/</url>
     <content><![CDATA[<p>最近在浏览 PostgreSQL 邮件列表时发现一个 bug：逻辑复制时，如果发布者和订阅者的 <code>datestyle</code> 不一致可能导致逻辑复制失败。本文简要记录这个问题的分析与修复方法。</p>
@@ -2146,38 +2003,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>LaTeX 页码设置</title>
-    <url>/2019/03/latex-page-numbering/</url>
-    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
-<span id="more"></span>
-
-<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
-<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
-<ul>
-<li><strong>empty</strong> - 没有页眉和页脚</li>
-<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
-<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
-<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
-</ul>
-<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
-<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
-<ul>
-<li><strong>arabic</strong> - 阿拉伯数字</li>
-<li><strong>roman</strong> - 小写的罗马数字</li>
-<li><strong>Roman</strong> - 大写的罗马数字</li>
-<li><strong>alph</strong> - 小写的字符形式</li>
-<li><strong>Alph</strong> - 大写的字符形式</li>
-</ul>
-<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">\documentclass&#123;article&#125;</span><br><span class="line"></span><br><span class="line">\usepackage&#123;fontspec, xunicode, xlextra&#125;</span><br><span class="line">\usepackage&#123;xeCJK&#125;</span><br><span class="line"></span><br><span class="line">\title&#123;\LaTeX 页码设置&#125;</span><br><span class="line">\author&#123;Japinli&#125;</span><br><span class="line"></span><br><span class="line">\begin&#123;document&#125;</span><br><span class="line">\maketitle</span><br><span class="line">\thispagestyle&#123;empty&#125; % 当前页不显示页码</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\pagestyle&#123;headings&#125;</span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;Roman&#125;</span><br><span class="line"></span><br><span class="line">\section*&#123;前言&#125;</span><br><span class="line">学习如何在\LaTeX 中设置页码。</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\tableofcontents</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;arabic&#125;</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格&#125;</span><br><span class="line"></span><br><span class="line">\LaTeX 中包含五种页码风格，分别是\emph&#123;arabic&#125;，\emph&#123;roman&#125;，\emph&#123;Roman&#125;，</span><br><span class="line">\emph&#123;alph&#125;和\emph&#123;Alph&#125;。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格说明&#125;</span><br><span class="line"></span><br><span class="line">\emph&#123;arabic&#125;代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;roman&#125;代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Roman&#125;代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;alph&#125;代表小写的字符类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Alph&#125;代表大写的字符类型。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格设置&#125;</span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用\emph&#123;\textbackslash pagenumbering\&#123;sytle\&#125;&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line">\end&#123;document&#125;</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -2382,6 +2207,80 @@ table th:nth-of-type(2) {
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
         <tag>迁移</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Oracle VARCHAR2 与 PostgreSQL VARCHAR 异同</title>
+    <url>/2021/11/oracle-varchar2-vs-postgresql-varchar/</url>
+    <content><![CDATA[<p>在 Oracle 迁移到 PostgreSQL 数据库的过程中，我们通常使用 PostgreSQL 中的 <code>VARCHAR</code> 类型替换 Oracle 中的 <code>VARCHAR2</code> 类型。本文将针对 Oracle 中的 <code>VARCHAR2</code> 类型和 PostgreSQL 中的 <code>VARCHAR</code> 类型进行简要的比较。</p>
+<span id="more"></span>
+
+<h2 id="Oracle-VARCHAR2-类型"><a href="#Oracle-VARCHAR2-类型" class="headerlink" title="Oracle VARCHAR2 类型"></a>Oracle VARCHAR2 类型</h2><p>在 Oracle 数据库中，我们通常使用 <code>VARCHAR2</code> 类型存储变长数据。Oracle 中的 <code>VARCHAR2</code> 存储范围为 1 到 4000 个字节。</p>
+<p>当我们创建表时，必须指定字符长度。Oracle 提供了两种方式。</p>
+<ul>
+<li><code>VARCHAR2(max_size BYTE)</code> - 以字节的方式给出最大值。</li>
+<li><code>VARCHAR2(max_size CHAR)</code> - 以字的方式给出最大值。</li>
+</ul>
+<p>默认情况下，Oracle 是以字节的方式给出最大值的，即 <code>VARCHAR2(max_size)</code> 等同于 <code>VARCHAR2(max_size BYTE)</code>。</p>
+<p>在 Oracle 12c 中，您可以指定 <code>max_size</code> 为 32767。Oracle 通过参数 <code>MAX_STRING_SIZE</code> 来控制这个值，如果 <code>MAX_STRING_SIZE = STANDARD</code>，那么 <code>VARCHAR2</code> 的最大值仍然只能最大为 4000；若 <code>MAX_STRING_SIZE = EXTENDED</code>，那么 <code>VARCHAR2</code> 的最大值则可以设置为 32767。</p>
+<h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><p>我们创建一张表，并插入一条记录。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (s1 varchar2(<span class="number">3</span>), s2 varchar2(<span class="number">3</span> <span class="type">char</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="string">&#x27;a&#x27;</span>, <span class="string">&#x27;您&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>通过 <code>length()</code> 函数查看其长度，我们发现 <code>s2</code> 的长度为 3，这里需要注意的是在 <code>VARCHAR2</code> 包含多字节编码的字时他将在末尾添加一个 <code>0x00</code> 字节。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> length(s1), length(s2) <span class="keyword">FROM</span> tbl;</span><br><span class="line"></span><br><span class="line">LENGTH(S1) LENGTH(S2)</span><br><span class="line"><span class="comment">---------- ----------</span></span><br><span class="line">         <span class="number">1</span>          <span class="number">3</span></span><br></pre></td></tr></table></figure>
+
+<p>当我们插入的字节大于指定的 <code>max_size</code> 将报错。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="string">&#x27;ab&#x27;</span>, <span class="string">&#x27;您a&#x27;</span>)</span><br><span class="line">                              <span class="operator">*</span></span><br><span class="line">ERROR <span class="keyword">at</span> line <span class="number">1</span>:</span><br><span class="line">ORA<span class="number">-12899</span>: <span class="keyword">value</span> too <span class="keyword">large</span> <span class="keyword">for</span> <span class="keyword">column</span> &quot;SYS&quot;.&quot;TBL&quot;.&quot;S2&quot; (actual: <span class="number">4</span>, maximum: <span class="number">3</span>)</span><br></pre></td></tr></table></figure>
+
+<p>此外，Oracle 中的 <code>length()</code> 针对 <code>VARCHAR2</code> 类型得到的是字节的长度，而不是字的长度。</p>
+<p>以上测试基于 Oracle 12.1.0.2.0。</p>
+<h2 id="PostgreSQL-VARCHAR-类型"><a href="#PostgreSQL-VARCHAR-类型" class="headerlink" title="PostgreSQL VARCHAR 类型"></a>PostgreSQL VARCHAR 类型</h2><p>PostgreSQL 中的 <code>VARCHAR</code> 类型与 Oracle 有所不同，它不支持指定不同的类型，PostgreSQL 的 <code>VARCHAR</code> 是按字来计算的而不是字节。</p>
+<h3 id="示例-1"><a href="#示例-1" class="headerlink" title="示例"></a>示例</h3><p>创建一张测试表，并插入一条记录。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (s1 <span class="type">varchar</span>(<span class="number">3</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="string">&#x27;你好啊&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>一切都正常。我们再次尝试插入更多的字。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="string">&#x27;你好啊a&#x27;</span>);</span><br><span class="line">ERROR:  <span class="keyword">value</span> too long <span class="keyword">for</span> type <span class="type">character</span> <span class="type">varying</span>(<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="string">&#x27;你好啊啊&#x27;</span>);</span><br><span class="line">ERROR:  <span class="keyword">value</span> too long <span class="keyword">for</span> type <span class="type">character</span> <span class="type">varying</span>(<span class="number">3</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这是无论我们插入什么，PostgreSQL 都将报错，并指出超出长度限制。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> length(s1), <span class="keyword">octet_length</span>(s1) <span class="keyword">FROM</span> TBL;</span><br><span class="line"> length <span class="operator">|</span> <span class="keyword">octet_length</span></span><br><span class="line"><span class="comment">--------+--------------</span></span><br><span class="line">      <span class="number">3</span> <span class="operator">|</span>            <span class="number">9</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>字符串 <code>你好啊</code> 的 <a href="https://www.browserling.com/tools/utf8-encode">UTF-8 编码</a>序列为 <code>\xe4\xbd\xa0\xe5\xa5\xbd\xe5\x95\x8a</code>，包含 9 个字节。</p>
+<p>PostgreSQL 中的最大长度为 <code>10485760</code>，10MB 的数据。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><table>
+<thead>
+<tr>
+<th>数据库类型</th>
+<th>最大长度</th>
+<th>申明方式</th>
+<th>length() 函数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PostgreSQL VARCHAR</td>
+<td>10485760</td>
+<td>varchar(n)</td>
+<td>以字计算</td>
+</tr>
+<tr>
+<td>Oracle VARCHAR2</td>
+<td>4000 or 32767 (12c)</td>
+<td>varchar2(n byte), varchar2(n char)</td>
+<td>以字节计算</td>
+</tr>
+</tbody></table>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.oracletutorial.com/oracle-basics/oracle-varchar2/">https://www.oracletutorial.com/oracle-basics/oracle-varchar2/</a><br>[2] <a href="https://www.postgresql.org/docs/13/datatype-character.html">https://www.postgresql.org/docs/13/datatype-character.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 州同
+
+<p>一人好古董，有持文王鼎求售者，以百金买之。<br>又一人持一夜壶至，铜色斑驳陆离，云是武王时物，亦索重价。<br>曰：“铜色虽好，只是肚里甚臭。”<br>答曰：“腹中虽臭，难道不是个周铜？”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Oracle</tag>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -3423,6 +3322,181 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>GDB 基本使用</title>
+    <url>/2020/01/getting-in-and-out-of-gdb/</url>
+    <content><![CDATA[<p>在工作中经常使用 GDB 来调试程序，但是一直都没有系统的进行学习过，为此，我打算对其进行一个系统的学习，学习的主要材料来自 GNU GDB 文档 <a href="https://sourceware.org/gdb/current/onlinedocs/gdb/">Debugging with GDB</a>。</p>
+<p>本文主要包括如何运行以及退出 GDB，通常，我们使用 <code>gdb</code> 即可进入 GDB，而 <code>quit</code> 命令或者 <code>Ctrl-d</code> 快捷键便可以退出 GDB。</p>
+<span id="more"></span>
+
+<h2 id="运行-GDB"><a href="#运行-GDB" class="headerlink" title="运行 GDB"></a>运行 GDB</h2><p>通过在命令行中输入 <code>gdb</code> 就可以进入到 GDB，此时，GDB 将读取用户输入的命令并执行，这其实就是一个交互式的界面，读取用户命令，执行用户命令，再读取用户命令，直到用户输入退出指令执行退出操作。</p>
+<p>我们还可以在 <code>gdb</code> 运行时指定一系列参数和选项，从而指定更多关于我们调试环境的一些设置。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program</span></span><br></pre></td></tr></table></figure>
+
+<p>上面是最常用的 GDB 使用方式，它指定我们将要调试的可执行程序。此外，我们还可以指定调试的程序以及一个 core 文件：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program core</span></span><br></pre></td></tr></table></figure>
+
+<p>如果我们要调试正在运行的程序，我们还可以使用进程 ID 或者 <code>-p</code> 选项作为第二个参数：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb program 1234</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gdb -p 1234</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的命令将使用 GDB 附加到进程 ID 为 <code>1234</code> 的进程上，如果使用 <code>-p</code> 选项，我们可以省略 <code>program</code> 程序名。</p>
+<p>我们可以选择使用 <code>--args</code> 来向调试的程序传递参数，该选项将终止可选参数的处理。例如：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb --args gcc -O2 -c foo.c</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的命令将使用 GDB 调试 gcc 程序，并将 <code>-O2 -c foo.c</code> 作为 <code>gcc</code> 的命令行参数。</p>
+<p>GDB 运行时会输出类似下面的信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ gdb</span><br><span class="line">GNU gdb (GDB) 8.3</span><br><span class="line">Copyright (C) 2019 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.</span><br><span class="line">Type &quot;show copying&quot; and &quot;show warranty&quot; for details.</span><br><span class="line">This GDB was configured as &quot;x86_64-apple-darwin18.5.0&quot;.</span><br><span class="line">Type &quot;show configuration&quot; for configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">    &lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line"></span><br><span class="line">For help, type &quot;help&quot;.</span><br><span class="line">Type &quot;apropos word&quot; to search for commands related to &quot;word&quot;.</span><br></pre></td></tr></table></figure>
+
+<p>我们可以使用 <code>--slient</code> 或者 <code>-q/--quite</code> 选项来抑制这些信息的输出。还有很多关于 GDB 的命令行选项，我们可以通过 <code>gdb -help</code> 来获取其使用方法。</p>
+<h3 id="文件选择"><a href="#文件选择" class="headerlink" title="文件选择"></a>文件选择</h3><p>当 GDB 运行时，它将读取选项以外的所有参数以指定可执行文件和 core 文件（或者进程 ID）中读取其它参数。这与分别由 <code>-se</code> 和 <code>-c</code> （或者 <code>-p</code>）指定参数相同。（GDB 将第一个没有选项关联的参数视为与 <code>-se</code> 后跟参数等效；将第二个没有选项关联的参数视为与 <code>-c</code> 或者 <code>-p</code> 后跟参数等效。）如果第二个参数以数字开始，GDB 首先尝试将其附加为一个进程，如果失败了，GDB 则试图将其作为一个 core 文件来打开。如果我们有一个以数字开始的 core 文件，那么我们可以为期添加前缀（如 <code>./</code>）来避免 GDB 将其视为一个进程 ID。</p>
+<p>如果 GDB 不支持配置 core 文件，例如对于大多是嵌入式目标，那么 GDB 将输出日志并忽略第二个参数。</p>
+<p>大多数 GDB 选项都有长，短选项两种形式；如果我们截断了长格式，只要足够 GDB 区分歧义，那么它也是能识别的。</p>
+<style>
+table th:nth-of-type(1) {
+    width: 35%;
+}
+table th:nth-of-type(2) {
+    width: 65%;
+}
+</style>
+
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-symbols file</code>, <br/><code>-s file</code></td>
+<td>从文件 <code>file</code> 中读取符号表</td>
+</tr>
+<tr>
+<td><code>-exec file</code>, <br/><code>-e file</code></td>
+<td>使用文件 <code>file</code> 作为可执行文件在适当时执行，并与核心转储一起检查纯数据</td>
+</tr>
+<tr>
+<td><code>-se file</code></td>
+<td>从文件 <code>file</code> 中读取符号表，并将其用作可执行文件</td>
+</tr>
+<tr>
+<td><code>-core file</code>, <br/><code>-c file</code></td>
+<td>使用文件 <code>file</code> 作为 coredump 文件进行检查</td>
+</tr>
+<tr>
+<td><code>-pid number</code>, <br/><code>-p number</code></td>
+<td>与 <code>attach</code> 命令一样，附加到进程 ID 为 <code>number</code> 的进程</td>
+</tr>
+<tr>
+<td><code>-command file</code>, <br/><code>-x file</code></td>
+<td>执行 <code>file</code> 文件中的命令，该文件的内容与 <code>source</code> 命令的内容相同</td>
+</tr>
+<tr>
+<td><code>-eval-command command</code>, <br/><code>-ex command</code></td>
+<td>执行单个的 GDB 命令，可多次使用，也可以与 <code>-x</code> 交叉使用</td>
+</tr>
+<tr>
+<td><code>-init-command file</code>, <br/><code>-ix file</code></td>
+<td>在加载 <code>inferior</code> 之前（在加载 <code>gdbinit</code> 文件之后）执行 <code>file</code> 文件内的 GDB 命令</td>
+</tr>
+<tr>
+<td><code>-init-eval-command command</code>,<br/> <code>-iex command</code></td>
+<td>在加载 <code>inferior</code> 之前（在加载 <code>gdbinit</code> 文件之后）执行单个 GDB 命令</td>
+</tr>
+<tr>
+<td><code>-directory directory</code>, <br/><code>-d directory</code></td>
+<td>将目录 <code>directory</code> 作为源码或脚本的搜索路径</td>
+</tr>
+<tr>
+<td><code>-r</code>, <br/><code>-readnow</code></td>
+<td>立即读取每个符号文件的整个符号表，而不是默认值，默认值是根据需要逐步读取它。这会使启动速度变慢，但会使以后的操作变快</td>
+</tr>
+<tr>
+<td><code>--readnever</code></td>
+<td>不要读取每个符号文件的符号调试信息。这使启动速度更快，但以无法执行符号调试为代价。DWARF展开信息也不会被读取，这意味着 backtrace 可能变得不完整或不准确。这种用法通常是用户只关心程序的执行顺序。</td>
+</tr>
+</tbody></table>
+<h3 id="选择模式"><a href="#选择模式" class="headerlink" title="选择模式"></a>选择模式</h3><p>我们可以在不同模式下运行 GBD，例如，批处理模式或者静默模式。</p>
+<ul>
+<li><p><code>-nx, -n</code> 不要执行初始化文件中的命令。GDB 包含三个初始化文件，它们按照如下的顺序加载：</p>
+<ul>
+<li><code>system.gdbinit</code> - 系统级别的初始化文件，它由编译时选项 <code>--with-system-gdbinit</code> 指定的位置。GDB 会在命令行选项处理之前加载此文件。</li>
+<li><code>system.gdbinit.d</code> - 这是系统级别的初始化目录。它由编译时选项 <code>--with-system-gdbinit-dir</code> 指定。此处的文件将在 <code>system.gdbinit</code> 文件之后、命令行选项之前进行加载，该目录下可能存在多个文件，它们按字母顺序进行加载。文件需要具有公认的脚本语言扩展名（<code>.py/.scm</code>）或以 <code>.gdb</code> 扩展名（将其视为普通的 GDB 命令）命名。GDB 不会递归的加载该目录下的子目录。</li>
+<li><code>~/.gdbinit</code> - 用户家目录初始化文件，它在 <code>system.gdbinit</code> 之后，命令行选项处理之前加载。</li>
+<li><code>./.gdbinit</code> - 当前目录的初始化文件。它最后被加载，除了 <code>-x</code> 和 <code>-nx</code> 命令行选项之外。<code>-x</code> 和 <code>-ex</code> 是最后被处理的，在 <code>./.gdbinit</code> 之后加载。</li>
+</ul>
+</li>
+<li><p><code>-nh</code> 不要执行来自用户家目录下的初始化文件（即 <code>~/.gdbinit</code>）中的命令。</p>
+</li>
+<li><p><code>-quite, -silent, -q</code> 静默模式，不输出介绍信息和版权信息。在批处理模式下也不会输出这些信息。</p>
+</li>
+<li><p><code>-batch</code> 批处理模式。在处理完由 <code>-x</code> 指定的所有命令文件（如果没有使用 <code>-n</code> 选项，也将处理初始化文件中的命令）并退出，正常返回 0，非 0 表示出现错误。批处理模式将会禁止分页功能，即终端的宽度和高度没有限制，类似于 <code>set confirm off</code>。</p>
+</li>
+<li><p><code>-cd directory</code> 使用 <code>directory</code> 作为工作目录，而不是当前目录作为工作目录。</p>
+</li>
+<li><p><code>-data-directory directory, -D directory</code> 使用 <code>directory</code> 作为 GDB 运行时的数据目录，这个目录包含了 GDB 的辅助文件。</p>
+</li>
+</ul>
+<p>此处只列出了部分选项，更多选项<a href="https://sourceware.org/gdb/current/onlinedocs/gdb/Mode-Options.html#Mode-Options">请看这里</a>。</p>
+<h3 id="GDB-在启动时都做了什么"><a href="#GDB-在启动时都做了什么" class="headerlink" title="GDB 在启动时都做了什么"></a>GDB 在启动时都做了什么</h3><p>下面是有关 GDB 在会话启动过程中执行的操作的说明：</p>
+<ol>
+<li><p>设置命令行指定的命令解释器。</p>
+</li>
+<li><p>读取系统级别的初始化文件以及系统级别的初始化目录，并执行这些文件中的命令。这些文件以 <code>.gdb</code> 结尾（包含 GDB 命令）或者 GDB 支持的脚本语言的后缀结尾。</p>
+</li>
+<li><p>读取用户级别的初始化文件并执行其中的命令。</p>
+</li>
+<li><p>执行由 <code>-iex</code> 或 <code>-ix</code> 选项指定的命令文件或命令，按照指定的顺序执行。</p>
+</li>
+<li><p>处理命令行选项和操作数。</p>
+</li>
+<li><p>读取并执行来自当前工作目录下的初始化文件（需要 <code>set auto-load local-gdbinit</code> 设置为 <code>on</code>）。仅在当前目录不是用户家目录时才会执行。因此，我们可以在调用 GDB 的目录中拥有多个初始化文件，一个初始化文件位于用户家目录中，而另一个文件特定于要调试的程序目录。</p>
+</li>
+<li><p>如果命令行选项指定了待调试的程序，或者需要附加的进程，或者 core 文件，GDB 会加载为程序或其加载的共享库提供的有自动加载的脚本。<br>如果我们想要禁用启动时自动加载脚本，可以按如下方式使用：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ gdb -iex &quot;set auto-load python-scripts off&quot; myprogname</span><br></pre></td></tr></table></figure>
+
+<p>选项 <code>-ex</code> 不会有效，这是因为它加载的时间太晚了，以致于来不及关闭自动加载功能。</p>
+</li>
+<li><p>按顺序执行来自 <code>-ex</code> 和 <code>-x</code> 选项指定的命令。</p>
+</li>
+<li><p>读取历史文件中的历史文件。</p>
+</li>
+</ol>
+<p>初始化文件使用的语法与命令文件相同，并且 GDB 处理的方式也一样。用户家目录的初始化文件设置选项可以影响后续选项的处理。如果使用了 <code>-nx</code> 选项，那么将不会执行初始化文件中的命令。</p>
+<p>通过 <code>gdb --help</code> 可以看到 GDB 启动时加载的初始化文件列表。</p>
+<h2 id="退出-GDB"><a href="#退出-GDB" class="headerlink" title="退出 GDB"></a>退出 GDB</h2><p>我们可以使用 <code>quit [expression]</code> 或者 <code>q [expression]</code> 退出 GDB。如果没有指定 <code>expression</code> 表达式，GDB 将正常终止；否则他将使用表达式 <code>experssion</code> 的结果作为错误码。</p>
+<p>中断（通常是 <code>Ctrl-c</code>）不会退出 GDB，而是终止正在运行的 GDB 命令，并返回到 GDB 的命令行。如果您一直在使用 GDB 来控制连接的进程或设备，则可以使用 <code>detach</code> 命令释放它。</p>
+<h2 id="Shell-命令"><a href="#Shell-命令" class="headerlink" title="Shell 命令"></a>Shell 命令</h2><p>如果我们想要在调试期间执行 shell 命令，我们没有必要离开或者挂起 GDB；我们可以直接使用 SHELL 命令。</p>
+<p>我们可以使用 <code>shell command-string</code> 或者 <code>!command-string</code> 来执行标准的 shell 命令。需要注意的是在 <code>!</code> 和 <code>command-string</code> 之间没有空格。如果存在空格，那么将使用环境变量 <code>SHELL</code> 来运行 shell 命令。否则，GDB 将使用默认的 shell（Unix 系统为 /bin/sh，Windows 平台为 COMMAND.COM 等）。</p>
+<p>编译工具 <code>make</code> 总是在开发环境中，因此，在 GDB 中我们不必为 <code>make</code> 使用 <code>shell</code> 命令。</p>
+<ul>
+<li><p><code>make make-args</code> -  将以给定的参数执行 <code>make</code> 命令，这等同于 <code>shell make make-args</code>。</p>
+</li>
+<li><p><code>pipe [command] | shell_command</code> 和 <code>| [command] | shell_command</code> - 命令执行 <code>command</code> 命令并将结果重定向到 <code>shell_command</code> 中。</p>
+</li>
+<li><p><code>pipe -d delim command delim shell_command</code> 和<code>| -d delim command delim shell_command</code> - 与上面的命令相似，不同的是我们可以指定分割符 <code>delim</code>。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">(gdb) p var</span><br><span class="line">$1 = &#123;</span><br><span class="line">  black = 144,</span><br><span class="line">  red = 233,</span><br><span class="line">  green = 377,</span><br><span class="line">  blue = 610,</span><br><span class="line">  white = 987</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">(gdb) pipe p var | wc</span><br><span class="line">      7      19      80</span><br><span class="line">(gdb) | p var | wc -l</span><br><span class="line">7</span><br><span class="line"></span><br><span class="line">(gdb) p /x var</span><br><span class="line">$4 = &#123;</span><br><span class="line">  black = 0x90,</span><br><span class="line">  red = 0xe9,</span><br><span class="line">  green = 0x179,</span><br><span class="line">  blue = 0x262,</span><br><span class="line">  white = 0x3db</span><br><span class="line">&#125;</span><br><span class="line">(gdb) || grep red</span><br><span class="line">  red =&gt; 0xe9,</span><br><span class="line"></span><br><span class="line">(gdb) | -d ! echo this contains a | char\n ! sed -e &#x27;s/|/PIPE/&#x27;</span><br><span class="line">this contains a PIPE char</span><br><span class="line">(gdb) | -d xxx echo this contains a | char!\n xxx sed -e &#x27;s/|/PIPE/&#x27;</span><br><span class="line">this contains a PIPE char!</span><br><span class="line">(gdb)</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>变量 <code>$_shell_exitcode</code> 和 <code>$_shell_exitsignal</code> 可以方便的检查 <code>shell</code>, <code>make</code>, <code>pipe</code> 和 <code>|</code> 最后一个 shell 命令的退出状态。</p>
+<h2 id="日志输出"><a href="#日志输出" class="headerlink" title="日志输出"></a>日志输出</h2><p>我们可能想要将 GDB 的输出保存在文件中，GDB 提供多个命令来控制日志的输出。</p>
+<ul>
+<li><code>set logging on</code> - 启用日志。</li>
+<li><code>set logging off</code> - 禁用日志。</li>
+<li><code>set logging file filename</code> - 改变当前日志文件名。默认为 gdb.txt。</li>
+<li><code>set logging overwrite [on|off]</code> - 默认情况下，GDB 将采用追加的方法写日志文件。我们可以通过设置该参数来改变其行为。</li>
+<li><code>set logging redirect [on|off]</code> - 默认情况下，GDB 会同时输出到终端和日志文件中，如果设置 <code>redirect</code>，那么只会输出到日志文件。如果是使用多个 TUI 模式，在 GDB 的命令窗口没有输出，也就无法输出到日志文件中。</li>
+<li><code>set logging debugredirect [on|off]</code> - 默认情况下，GDB 的调试输出同时输出到终端和日志文件中，如果设置了 <code>debugredirect</code>，那么就只会输出到日志文件中。GDB 8.1 没有这个命令。</li>
+<li><code>show logging</code> - 显示当前日志配置。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://sourceware.org/gdb/current/onlinedocs/gdb">https://sourceware.org/gdb/current/onlinedocs/gdb</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>gdb</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>【译】PostgreSQL 安全：现实中需要避免的事情</title>
     <url>/2021/08/postgresql-security-things-to-avoid-in-real-life/</url>
     <content><![CDATA[<p>强化 PostgreSQL 变得越来越重要。如今，安全是王道，人们想知道如何确保 PostgreSQL 的安全。我们中的一些人可能还记得近年来发生在 <a href="https://www.zdnet.com/article/hacker-ransoms-23k-mongodb-databases-and-threatens-to-contact-gdpr-authorities/">MongoDB 身上的事情</a>，我们当然希望在 PostgreSQL 世界中避免类似的安全问题。MongoDB 的遭遇实际上是令人震惊的：数以千计的数据库因为糟糕的默认安全设置而被勒索–这绝对是一场噩梦，不仅大大损害了 MongoDB 的声誉，也损害了整个行业的声誉。PostgreSQL 人员尽其所能避免在我们的生态系统中重复出现这种情况。</p>
@@ -3993,115 +4067,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 系统属性添加</title>
-    <url>/2019/08/postgresql-system-attribute/</url>
-    <content><![CDATA[<p>PostgreSQL 在插入数据的时候除了维护用户的属性列外，还有几个隐藏的系统属性列，如 <code>ctid</code>、<code>xmin</code> 和 <code>xmax</code> 等。如下图所示：</p>
-<img src="/2019/08/postgresql-system-attribute/sysattr.png" class="" title="PostgreSQL 系统属性">
-
-<p>从上图中我们可以看到，系统属性列其编号（即 <code>attnum</code> ）为负数，而用户自定义的属性列其编号则为正数（由 1 开始）。本文将介绍如何在 PostgreSQL 中添加自定义系统属性。</p>
-<span id="more"></span>
-
-<h2 id="属性列"><a href="#属性列" class="headerlink" title="属性列"></a>属性列</h2><p>PostgreSQL 为每个属性列都在系统表 <code>pg_attribute</code> 中记录了一个元组，<a href="https://www.postgresql.org/docs/12/catalog-pg-attribute.html">见官网文档</a>。这里我们需要对几个常见的列有所认识，这也是本文后续要使用到的。</p>
-<style>
-table th:nth-of-type(1) {
-    width: 15%;
-}
-table th:nth-of-type(2) {
-    width: 80%;
-}
-</style>
-
-<table>
-<thead>
-<tr>
-<th>属性列</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>attname</strong></td>
-<td>属性列的名称。</td>
-</tr>
-<tr>
-<td><strong>atttypid</strong></td>
-<td>属性列的数据类型的 OID，引用 <code>pg_type</code> 表的 <code>oid</code> 字段（外键约束）。</td>
-</tr>
-<tr>
-<td><strong>attlen</strong></td>
-<td>此属性列的数据类型长度，<code>pg_type</code> 表的 <code>typlen</code> 字段的副本。</td>
-</tr>
-<tr>
-<td><strong>attnum</strong></td>
-<td>属性列编号数。用户定义的普通属性列的编号从 1 开始。系统属性列列（例如 <code>ctid</code>）则为负数。</td>
-</tr>
-<tr>
-<td><strong>attcacheoff</strong></td>
-<td>存储中始终为 -1，但是当加载到内存中的行描述符时，可能会更新该行描述符以缓存行中属性的偏移量。</td>
-</tr>
-<tr>
-<td><strong>atttypmod</strong></td>
-<td>记录在创建表时提供的特定于类型的数据（例如，<code>varchar</code> 类型的最大长度）。它被传递给特定类型的输入函数和长度强制函数。对于不需要 <code>atttypmod</code> 的类型，该值通常为 -1。</td>
-</tr>
-<tr>
-<td><strong>attbyval</strong></td>
-<td>数据类型是否按值传递，<code>pg_type</code> 表的 <code>typbyval</code> 字段的副本。</td>
-</tr>
-<tr>
-<td><strong>attstorage</strong></td>
-<td>通常是此列类型的 <code>pg_type</code> 表的 <code>typstorage</code> 字段的副本。对于 TOAST-able 数据类型，可以在创建列后更改此值以控制存储策略。</td>
-</tr>
-<tr>
-<td><strong>attalign</strong></td>
-<td>数据类型的对其方式，<code>pg_type</code> 表的 <code>typalign</code> 的副本。<br/><code>c</code> 表示按照 <code>char</code> 类型对齐（即不需要对齐）；<code>s</code> 按 <code>short</code> 类型对齐（在大多数机器上是 2 字节对齐）；<code>i</code> 表示按照 <code>int</code> 类型对齐（通常是 4 字节对齐）；<code>d</code> 表示按照 <code>double</code> 类型对齐（通常是 8 字节对齐，但并不全是）。</td>
-</tr>
-<tr>
-<td><strong>attnotnull</strong></td>
-<td>该属性列是否具有非空约束。</td>
-</tr>
-<tr>
-<td><strong>attislocal</strong></td>
-<td>该属性列在表中是本地定义。请注意，属性列可以是本地定义并同时继承。</td>
-</tr>
-</tbody></table>
-<p>其实整个属性列都是通过 <code>FormData_pg_attribute</code> 结果来记录的，它定义在 <code>src/include/catalog/pg_attribute.h</code> 头文件中。</p>
-<h2 id="系统属性"><a href="#系统属性" class="headerlink" title="系统属性"></a>系统属性</h2><p>PostgreSQL 的系统属性是在 <code>src/backend/catalog/heap.c</code> 源文件中定义的，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a1 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;ctid&quot;</span>&#125;,</span><br><span class="line">    .atttypid = TIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(ItemPointerData),</span><br><span class="line">    .attnum = SelfItemPointerAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">false</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;s&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a2 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;xmin&quot;</span>&#125;,</span><br><span class="line">    .atttypid = XIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(TransactionId),</span><br><span class="line">    .attnum = MinTransactionIdAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">true</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a6 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;tableoid&quot;</span>&#125;,</span><br><span class="line">    .atttypid = OIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(Oid),</span><br><span class="line">    .attnum = TableOidAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">true</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute *SysAtt[] = &#123;&amp;a1, &amp;a2, &amp;a3, &amp;a4, &amp;a5, &amp;a6&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到，属性列的编号是通过宏来定义的，例如 <code>TableOidAttributenumber</code>，这些宏的定义在 <code>src/include/access/sysattr.h</code> 头文件中定义，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Attribute numbers for the system-defined attributes</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SelfItemPointerAttributeNumber                  (-1)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MinTransactionIdAttributeNumber                 (-2)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MinCommandIdAttributeNumber                     (-3)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxTransactionIdAttributeNumber                 (-4)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxCommandIdAttributeNumber                     (-5)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TableOidAttributeNumber                         (-6)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> FirstLowInvalidHeapAttributeNumber              (-7)</span></span><br></pre></td></tr></table></figure>
-
-<p><code>atttypid</code> 则是在 <code>src/include/catalog/pg_type.dat</code> 文件中声明，并在编译时由 perl 转换为 <code>pg_type_d.h</code> 文件中的宏定义。</p>
-<p>最终这些系统属性列将被保存在 <code>SysAttr</code> 全局数组中。用户在建立表时，PostgreSQL 通过 <code>AddNewAttributeTuples</code> 函数向 <code>pg_attribute</code> 插入属性列信息，随后在加入系统属性信息，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; natts; i++)</span><br><span class="line">&#123;</span><br><span class="line">    attr = TupleDescAttr(tupdesc, i);</span><br><span class="line">    <span class="comment">/* Fill in the correct relation OID */</span></span><br><span class="line">    attr-&gt;attrelid = new_rel_oid;</span><br><span class="line">    <span class="comment">/* Make sure this is OK, too */</span></span><br><span class="line">    attr-&gt;attstattarget = <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    InsertPgAttributeTuple(rel, attr, indstate);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Add dependency info */</span></span><br><span class="line">    myself.classId = RelationRelationId;</span><br><span class="line">    myself.objectId = new_rel_oid;</span><br><span class="line">    myself.objectSubId = i + <span class="number">1</span>;</span><br><span class="line">    referenced.classId = TypeRelationId;</span><br><span class="line">    referenced.objectId = attr-&gt;atttypid;</span><br><span class="line">    referenced.objectSubId = <span class="number">0</span>;</span><br><span class="line">    recordDependencyOn(&amp;myself, &amp;referenced, DEPENDENCY_NORMAL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* The default collation is pinned, so don&#x27;t bother recording it */</span></span><br><span class="line">    <span class="keyword">if</span> (OidIsValid(attr-&gt;attcollation) &amp;&amp;</span><br><span class="line">        attr-&gt;attcollation != DEFAULT_COLLATION_OID)</span><br><span class="line">    &#123;</span><br><span class="line">        referenced.classId = CollationRelationId;</span><br><span class="line">        referenced.objectId = attr-&gt;attcollation;</span><br><span class="line">        referenced.objectSubId = <span class="number">0</span>;</span><br><span class="line">        recordDependencyOn(&amp;myself, &amp;referenced, DEPENDENCY_NORMAL);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Next we add the system attributes.  Skip OID if rel has no OIDs. Skip</span></span><br><span class="line"><span class="comment"> * all for a view or type relation.  We don&#x27;t bother with making datatype</span></span><br><span class="line"><span class="comment"> * dependencies here, since presumably all these types are pinned.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">if</span> (relkind != RELKIND_VIEW &amp;&amp; relkind != RELKIND_COMPOSITE_TYPE)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; (<span class="keyword">int</span>) lengthof(SysAtt); i++)</span><br><span class="line">    &#123;</span><br><span class="line">        FormData_pg_attribute attStruct;</span><br><span class="line"></span><br><span class="line">        <span class="built_in">memcpy</span>(&amp;attStruct, SysAtt[i], <span class="keyword">sizeof</span>(FormData_pg_attribute));</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Fill in the correct relation OID in the copied tuple */</span></span><br><span class="line">        attStruct.attrelid = new_rel_oid;</span><br><span class="line"></span><br><span class="line">        InsertPgAttributeTuple(rel, &amp;attStruct, indstate);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="创建系统属性列"><a href="#创建系统属性列" class="headerlink" title="创建系统属性列"></a>创建系统属性列</h2><p>现在，我们对系统属性列的工作方式有所了解了，接下来就可以创建自定义系统属性列。首先我们声明一个属性列的编号，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> InfomaskAttributeNumber                         (-7)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> FirstLowInvalidHeapAttributeNumber              (-8)</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>注意；</strong> 不要忘记更新 <code>FirstLowInvalidHeapAttributeNumber</code> 的值。</p>
-<p>接着，我们需要声明属性列，并将其添加到 <code>SysAtt</code> 数组中，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a7 = &#123;</span><br><span class="line">        .attname = &#123;<span class="string">&quot;infomask&quot;</span>&#125;,</span><br><span class="line">        .atttypid = INT2OID,</span><br><span class="line">        .attlen = <span class="keyword">sizeof</span>(uint16),</span><br><span class="line">        .attnum = InfomaskAttributeNumber,</span><br><span class="line">        .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">        .atttypmod = <span class="number">-1</span>,</span><br><span class="line">        .attbyval = <span class="literal">true</span>,</span><br><span class="line">        .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">        .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">        .attnotnull = <span class="literal">true</span>,</span><br><span class="line">        .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute *SysAtt[] = &#123;&amp;a1, &amp;a2, &amp;a3, &amp;a4, &amp;a5, &amp;a6, &amp;a7&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>此时，我们就基本完成了属性列的添加。当然，为了能够查询，我还需要在两个地方做修改，它们均位于 <code>src/backend/access/common/heaptuple.c</code> 文件中。首先在函数 <code>heap_attisnull</code> 中增加我们的属性列：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">heap_attisnull</span><span class="params">(HeapTuple tup, <span class="keyword">int</span> attnum, TupleDesc tupleDesc)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * We allow a NULL tupledesc for relations not expected to have missing</span></span><br><span class="line"><span class="comment">         * values, such as catalog relations and indexes.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        Assert(!tupleDesc || attnum &lt;= tupleDesc-&gt;natts);</span><br><span class="line">        <span class="keyword">if</span> (attnum &gt; (<span class="keyword">int</span>) HeapTupleHeaderGetNatts(tup-&gt;t_data))</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">if</span> (tupleDesc &amp;&amp; TupleDescAttr(tupleDesc, attnum - <span class="number">1</span>)-&gt;atthasmissing)</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (attnum &gt; <span class="number">0</span>)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">if</span> (HeapTupleNoNulls(tup))</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                <span class="keyword">return</span> att_isnull(attnum - <span class="number">1</span>, tup-&gt;t_data-&gt;t_bits);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">switch</span> (attnum)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">case</span> TableOidAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> SelfItemPointerAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MinTransactionIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MinCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxTransactionIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> InfomaskAttributeNumber:</span><br><span class="line">                        <span class="comment">/* these are never null */</span></span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                        elog(ERROR, <span class="string">&quot;invalid attnum: %d&quot;</span>, attnum);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>接着，在 <code>heap_getsysattr</code> 函数中添加如何获取 <code>infomask</code> 的值，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">heap_getsysattr</span><span class="params">(HeapTuple tup, <span class="keyword">int</span> attnum, TupleDesc tupleDesc, <span class="keyword">bool</span> *isnull)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        Datum           result;</span><br><span class="line"></span><br><span class="line">        Assert(tup);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Currently, no sys attribute ever reads as NULL. */</span></span><br><span class="line">        *isnull = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">switch</span> (attnum)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">case</span> SelfItemPointerAttributeNumber:</span><br><span class="line">                        <span class="comment">/* pass-by-reference datatype */</span></span><br><span class="line">                        result = PointerGetDatum(&amp;(tup-&gt;t_self));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MinTransactionIdAttributeNumber:</span><br><span class="line">                        result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmin(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MaxTransactionIdAttributeNumber:</span><br><span class="line">                        result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmax(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MinCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxCommandIdAttributeNumber:</span><br><span class="line"></span><br><span class="line">                        <span class="comment">/*</span></span><br><span class="line"><span class="comment">                         * cmin and cmax are now both aliases for the same field, which</span></span><br><span class="line"><span class="comment">                         * can in fact also be a combo command id.  XXX perhaps we should</span></span><br><span class="line"><span class="comment">                         * return the &quot;real&quot; cmin or cmax if possible, that is if we are</span></span><br><span class="line"><span class="comment">                         * inside the originating transaction?</span></span><br><span class="line"><span class="comment">                         */</span></span><br><span class="line">                        result = CommandIdGetDatum(HeapTupleHeaderGetRawCommandId(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> TableOidAttributeNumber:</span><br><span class="line">                        result = ObjectIdGetDatum(tup-&gt;t_tableOid);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> InfomaskAttributeNumber:</span><br><span class="line">                        result = UInt16GetDatum(tup-&gt;t_data-&gt;t_infomask);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                        elog(ERROR, <span class="string">&quot;invalid attnum: %d&quot;</span>, attnum);</span><br><span class="line">                        result = <span class="number">0</span>;                     <span class="comment">/* keep compiler quiet */</span></span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>最后，编译、初始化并启动数据库，效果如下图所示：</p>
-<img src="/2019/08/postgresql-system-attribute/result.png" class="" title="效果图">
-
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/12/catalog-pg-attribute.html">https://www.postgresql.org/docs/12/catalog-pg-attribute.html</a><br>[2] <a href="https://www.postgresql.org/docs/12/catalog-pg-type.html">https://www.postgresql.org/docs/12/catalog-pg-type.html</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 自定义系统函数</title>
     <url>/2019/11/postgresql-system-function/</url>
     <content><![CDATA[<p>本文主要介绍如何实现一个系统函数，类似于 <code>pg_backend_pid()</code> 的系统函数。PostgreSQL 所有的系统函数都记录在 <code>pg_proc</code> 系统表中。</p>
@@ -4235,6 +4200,115 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 系统属性添加</title>
+    <url>/2019/08/postgresql-system-attribute/</url>
+    <content><![CDATA[<p>PostgreSQL 在插入数据的时候除了维护用户的属性列外，还有几个隐藏的系统属性列，如 <code>ctid</code>、<code>xmin</code> 和 <code>xmax</code> 等。如下图所示：</p>
+<img src="/2019/08/postgresql-system-attribute/sysattr.png" class="" title="PostgreSQL 系统属性">
+
+<p>从上图中我们可以看到，系统属性列其编号（即 <code>attnum</code> ）为负数，而用户自定义的属性列其编号则为正数（由 1 开始）。本文将介绍如何在 PostgreSQL 中添加自定义系统属性。</p>
+<span id="more"></span>
+
+<h2 id="属性列"><a href="#属性列" class="headerlink" title="属性列"></a>属性列</h2><p>PostgreSQL 为每个属性列都在系统表 <code>pg_attribute</code> 中记录了一个元组，<a href="https://www.postgresql.org/docs/12/catalog-pg-attribute.html">见官网文档</a>。这里我们需要对几个常见的列有所认识，这也是本文后续要使用到的。</p>
+<style>
+table th:nth-of-type(1) {
+    width: 15%;
+}
+table th:nth-of-type(2) {
+    width: 80%;
+}
+</style>
+
+<table>
+<thead>
+<tr>
+<th>属性列</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>attname</strong></td>
+<td>属性列的名称。</td>
+</tr>
+<tr>
+<td><strong>atttypid</strong></td>
+<td>属性列的数据类型的 OID，引用 <code>pg_type</code> 表的 <code>oid</code> 字段（外键约束）。</td>
+</tr>
+<tr>
+<td><strong>attlen</strong></td>
+<td>此属性列的数据类型长度，<code>pg_type</code> 表的 <code>typlen</code> 字段的副本。</td>
+</tr>
+<tr>
+<td><strong>attnum</strong></td>
+<td>属性列编号数。用户定义的普通属性列的编号从 1 开始。系统属性列列（例如 <code>ctid</code>）则为负数。</td>
+</tr>
+<tr>
+<td><strong>attcacheoff</strong></td>
+<td>存储中始终为 -1，但是当加载到内存中的行描述符时，可能会更新该行描述符以缓存行中属性的偏移量。</td>
+</tr>
+<tr>
+<td><strong>atttypmod</strong></td>
+<td>记录在创建表时提供的特定于类型的数据（例如，<code>varchar</code> 类型的最大长度）。它被传递给特定类型的输入函数和长度强制函数。对于不需要 <code>atttypmod</code> 的类型，该值通常为 -1。</td>
+</tr>
+<tr>
+<td><strong>attbyval</strong></td>
+<td>数据类型是否按值传递，<code>pg_type</code> 表的 <code>typbyval</code> 字段的副本。</td>
+</tr>
+<tr>
+<td><strong>attstorage</strong></td>
+<td>通常是此列类型的 <code>pg_type</code> 表的 <code>typstorage</code> 字段的副本。对于 TOAST-able 数据类型，可以在创建列后更改此值以控制存储策略。</td>
+</tr>
+<tr>
+<td><strong>attalign</strong></td>
+<td>数据类型的对其方式，<code>pg_type</code> 表的 <code>typalign</code> 的副本。<br/><code>c</code> 表示按照 <code>char</code> 类型对齐（即不需要对齐）；<code>s</code> 按 <code>short</code> 类型对齐（在大多数机器上是 2 字节对齐）；<code>i</code> 表示按照 <code>int</code> 类型对齐（通常是 4 字节对齐）；<code>d</code> 表示按照 <code>double</code> 类型对齐（通常是 8 字节对齐，但并不全是）。</td>
+</tr>
+<tr>
+<td><strong>attnotnull</strong></td>
+<td>该属性列是否具有非空约束。</td>
+</tr>
+<tr>
+<td><strong>attislocal</strong></td>
+<td>该属性列在表中是本地定义。请注意，属性列可以是本地定义并同时继承。</td>
+</tr>
+</tbody></table>
+<p>其实整个属性列都是通过 <code>FormData_pg_attribute</code> 结果来记录的，它定义在 <code>src/include/catalog/pg_attribute.h</code> 头文件中。</p>
+<h2 id="系统属性"><a href="#系统属性" class="headerlink" title="系统属性"></a>系统属性</h2><p>PostgreSQL 的系统属性是在 <code>src/backend/catalog/heap.c</code> 源文件中定义的，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a1 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;ctid&quot;</span>&#125;,</span><br><span class="line">    .atttypid = TIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(ItemPointerData),</span><br><span class="line">    .attnum = SelfItemPointerAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">false</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;s&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a2 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;xmin&quot;</span>&#125;,</span><br><span class="line">    .atttypid = XIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(TransactionId),</span><br><span class="line">    .attnum = MinTransactionIdAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">true</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a6 = &#123;</span><br><span class="line">    .attname = &#123;<span class="string">&quot;tableoid&quot;</span>&#125;,</span><br><span class="line">    .atttypid = OIDOID,</span><br><span class="line">    .attlen = <span class="keyword">sizeof</span>(Oid),</span><br><span class="line">    .attnum = TableOidAttributeNumber,</span><br><span class="line">    .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">    .atttypmod = <span class="number">-1</span>,</span><br><span class="line">    .attbyval = <span class="literal">true</span>,</span><br><span class="line">    .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">    .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">    .attnotnull = <span class="literal">true</span>,</span><br><span class="line">    .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute *SysAtt[] = &#123;&amp;a1, &amp;a2, &amp;a3, &amp;a4, &amp;a5, &amp;a6&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，属性列的编号是通过宏来定义的，例如 <code>TableOidAttributenumber</code>，这些宏的定义在 <code>src/include/access/sysattr.h</code> 头文件中定义，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Attribute numbers for the system-defined attributes</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SelfItemPointerAttributeNumber                  (-1)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MinTransactionIdAttributeNumber                 (-2)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MinCommandIdAttributeNumber                     (-3)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxTransactionIdAttributeNumber                 (-4)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxCommandIdAttributeNumber                     (-5)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TableOidAttributeNumber                         (-6)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> FirstLowInvalidHeapAttributeNumber              (-7)</span></span><br></pre></td></tr></table></figure>
+
+<p><code>atttypid</code> 则是在 <code>src/include/catalog/pg_type.dat</code> 文件中声明，并在编译时由 perl 转换为 <code>pg_type_d.h</code> 文件中的宏定义。</p>
+<p>最终这些系统属性列将被保存在 <code>SysAttr</code> 全局数组中。用户在建立表时，PostgreSQL 通过 <code>AddNewAttributeTuples</code> 函数向 <code>pg_attribute</code> 插入属性列信息，随后在加入系统属性信息，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; natts; i++)</span><br><span class="line">&#123;</span><br><span class="line">    attr = TupleDescAttr(tupdesc, i);</span><br><span class="line">    <span class="comment">/* Fill in the correct relation OID */</span></span><br><span class="line">    attr-&gt;attrelid = new_rel_oid;</span><br><span class="line">    <span class="comment">/* Make sure this is OK, too */</span></span><br><span class="line">    attr-&gt;attstattarget = <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">    InsertPgAttributeTuple(rel, attr, indstate);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Add dependency info */</span></span><br><span class="line">    myself.classId = RelationRelationId;</span><br><span class="line">    myself.objectId = new_rel_oid;</span><br><span class="line">    myself.objectSubId = i + <span class="number">1</span>;</span><br><span class="line">    referenced.classId = TypeRelationId;</span><br><span class="line">    referenced.objectId = attr-&gt;atttypid;</span><br><span class="line">    referenced.objectSubId = <span class="number">0</span>;</span><br><span class="line">    recordDependencyOn(&amp;myself, &amp;referenced, DEPENDENCY_NORMAL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* The default collation is pinned, so don&#x27;t bother recording it */</span></span><br><span class="line">    <span class="keyword">if</span> (OidIsValid(attr-&gt;attcollation) &amp;&amp;</span><br><span class="line">        attr-&gt;attcollation != DEFAULT_COLLATION_OID)</span><br><span class="line">    &#123;</span><br><span class="line">        referenced.classId = CollationRelationId;</span><br><span class="line">        referenced.objectId = attr-&gt;attcollation;</span><br><span class="line">        referenced.objectSubId = <span class="number">0</span>;</span><br><span class="line">        recordDependencyOn(&amp;myself, &amp;referenced, DEPENDENCY_NORMAL);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Next we add the system attributes.  Skip OID if rel has no OIDs. Skip</span></span><br><span class="line"><span class="comment"> * all for a view or type relation.  We don&#x27;t bother with making datatype</span></span><br><span class="line"><span class="comment"> * dependencies here, since presumably all these types are pinned.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">if</span> (relkind != RELKIND_VIEW &amp;&amp; relkind != RELKIND_COMPOSITE_TYPE)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; (<span class="keyword">int</span>) lengthof(SysAtt); i++)</span><br><span class="line">    &#123;</span><br><span class="line">        FormData_pg_attribute attStruct;</span><br><span class="line"></span><br><span class="line">        <span class="built_in">memcpy</span>(&amp;attStruct, SysAtt[i], <span class="keyword">sizeof</span>(FormData_pg_attribute));</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Fill in the correct relation OID in the copied tuple */</span></span><br><span class="line">        attStruct.attrelid = new_rel_oid;</span><br><span class="line"></span><br><span class="line">        InsertPgAttributeTuple(rel, &amp;attStruct, indstate);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="创建系统属性列"><a href="#创建系统属性列" class="headerlink" title="创建系统属性列"></a>创建系统属性列</h2><p>现在，我们对系统属性列的工作方式有所了解了，接下来就可以创建自定义系统属性列。首先我们声明一个属性列的编号，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> InfomaskAttributeNumber                         (-7)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> FirstLowInvalidHeapAttributeNumber              (-8)</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>注意；</strong> 不要忘记更新 <code>FirstLowInvalidHeapAttributeNumber</code> 的值。</p>
+<p>接着，我们需要声明属性列，并将其添加到 <code>SysAtt</code> 数组中，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute a7 = &#123;</span><br><span class="line">        .attname = &#123;<span class="string">&quot;infomask&quot;</span>&#125;,</span><br><span class="line">        .atttypid = INT2OID,</span><br><span class="line">        .attlen = <span class="keyword">sizeof</span>(uint16),</span><br><span class="line">        .attnum = InfomaskAttributeNumber,</span><br><span class="line">        .attcacheoff = <span class="number">-1</span>,</span><br><span class="line">        .atttypmod = <span class="number">-1</span>,</span><br><span class="line">        .attbyval = <span class="literal">true</span>,</span><br><span class="line">        .attstorage = <span class="string">&#x27;p&#x27;</span>,</span><br><span class="line">        .attalign = <span class="string">&#x27;i&#x27;</span>,</span><br><span class="line">        .attnotnull = <span class="literal">true</span>,</span><br><span class="line">        .attislocal = <span class="literal">true</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> FormData_pg_attribute *SysAtt[] = &#123;&amp;a1, &amp;a2, &amp;a3, &amp;a4, &amp;a5, &amp;a6, &amp;a7&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>此时，我们就基本完成了属性列的添加。当然，为了能够查询，我还需要在两个地方做修改，它们均位于 <code>src/backend/access/common/heaptuple.c</code> 文件中。首先在函数 <code>heap_attisnull</code> 中增加我们的属性列：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">heap_attisnull</span><span class="params">(HeapTuple tup, <span class="keyword">int</span> attnum, TupleDesc tupleDesc)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * We allow a NULL tupledesc for relations not expected to have missing</span></span><br><span class="line"><span class="comment">         * values, such as catalog relations and indexes.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        Assert(!tupleDesc || attnum &lt;= tupleDesc-&gt;natts);</span><br><span class="line">        <span class="keyword">if</span> (attnum &gt; (<span class="keyword">int</span>) HeapTupleHeaderGetNatts(tup-&gt;t_data))</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">if</span> (tupleDesc &amp;&amp; TupleDescAttr(tupleDesc, attnum - <span class="number">1</span>)-&gt;atthasmissing)</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (attnum &gt; <span class="number">0</span>)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">if</span> (HeapTupleNoNulls(tup))</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">                <span class="keyword">return</span> att_isnull(attnum - <span class="number">1</span>, tup-&gt;t_data-&gt;t_bits);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">switch</span> (attnum)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">case</span> TableOidAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> SelfItemPointerAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MinTransactionIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MinCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxTransactionIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> InfomaskAttributeNumber:</span><br><span class="line">                        <span class="comment">/* these are never null */</span></span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                        elog(ERROR, <span class="string">&quot;invalid attnum: %d&quot;</span>, attnum);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接着，在 <code>heap_getsysattr</code> 函数中添加如何获取 <code>infomask</code> 的值，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">heap_getsysattr</span><span class="params">(HeapTuple tup, <span class="keyword">int</span> attnum, TupleDesc tupleDesc, <span class="keyword">bool</span> *isnull)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        Datum           result;</span><br><span class="line"></span><br><span class="line">        Assert(tup);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Currently, no sys attribute ever reads as NULL. */</span></span><br><span class="line">        *isnull = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">switch</span> (attnum)</span><br><span class="line">        &#123;</span><br><span class="line">                <span class="keyword">case</span> SelfItemPointerAttributeNumber:</span><br><span class="line">                        <span class="comment">/* pass-by-reference datatype */</span></span><br><span class="line">                        result = PointerGetDatum(&amp;(tup-&gt;t_self));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MinTransactionIdAttributeNumber:</span><br><span class="line">                        result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmin(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MaxTransactionIdAttributeNumber:</span><br><span class="line">                        result = TransactionIdGetDatum(HeapTupleHeaderGetRawXmax(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MinCommandIdAttributeNumber:</span><br><span class="line">                <span class="keyword">case</span> MaxCommandIdAttributeNumber:</span><br><span class="line"></span><br><span class="line">                        <span class="comment">/*</span></span><br><span class="line"><span class="comment">                         * cmin and cmax are now both aliases for the same field, which</span></span><br><span class="line"><span class="comment">                         * can in fact also be a combo command id.  XXX perhaps we should</span></span><br><span class="line"><span class="comment">                         * return the &quot;real&quot; cmin or cmax if possible, that is if we are</span></span><br><span class="line"><span class="comment">                         * inside the originating transaction?</span></span><br><span class="line"><span class="comment">                         */</span></span><br><span class="line">                        result = CommandIdGetDatum(HeapTupleHeaderGetRawCommandId(tup-&gt;t_data));</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> TableOidAttributeNumber:</span><br><span class="line">                        result = ObjectIdGetDatum(tup-&gt;t_tableOid);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> InfomaskAttributeNumber:</span><br><span class="line">                        result = UInt16GetDatum(tup-&gt;t_data-&gt;t_infomask);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                        elog(ERROR, <span class="string">&quot;invalid attnum: %d&quot;</span>, attnum);</span><br><span class="line">                        result = <span class="number">0</span>;                     <span class="comment">/* keep compiler quiet */</span></span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后，编译、初始化并启动数据库，效果如下图所示：</p>
+<img src="/2019/08/postgresql-system-attribute/result.png" class="" title="效果图">
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/12/catalog-pg-attribute.html">https://www.postgresql.org/docs/12/catalog-pg-attribute.html</a><br>[2] <a href="https://www.postgresql.org/docs/12/catalog-pg-type.html">https://www.postgresql.org/docs/12/catalog-pg-type.html</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 数据库系统标识符</title>
     <url>/2020/06/postgresql-system-identifier/</url>
     <content><![CDATA[<p>我们都知道 PostgreSQL 针对每个数据库集群实例，都会有一个唯一的标识符 - <strong>system identifier</strong>。那么这个标识符是如何生成的呢？本文将对其进行简要的分析。</p>
@@ -4298,28 +4372,6 @@ table th:nth-of-type(2) {
 <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">test=# \d+</span><br><span class="line">                       List of relations</span><br><span class="line"> Schema |   Name    | Type  | Owner |    Size    | Description</span><br><span class="line">--------+-----------+-------+-------+------------+-------------</span><br><span class="line"> public | customers | table | japin | 8192 bytes |</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">test=#</span><br></pre></td></tr></table></figure>
 
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/sql-createtable.html">https://www.postgresql.org/docs/10/sql-createtable.html</a><br>[2] <a href="http://www.postgresqltutorial.com/postgresql-temporary-table/">http://www.postgresqltutorial.com/postgresql-temporary-table/</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 更新 configure 引入无关更改</title>
-    <url>/2021/02/postgresql-update-configure-file/</url>
-    <content><![CDATA[<p>PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="meta">@@ -1187,6 +1189,15 @@</span> do</span><br><span class="line">   | -silent | --silent | --silen | --sile | --sil)</span><br><span class="line">     silent=yes ;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+  -runstatedir | --runstatedir | --runstatedi | --runstated \</span></span><br><span class="line"><span class="addition">+  | --runstate | --runstat | --runsta | --runst | --runs \</span></span><br><span class="line"><span class="addition">+  | --run | --ru | --r)</span></span><br><span class="line"><span class="addition">+    ac_prev=runstatedir ;;</span></span><br><span class="line"><span class="addition">+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \</span></span><br><span class="line"><span class="addition">+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \</span></span><br><span class="line"><span class="addition">+  | --run=* | --ru=* | --r=*)</span></span><br><span class="line"><span class="addition">+    runstatedir=$ac_optarg ;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -14714,7 +14738,7 @@</span> else</span><br><span class="line">     We can&#x27;t simply define LARGE_OFF_T to be 9223372036854775807,</span><br><span class="line">     since some C++ compilers masquerading as C compilers</span><br><span class="line">     incorrectly reject 9223372036854775807.  */</span><br><span class="line"><span class="deletion">-#define LARGE_OFF_T (((off_t) 1 &lt;&lt; 62) - 1 + ((off_t) 1 &lt;&lt; 62))</span></span><br><span class="line"><span class="addition">+#define LARGE_OFF_T ((((off_t) 1 &lt;&lt; 31) &lt;&lt; 31) - 1 + (((off_t) 1 &lt;&lt; 31) &lt;&lt; 31))</span></span><br><span class="line">   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721</span><br><span class="line">               &amp;&amp; LARGE_OFF_T % 2147483647 == 1)</span><br><span class="line">              ? 1 : -1];</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。</p>
-<span id="more"></span>
-
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>我们可以从 autoconf 的<a href="https://www.gnu.org/software/autoconf/#downloading">官网下载</a>并重新安装。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> wget https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar xf autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./configure --prefix=/usr/<span class="built_in">local</span>/autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> make</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> sudo make install</span></span><br></pre></td></tr></table></figure>
-
-<p>最后将 <code>/usr/local/autoconf-2.69/bin</code> 加入到 <code>PATH</code> 环境变量的开始（确保我们安装的 autoconf 先于系统的即可）并重新载入环境变量。随后执行 <code>autoreconf</code> 命令更新 <code>configure</code> 文件，这时就不会引入其他无关的更改。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz">https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz</a></p>
 ]]></content>
       <categories>
         <category>数据库</category>
@@ -4408,6 +4460,28 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 更新 configure 引入无关更改</title>
+    <url>/2021/02/postgresql-update-configure-file/</url>
+    <content><![CDATA[<p>PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="meta">@@ -1187,6 +1189,15 @@</span> do</span><br><span class="line">   | -silent | --silent | --silen | --sile | --sil)</span><br><span class="line">     silent=yes ;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+  -runstatedir | --runstatedir | --runstatedi | --runstated \</span></span><br><span class="line"><span class="addition">+  | --runstate | --runstat | --runsta | --runst | --runs \</span></span><br><span class="line"><span class="addition">+  | --run | --ru | --r)</span></span><br><span class="line"><span class="addition">+    ac_prev=runstatedir ;;</span></span><br><span class="line"><span class="addition">+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \</span></span><br><span class="line"><span class="addition">+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \</span></span><br><span class="line"><span class="addition">+  | --run=* | --ru=* | --r=*)</span></span><br><span class="line"><span class="addition">+    runstatedir=$ac_optarg ;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -14714,7 +14738,7 @@</span> else</span><br><span class="line">     We can&#x27;t simply define LARGE_OFF_T to be 9223372036854775807,</span><br><span class="line">     since some C++ compilers masquerading as C compilers</span><br><span class="line">     incorrectly reject 9223372036854775807.  */</span><br><span class="line"><span class="deletion">-#define LARGE_OFF_T (((off_t) 1 &lt;&lt; 62) - 1 + ((off_t) 1 &lt;&lt; 62))</span></span><br><span class="line"><span class="addition">+#define LARGE_OFF_T ((((off_t) 1 &lt;&lt; 31) &lt;&lt; 31) - 1 + (((off_t) 1 &lt;&lt; 31) &lt;&lt; 31))</span></span><br><span class="line">   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721</span><br><span class="line">               &amp;&amp; LARGE_OFF_T % 2147483647 == 1)</span><br><span class="line">              ? 1 : -1];</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。</p>
+<span id="more"></span>
+
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>我们可以从 autoconf 的<a href="https://www.gnu.org/software/autoconf/#downloading">官网下载</a>并重新安装。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> wget https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar xf autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./configure --prefix=/usr/<span class="built_in">local</span>/autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> make</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> sudo make install</span></span><br></pre></td></tr></table></figure>
+
+<p>最后将 <code>/usr/local/autoconf-2.69/bin</code> 加入到 <code>PATH</code> 环境变量的开始（确保我们安装的 autoconf 先于系统的即可）并重新载入环境变量。随后执行 <code>autoreconf</code> 命令更新 <code>configure</code> 文件，这时就不会引入其他无关的更改。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz">https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -4663,6 +4737,65 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </tags>
   </entry>
   <entry>
+    <title>Ubuntu 笔记本盖住不挂机</title>
+    <url>/2020/03/ubuntu-lid-switch-action/</url>
+    <content><![CDATA[<p>我有一台旧笔记本装有 Ubuntu 18.04 系统，希望把它当作一个服务器，这时我就需要在盖住笔记本时系统不休眠。</p>
+<p>Ubuntu 系统中提供了 Login Manager 来管理这些行为，它的配置文件为 /etc/systemd/logind.conf。通过<br><code>man logind.conf</code> 我们可以看到其详细说明。</p>
+<p>其中有一项 <code>HandleLidSwitch</code>，它控制了笔记本盖住的行为，默认情况下是 <code>suspend</code>，我们可以将其修改为 <code>ignore</code> 即可以实现我们的目的。例如，我们修改 /etc/system/logind.conf 文件中的</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#HandleLidSwitch=suspend</span><br></pre></td></tr></table></figure>
+
+<p>行修改为</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">HandleLidSwitch=ignore</span><br></pre></td></tr></table></figure>
+
+<p>然后重启 systemd-logind 服务即可。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo service systemd-logind restart</span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Ubuntu</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Ubuntu 修改 I/O 调度算法</title>
+    <url>/2019/03/ubuntu-modify-io-scheduler/</url>
+    <content><![CDATA[<p>Linux I/O 调度器控制着内核读写磁盘的工作方式。系统管理员可以通过更改调度器来自定义磁盘调度算法，从而优化系统性能。有三种调度程序可供选择，每种调度程序都有其优点。这些调度器是：</p>
+<ul>
+<li><p><strong>Noop</strong> - 电梯调度算法，最简单的调度算法，该算法基于先进先出队列 (FIFO) 实现，所有的 I/O 请求都符合先进先出规则，适合于 SSD 设备。</p>
+</li>
+<li><p><strong>Deadline</strong> - 绝对保障算法，它为读和写分别创建了 FIFO 队列，当内核收到请时，先尝试合并，不能合并则尝试排序或放入队列中，并且尽量保证在请求到达最终期限时进行调度，避免有一些请求长时间不能得到处理。该调度器适合虚拟机所在宿主机器或 I/O 压力比较重的场景，例如数据库服务器。</p>
+</li>
+<li><p><strong>Completely Fair Queuing, CFQ</strong> - 绝对公平调度算法，它为每个进程和线程单独创建一个队列来管理该进程的 I/O 请求，然后为每个队列分配访问磁盘的时间片。时间片的长度以及允许队列提交的请求数取决于给定进程的 I/O 优先级。该调度器比较适合于通用服务器。</p>
+</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="查询当前调度器"><a href="#查询当前调度器" class="headerlink" title="查询当前调度器"></a>查询当前调度器</h2><p>首先，我们需要知道系统目前使用的是哪种 I/O 调度器。假设我们有一块名为 <code>sda</code> 的磁盘，那么我们可以通过如下命令查看该磁盘使用的调度器类别。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat /sys/block/sda/queue/scheduler</span></span><br><span class="line">noop [deadline] cfq</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到我们的系统在 <code>sda</code> 磁盘上支持 <code>noop</code>，<code>deadline</code> 和 <code>cfq</code> 三种调度器，而默认采用的是 <code>deadline</code> 调度器。</p>
+<h2 id="修改调度器"><a href="#修改调度器" class="headerlink" title="修改调度器"></a>修改调度器</h2><p>Ubuntu 系统提供了两种方式来修改调度器：a) 临时修改；b) 永久修改。临时修改的方式在系统重启后将会恢复到默认设置。通常，我们可以通过临时修改的方式来确定哪种调度器能带来更大的性能提升，然后在永久的修改为这种调度器。</p>
+<p>我们可以通过下面的命令将系统的调度器临时的修改为 <code>noop</code> 类型：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo <span class="built_in">echo</span> noop &gt; /sys/block/sda/queue/scheduler</span></span><br></pre></td></tr></table></figure>
+
+<p>通过上述方式修改不需要重启机器而是立马生效。如果你需要永久的修改调度器，那么你需要修改 GRUB 的配置文件，即编辑配置文件 <code>/etc/default/grub</code> 修改</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash&quot;</span><br></pre></td></tr></table></figure>
+
+<p>为</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash elevator=noop&quot;</span><br></pre></td></tr></table></figure>
+
+<p>通过这种方式修改我们需要重启机器以使修改生效，当然我们可以结合临时修改的方式，从而避免重启。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 谭峰，张文升《PostgreSQL 实战》<br>[2] <a href="https://www.techrepublic.com/article/how-to-change-the-linux-io-scheduler-to-fit-your-needs/">How to change the linux io scheduler to fit your needs</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Ubuntu</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>【译】理解 PostgreSQL 中的 LATERAL 连接</title>
     <url>/2021/07/understanding-lateral-joins-in-postgresql/</url>
     <content><![CDATA[<p><code>LATERAL</code> 连接是 PostgreSQL 和其他关系型数据库（如 Oracle、DB2 和 MS SQL）中鲜为人知的功能之一。然而，<code>LATERAL</code> 连接是一个非常有用的功能，本文将带你看看用它们能完成什么有意义的事情。</p>
@@ -4712,95 +4845,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
 
 <p>一官新到任，祭仪门前毕，有未烬纸钱在地，官即取一锡锭藏好。<br>门子禀曰：“老爷这是纸钱，要他何用？”<br>官曰：“我知道，且等我发个利市者。”</p>
 </div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>翻译</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Ubuntu 修改 I/O 调度算法</title>
-    <url>/2019/03/ubuntu-modify-io-scheduler/</url>
-    <content><![CDATA[<p>Linux I/O 调度器控制着内核读写磁盘的工作方式。系统管理员可以通过更改调度器来自定义磁盘调度算法，从而优化系统性能。有三种调度程序可供选择，每种调度程序都有其优点。这些调度器是：</p>
-<ul>
-<li><p><strong>Noop</strong> - 电梯调度算法，最简单的调度算法，该算法基于先进先出队列 (FIFO) 实现，所有的 I/O 请求都符合先进先出规则，适合于 SSD 设备。</p>
-</li>
-<li><p><strong>Deadline</strong> - 绝对保障算法，它为读和写分别创建了 FIFO 队列，当内核收到请时，先尝试合并，不能合并则尝试排序或放入队列中，并且尽量保证在请求到达最终期限时进行调度，避免有一些请求长时间不能得到处理。该调度器适合虚拟机所在宿主机器或 I/O 压力比较重的场景，例如数据库服务器。</p>
-</li>
-<li><p><strong>Completely Fair Queuing, CFQ</strong> - 绝对公平调度算法，它为每个进程和线程单独创建一个队列来管理该进程的 I/O 请求，然后为每个队列分配访问磁盘的时间片。时间片的长度以及允许队列提交的请求数取决于给定进程的 I/O 优先级。该调度器比较适合于通用服务器。</p>
-</li>
-</ul>
-<span id="more"></span>
-
-<h2 id="查询当前调度器"><a href="#查询当前调度器" class="headerlink" title="查询当前调度器"></a>查询当前调度器</h2><p>首先，我们需要知道系统目前使用的是哪种 I/O 调度器。假设我们有一块名为 <code>sda</code> 的磁盘，那么我们可以通过如下命令查看该磁盘使用的调度器类别。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat /sys/block/sda/queue/scheduler</span></span><br><span class="line">noop [deadline] cfq</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到我们的系统在 <code>sda</code> 磁盘上支持 <code>noop</code>，<code>deadline</code> 和 <code>cfq</code> 三种调度器，而默认采用的是 <code>deadline</code> 调度器。</p>
-<h2 id="修改调度器"><a href="#修改调度器" class="headerlink" title="修改调度器"></a>修改调度器</h2><p>Ubuntu 系统提供了两种方式来修改调度器：a) 临时修改；b) 永久修改。临时修改的方式在系统重启后将会恢复到默认设置。通常，我们可以通过临时修改的方式来确定哪种调度器能带来更大的性能提升，然后在永久的修改为这种调度器。</p>
-<p>我们可以通过下面的命令将系统的调度器临时的修改为 <code>noop</code> 类型：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo <span class="built_in">echo</span> noop &gt; /sys/block/sda/queue/scheduler</span></span><br></pre></td></tr></table></figure>
-
-<p>通过上述方式修改不需要重启机器而是立马生效。如果你需要永久的修改调度器，那么你需要修改 GRUB 的配置文件，即编辑配置文件 <code>/etc/default/grub</code> 修改</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash&quot;</span><br></pre></td></tr></table></figure>
-
-<p>为</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash elevator=noop&quot;</span><br></pre></td></tr></table></figure>
-
-<p>通过这种方式修改我们需要重启机器以使修改生效，当然我们可以结合临时修改的方式，从而避免重启。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 谭峰，张文升《PostgreSQL 实战》<br>[2] <a href="https://www.techrepublic.com/article/how-to-change-the-linux-io-scheduler-to-fit-your-needs/">How to change the linux io scheduler to fit your needs</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Ubuntu</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Ubuntu 笔记本盖住不挂机</title>
-    <url>/2020/03/ubuntu-lid-switch-action/</url>
-    <content><![CDATA[<p>我有一台旧笔记本装有 Ubuntu 18.04 系统，希望把它当作一个服务器，这时我就需要在盖住笔记本时系统不休眠。</p>
-<p>Ubuntu 系统中提供了 Login Manager 来管理这些行为，它的配置文件为 /etc/systemd/logind.conf。通过<br><code>man logind.conf</code> 我们可以看到其详细说明。</p>
-<p>其中有一项 <code>HandleLidSwitch</code>，它控制了笔记本盖住的行为，默认情况下是 <code>suspend</code>，我们可以将其修改为 <code>ignore</code> 即可以实现我们的目的。例如，我们修改 /etc/system/logind.conf 文件中的</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#HandleLidSwitch=suspend</span><br></pre></td></tr></table></figure>
-
-<p>行修改为</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">HandleLidSwitch=ignore</span><br></pre></td></tr></table></figure>
-
-<p>然后重启 systemd-logind 服务即可。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo service systemd-logind restart</span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Ubuntu</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>【译】PostgreSQL 查询结果转为 JSON 格式</title>
-    <url>/2019/09/turning-query-results-into-json-in-postgresql/</url>
-    <content><![CDATA[<img src="/2019/09/turning-query-results-into-json-in-postgresql/postgresql-weekly.png" class="">
-
-<p>您知道 Postgres 提供了一个函数将查询结果集转为 JSON 数据类型吗？这个函数是 <code>row_to_json</code>。</p>
-<span id="more"></span>
-
-<p>我们先创建一个表，它包含两个用户记录以以及一个 <code>interests</code> 的属性列：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> people</span><br><span class="line">	(name text, age <span class="type">int</span>, interests text[]);</span><br><span class="line"></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> people (name, age, interests)</span><br><span class="line">	<span class="keyword">VALUES</span></span><br><span class="line">    (<span class="string">&#x27;Jon&#x27;</span>, <span class="number">12</span>, <span class="keyword">ARRAY</span> [<span class="string">&#x27;Golf&#x27;</span>, <span class="string">&#x27;Food&#x27;</span>]),</span><br><span class="line">    (<span class="string">&#x27;Jane&#x27;</span>, <span class="number">45</span>, <span class="keyword">ARRAY</span> [<span class="string">&#x27;Art&#x27;</span>]);</span><br></pre></td></tr></table></figure>
-
-<p><code>row_to_json</code> 函数最基本的使用方法是使用 <code>ROW</code> 行构造器，例如：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> row_to_json(<span class="type">ROW</span>(name, age, interests)) <span class="keyword">FROM</span> people;</span><br><span class="line">                row_to_json</span><br><span class="line"><span class="comment">-------------------------------------------</span></span><br><span class="line"> &#123;&quot;f1&quot;:&quot;Jon&quot;,&quot;f2&quot;:<span class="number">12</span>,&quot;f3&quot;:[&quot;Golf&quot;,&quot;Food&quot;]&#125;</span><br><span class="line"> &#123;&quot;f1&quot;:&quot;Jane&quot;,&quot;f2&quot;:<span class="number">45</span>,&quot;f3&quot;:[&quot;Art&quot;]&#125;</span><br><span class="line">(<span class="number">2</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
-
-<p>针对表中不同的类型，在最后的输出中都做了相应的转换，但是属性列的名称在输出中并没有体现出来。幸运的是我们可以通过子查询的方式来实现：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> row_to_json(q1) <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> people LIMIT <span class="number">1</span>) q1;</span><br><span class="line">                     row_to_json</span><br><span class="line"><span class="comment">-----------------------------------------------------</span></span><br><span class="line"> &#123;&quot;name&quot;:&quot;Jon&quot;,&quot;age&quot;:<span class="number">12</span>,&quot;interests&quot;:[&quot;Golf&quot;,&quot;Food&quot;]&#125;</span><br><span class="line">(<span class="number">1</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
-
-<p>虽然与我们的示例无关，但我们还是需要提一下，<code>row_to_json</code> 提供了一个可选的参数 <code>prettifies</code> 用于格式化输出，想要启用它，您可以在上面的示例中使用 <code>row_to_json(q1, true)</code>。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> row_to_json(q1, <span class="literal">true</span>) <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> people LIMIT <span class="number">1</span>) q1;</span><br><span class="line">          row_to_json</span><br><span class="line"><span class="comment">-------------------------------</span></span><br><span class="line"> &#123;&quot;name&quot;:&quot;Jon&quot;,               <span class="operator">+</span></span><br><span class="line">  &quot;age&quot;:<span class="number">12</span>,                   <span class="operator">+</span></span><br><span class="line">  &quot;interests&quot;:[&quot;Golf&quot;,&quot;Food&quot;]&#125;</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
-
-<h2 id="原文"><a href="#原文" class="headerlink" title="原文"></a>原文</h2><p>[1] <a href="https://postgresweekly.com/issues/322">https://postgresweekly.com/issues/322</a></p>
 ]]></content>
       <categories>
         <category>数据库</category>
@@ -4876,6 +4920,36 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>【译】PostgreSQL 查询结果转为 JSON 格式</title>
+    <url>/2019/09/turning-query-results-into-json-in-postgresql/</url>
+    <content><![CDATA[<img src="/2019/09/turning-query-results-into-json-in-postgresql/postgresql-weekly.png" class="">
+
+<p>您知道 Postgres 提供了一个函数将查询结果集转为 JSON 数据类型吗？这个函数是 <code>row_to_json</code>。</p>
+<span id="more"></span>
+
+<p>我们先创建一个表，它包含两个用户记录以以及一个 <code>interests</code> 的属性列：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> people</span><br><span class="line">	(name text, age <span class="type">int</span>, interests text[]);</span><br><span class="line"></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> people (name, age, interests)</span><br><span class="line">	<span class="keyword">VALUES</span></span><br><span class="line">    (<span class="string">&#x27;Jon&#x27;</span>, <span class="number">12</span>, <span class="keyword">ARRAY</span> [<span class="string">&#x27;Golf&#x27;</span>, <span class="string">&#x27;Food&#x27;</span>]),</span><br><span class="line">    (<span class="string">&#x27;Jane&#x27;</span>, <span class="number">45</span>, <span class="keyword">ARRAY</span> [<span class="string">&#x27;Art&#x27;</span>]);</span><br></pre></td></tr></table></figure>
+
+<p><code>row_to_json</code> 函数最基本的使用方法是使用 <code>ROW</code> 行构造器，例如：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> row_to_json(<span class="type">ROW</span>(name, age, interests)) <span class="keyword">FROM</span> people;</span><br><span class="line">                row_to_json</span><br><span class="line"><span class="comment">-------------------------------------------</span></span><br><span class="line"> &#123;&quot;f1&quot;:&quot;Jon&quot;,&quot;f2&quot;:<span class="number">12</span>,&quot;f3&quot;:[&quot;Golf&quot;,&quot;Food&quot;]&#125;</span><br><span class="line"> &#123;&quot;f1&quot;:&quot;Jane&quot;,&quot;f2&quot;:<span class="number">45</span>,&quot;f3&quot;:[&quot;Art&quot;]&#125;</span><br><span class="line">(<span class="number">2</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>针对表中不同的类型，在最后的输出中都做了相应的转换，但是属性列的名称在输出中并没有体现出来。幸运的是我们可以通过子查询的方式来实现：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> row_to_json(q1) <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> people LIMIT <span class="number">1</span>) q1;</span><br><span class="line">                     row_to_json</span><br><span class="line"><span class="comment">-----------------------------------------------------</span></span><br><span class="line"> &#123;&quot;name&quot;:&quot;Jon&quot;,&quot;age&quot;:<span class="number">12</span>,&quot;interests&quot;:[&quot;Golf&quot;,&quot;Food&quot;]&#125;</span><br><span class="line">(<span class="number">1</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>虽然与我们的示例无关，但我们还是需要提一下，<code>row_to_json</code> 提供了一个可选的参数 <code>prettifies</code> 用于格式化输出，想要启用它，您可以在上面的示例中使用 <code>row_to_json(q1, true)</code>。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> row_to_json(q1, <span class="literal">true</span>) <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> people LIMIT <span class="number">1</span>) q1;</span><br><span class="line">          row_to_json</span><br><span class="line"><span class="comment">-------------------------------</span></span><br><span class="line"> &#123;&quot;name&quot;:&quot;Jon&quot;,               <span class="operator">+</span></span><br><span class="line">  &quot;age&quot;:<span class="number">12</span>,                   <span class="operator">+</span></span><br><span class="line">  &quot;interests&quot;:[&quot;Golf&quot;,&quot;Food&quot;]&#125;</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="原文"><a href="#原文" class="headerlink" title="原文"></a>原文</h2><p>[1] <a href="https://postgresweekly.com/issues/322">https://postgresweekly.com/issues/322</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>翻译</tag>
       </tags>
   </entry>
   <entry>
