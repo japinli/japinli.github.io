@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://blog.japinli.top/2021/11/postgresql-send-email-using-procedure/</loc>
+    
+    <lastmod>2021-11-17</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://blog.japinli.top/2021/11/postgresql-send-http-using-procedure/</loc>
     
     <lastmod>2021-11-16</lastmod>
