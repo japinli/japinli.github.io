@@ -6372,6 +6372,7 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
 <p>最后我们查看 <code>log</code> 表来验证 job 是否执行。</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">testdb<span class="operator">=</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> log;</span><br><span class="line">     info      <span class="operator">|</span>             <span class="keyword">at</span></span><br><span class="line"><span class="comment">---------------+----------------------------</span></span><br><span class="line"> hello, testdb <span class="operator">|</span> <span class="number">2021</span><span class="number">-11</span><span class="number">-18</span> <span class="number">23</span>:<span class="number">40</span>:<span class="number">00.022578</span></span><br><span class="line"> hello, testdb <span class="operator">|</span> <span class="number">2021</span><span class="number">-11</span><span class="number">-18</span> <span class="number">23</span>:<span class="number">41</span>:<span class="number">00.029197</span></span><br><span class="line">(<span class="number">2</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
 
+<p>最后，还需要主要的是，pg_cron 的定时时间是基于 GMT 的，因此，您可能需要换算时区。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://github.com/citusdata/pg_cron">https://github.com/citusdata/pg_cron</a></p>
 <div class="just-for-fun">
 笑林广记 - 武弁夜巡
@@ -6384,6 +6385,174 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL SQL 查询路径</title>
+    <url>/2021/11/the-path-of-a-query/</url>
+    <content><![CDATA[<p>在 PostgreSQL 中，查询一般会经历以下几个阶段：</p>
+<ol>
+<li>应用程序连接到 PostgreSQL 并发送查询请求，随后等待返回结果。</li>
+<li>解析器（parser）检查应用程序传输的查询的语法是否正确并创建查询树（query tree）。</li>
+<li>重写系统（rewrite system）采用解析器阶段创建的查询树，并查找存储在系统表中的规则来重写查询树，例如视图。</li>
+<li>规划器/优化器（planner/optimizer）采用（重写的）查询树并创建一个查询计划，该计划将作为执行器（executor）的输入。<br>它首先创建得到相同结果的所有路径。例如，在表上有索引，那么将会创建两个查询路径：顺序扫描和索引扫描。接下来估计每条路径的执行成本并选择最便宜的路径，将最便宜的路径扩展为执行器可以使用的完整计划。</li>
+<li>执行器递归地遍历计划树并以计划表示的方式检索行。执行器在扫描表时会使用存储系统、执行排序和连接、估算条件并最后归还得到的行。</li>
+</ol>
+<h2 id="建立连接"><a href="#建立连接" class="headerlink" title="建立连接"></a>建立连接</h2><p>PostgreSQL 采用客户端服务器模型实现，针对每一个客户端的连接，它将为其创建一个后端服务进程。由于我们不能提前知道有多少了连接，因此我们必须使用一个主进程在每次连接请求时创建一个后端服务进程。主进程是一个被称为 <code>postmaster</code> 的进程，它在一个特定的 TCP/IP 端口监听连接请求。当它监测到连接请求时，它将创建一个后端进程。这些后端进程使用信号量和共享内存相互通信并与实例的其他进程通信，以确保整个并发数据访问过程中的数据完整性。</p>
+<p>如下所示，当我们启动数据库后一般会有如下进程。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">px@ubuntu:~/Codes/postgres/Debug$ ps -ef | grep postgres</span><br><span class="line">px       1785509       1  0 17:34 ?        00:00:00 /home/px/Codes/postgres/Debug/pg/bin/postgres</span><br><span class="line">px       1785510 1785509  0 17:34 ?        00:00:00 postgres: checkpointer</span><br><span class="line">px       1785511 1785509  0 17:34 ?        00:00:00 postgres: background writer</span><br><span class="line">px       1785513 1785509  0 17:34 ?        00:00:00 postgres: walwriter</span><br><span class="line">px       1785514 1785509  0 17:34 ?        00:00:00 postgres: autovacuum launcher</span><br><span class="line">px       1785515 1785509  0 17:34 ?        00:00:00 postgres: stats collector</span><br><span class="line">px       1785516 1785509  0 17:34 ?        00:00:00 postgres: logical replication launcher</span><br><span class="line">px       1788661  578230  0 17:53 pts/8    00:00:00 grep --color=auto postgres</span><br></pre></td></tr></table></figure>
+
+<p>此时，若我们在另一个终端通过 psql 连接数据库，其进程信息如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">px@ubuntu:~/Codes/postgres/Debug$ ps -ef | grep postgres</span><br><span class="line">px       1785509       1  0 17:34 ?        00:00:00 /home/px/Codes/postgres/Debug/pg/bin/postgres</span><br><span class="line">px       1785510 1785509  0 17:34 ?        00:00:00 postgres: checkpointer</span><br><span class="line">px       1785511 1785509  0 17:34 ?        00:00:00 postgres: background writer</span><br><span class="line">px       1785513 1785509  0 17:34 ?        00:00:00 postgres: walwriter</span><br><span class="line">px       1785514 1785509  0 17:34 ?        00:00:00 postgres: autovacuum launcher</span><br><span class="line">px       1785515 1785509  0 17:34 ?        00:00:00 postgres: stats collector</span><br><span class="line">px       1785516 1785509  0 17:34 ?        00:00:00 postgres: logical replication launcher</span><br><span class="line">px       1788933  578230  0 17:55 pts/8    00:00:00 psql postgres</span><br><span class="line">px       1788934 1785509  0 17:55 ?        00:00:00 postgres: px postgres [local] idle</span><br><span class="line">px       1788954 1784579  0 17:55 pts/4    00:00:00 grep --color=auto postgres</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，后端进程中多了一个进程 ID 为 <code>1788934</code> 的进程。您可以在 psql 端通过 <code>pg_backend_pid()</code> 函数来进行验证。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> pg_backend_pid();</span><br><span class="line"> pg_backend_pid</span><br><span class="line"><span class="comment">----------------</span></span><br><span class="line">        <span class="number">1788934</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>连接建立后，客户端进程可以向其连接的后端进程发送查询。查询使用纯文本传输，即在客户端没有进行解析。后端进程解析查询，创建执行计划，执行计划，并通过在已建立的连接上传输检索到的行将它们返回给客户端。</p>
+<p>为了验证上面的内容，我们创建 <code>friend</code> 的表并插入数据。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> friend (firstname text, lastname text, age <span class="type">int</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> friend <span class="keyword">VALUES</span> (<span class="string">&#x27;Sandy&#x27;</span>, <span class="string">&#x27;Tom&#x27;</span>, <span class="number">33</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> friend <span class="keyword">VALUES</span> (<span class="string">&#x27;Lily&#x27;</span>, <span class="string">&#x27;Jane&#x27;</span>, <span class="number">23</span>);</span><br></pre></td></tr></table></figure>
+
+<p>接着我们通过 psql 连接到数据库（注意需要走 TCP/IP，可以使用 <code>psql -h 127.0.0.1</code> 的方式进行连接），并利用 tcpdump 来捕获数据包。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ psql -h 127.0.0.1 postgres</span><br><span class="line">postgres=# SELECT firstname</span><br><span class="line">postgres-# FROM friend</span><br><span class="line">postgres-# WHERE age = 33;</span><br><span class="line"> firstname</span><br><span class="line">-----------</span><br><span class="line"> Sandy</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>下面是 tcpdump 的输出，我们可以看到数据包中包含了我们在 psql 中输入的查询语句。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo tcpdump -X -i lo port 5432</span></span><br><span class="line">18:17:57.376100 IP localhost.55238 &gt; localhost.postgresql: Flags [P.], seq 50:100, ack 113, win 512, options [nop,nop,TS val 1265806437 ecr 1265755262], length 50</span><br><span class="line">        0x0000:  4500 0066 313b 4000 4006 0b55 7f00 0001  E..f1;@.@..U....</span><br><span class="line">        0x0010:  7f00 0001 d7c6 1538 e8dd 8ea1 7e88 14b9  .......8....~...</span><br><span class="line">        0x0020:  8018 0200 fe5a 0000 0101 080a 4b72 ac65  .....Z......Kr.e</span><br><span class="line">        0x0030:  4b71 e47e 5100 0000 3153 454c 4543 5420  Kq.~Q...1SELECT.</span><br><span class="line">        0x0040:  6669 7273 746e 616d 650a 4652 4f4d 2066  firstname.FROM.f</span><br><span class="line">        0x0050:  7269 656e 640a 5748 4552 4520 6167 6520  riend.WHERE.age.</span><br><span class="line">        0x0060:  3d20 3333 3b00                           =.33;.</span><br><span class="line">18:17:57.376956 IP localhost.postgresql &gt; localhost.55238: Flags [P.], seq 113:184, ack 100, win 512, options [nop,nop,TS val 1265806438 ecr 1265806437], length 71</span><br><span class="line">        0x0000:  4500 007b 4194 4000 4006 fae6 7f00 0001  E..&#123;A.@.@.......</span><br><span class="line">        0x0010:  7f00 0001 1538 d7c6 7e88 14b9 e8dd 8ed3  .....8..~.......</span><br><span class="line">        0x0020:  8018 0200 fe6f 0000 0101 080a 4b72 ac66  .....o......Kr.f</span><br><span class="line">        0x0030:  4b72 ac65 5400 0000 2200 0166 6972 7374  Kr.eT...&quot;..first</span><br><span class="line">        0x0040:  6e61 6d65 0000 0040 0600 0100 0000 19ff  name...@........</span><br><span class="line">        0x0050:  ffff ffff ff00 0044 0000 000f 0001 0000  .......D........</span><br><span class="line">        0x0060:  0005 5361 6e64 7943 0000 000d 5345 4c45  ..SandyC....SELE</span><br><span class="line">        0x0070:  4354 2031 005a 0000 0005 49              CT.1.Z....I</span><br></pre></td></tr></table></figure>
+
+<p>下图是 PostgreSQL 数据库连接的示意图，用户终端通过应用程序连接 PostgreSQL 服务器进行查询操作，而应用服务器一般情况下都是通过 libpq 这个库来实现对 PostgreSQL 数据库的访问。</p>
+<img src="/2021/11/the-path-of-a-query/connection.png" class="">
+
+<p>为了方便后续查看，建议设置以下选项：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">log_min_messages = debug5</span><br><span class="line">debug_print_parse = on</span><br><span class="line">debug_print_rewritten = on</span><br><span class="line">debug_print_plan = on</span><br><span class="line"># debug_pretty_print = on</span><br></pre></td></tr></table></figure>
+
+<p>上面我们通过 ps 命令看到了新进程的创建，我们也可以在日志文件中找到相应的日志。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2021-11-21 18:59:25.293 CST [1798570] DEBUG:  forked new backend, pid=1798903 socket=9</span><br><span class="line">2021-11-21 18:59:25.300 CST [1798903] DEBUG:  InitPostgres</span><br><span class="line">2021-11-21 18:59:25.301 CST [1798903] DEBUG:  my backend ID is 3</span><br><span class="line">2021-11-21 18:59:25.303 CST [1798903] DEBUG:  StartTransaction(1) name: unnamed; blockState: DEFAULT; state: INPROGRESS, xid/subid/cid: 0/1/0</span><br><span class="line">2021-11-21 18:59:25.314 CST [1798903] DEBUG:  CommitTransaction(1) name: unnamed; blockState: STARTED; state: INPROGRESS, xid/subid/cid: 0/1/0</span><br><span class="line">2021-11-21 18:59:41.553 CST [1798903] DEBUG:  StartTransaction(1) name: unnamed; blockState: DEFAULT; state: INPROGRESS, xid/subid/cid: 0/1/0</span><br></pre></td></tr></table></figure>
+
+<h2 id="解析器"><a href="#解析器" class="headerlink" title="解析器"></a>解析器</h2><p>后端进程在接收到查询请求后，首先会进行查询的解析。解析器由两部分组成：</p>
+<ul>
+<li>定义在 <code>gram.y</code> 和 <code>scan.l</code> 文件中的解析器，它使用 Unix 的 bison 和 flex 工具实现。</li>
+<li>转换过程对解析器返回的数据结构进行修改和扩充。</li>
+</ul>
+<h3 id="解析器-1"><a href="#解析器-1" class="headerlink" title="解析器"></a>解析器</h3><p>解析器必须检查查询字符串（以纯文本形式出现）的语法是否有效。 如果语法正确，则会建立并返回解析树； 否则返回错误。</p>
+<p>词法分析其（lexer）定义在 <code>scan.l</code> 文件中，它负责识别标识符、SQL 关键字等。对于找到的每个关键字或标识符，都会生成一个标记（token）并将其传递给解析器。</p>
+<p>解析器（parser）定义在 <code>gram.y</code> 文件中，它由一组语法规则和在触发规则时执行的操作组成。操作的代码（实际上是 C 代码）用于构建解析树。</p>
+<p>下面就是一颗原始解析树的详细组成。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2021-11-21 19:42:20.293 CST [1805230] LOG:  parse tree:</span><br><span class="line">2021-11-21 19:42:20.293 CST [1805230] DETAIL:  &#123;QUERY :commandType 1 :querySource 0 :canSetTag true :utilityStmt &lt;&gt;</span><br><span class="line">	:resultRelation 0 :hasAggs false :hasWindowFuncs false :hasTargetSRFs false</span><br><span class="line">	:hasSubLinks false :hasDistinctOn false :hasRecursive false :hasModifyingCTE</span><br><span class="line">	false :hasForUpdate false :hasRowSecurity false :isReturn false :cteList &lt;&gt;</span><br><span class="line">	:rtable (&#123;RANGETBLENTRY :alias &lt;&gt; :eref &#123;ALIAS :aliasname friend :colnames</span><br><span class="line">	(&quot;firstname&quot; &quot;lastname&quot; &quot;age&quot;)&#125; :rtekind 0 :relid 16384 :relkind r</span><br><span class="line">	:rellockmode 1 :tablesample &lt;&gt; :lateral false :inh true :inFromCl true</span><br><span class="line">	:requiredPerms 2 :checkAsUser 0 :selectedCols (b 8 10) :insertedCols (b)</span><br><span class="line">	:updatedCols (b) :extraUpdatedCols (b) :securityQuals &lt;&gt;&#125;) :jointree &#123;FROMEXPR</span><br><span class="line">	:fromlist (&#123;RANGETBLREF :rtindex 1&#125;) :quals &#123;OPEXPR :opno 96 :opfuncid 65</span><br><span class="line">	:opresulttype 16 :opretset false :opcollid 0 :inputcollid 0 :args (&#123;VAR :varno</span><br><span class="line">	1 :varattno 3 :vartype 23 :vartypmod -1 :varcollid 0 :varlevelsup 0 :varnosyn</span><br><span class="line">	1 :varattnosyn 3 :location 35&#125; &#123;CONST :consttype 23 :consttypmod -1</span><br><span class="line">	:constcollid 0 :constlen 4 :constbyval true :constisnull false :location 41</span><br><span class="line">	:constvalue 4 [ 33 0 0 0 0 0 0 0 ]&#125;) :location 39&#125;&#125; :targetList (&#123;TARGETENTRY</span><br><span class="line">	:expr &#123;VAR :varno 1 :varattno 1 :vartype 1043 :vartypmod 34 :varcollid 100</span><br><span class="line">	:varlevelsup 0 :varnosyn 1 :varattnosyn 1 :location 7&#125; :resno 1 :resname</span><br><span class="line">	firstname :ressortgroupref 0 :resorigtbl 16384 :resorigcol 1 :resjunk false&#125;)</span><br><span class="line">	:override 0 :onConflict &lt;&gt; :returningList &lt;&gt; :groupClause &lt;&gt; :groupDistinct</span><br><span class="line">	false :groupingSets &lt;&gt; :havingQual &lt;&gt; :windowClause &lt;&gt; :distinctClause &lt;&gt;</span><br><span class="line">	:sortClause &lt;&gt; :limitOffset &lt;&gt; :limitCount &lt;&gt; :limitOption 0 :rowMarks &lt;&gt;</span><br><span class="line">	:setOperations &lt;&gt; :constraintDeps &lt;&gt; :withCheckOptions &lt;&gt; :stmt_location 0</span><br><span class="line">	:stmt_len 43&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们来看看 PostgreSQL 是如何识别标识符的。在 <code>scan.l</code> 文件中，您可以找到如下内容：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">identifier      &#123;ident_start&#125;&#123;ident_cont&#125;*</span><br><span class="line"></span><br><span class="line">&#123;identifier&#125;    &#123;</span><br><span class="line">                    int         kwnum;</span><br><span class="line">                    char       *ident;</span><br><span class="line"></span><br><span class="line">                    SET_YYLLOC();</span><br><span class="line"></span><br><span class="line">                    /* Is it a keyword? */</span><br><span class="line">                    kwnum = ScanKeywordLookup(yytext,</span><br><span class="line">                                              yyextra-&gt;keywordlist);</span><br><span class="line">                    if (kwnum &gt;= 0)</span><br><span class="line">                    &#123;</span><br><span class="line">                        yylval-&gt;keyword = GetScanKeyword(kwnum,</span><br><span class="line">                                                         yyextra-&gt;keywordlist);</span><br><span class="line">                        return yyextra-&gt;keyword_tokens[kwnum];</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    /*</span><br><span class="line">                     * No.  Convert the identifier to lower case, and truncate</span><br><span class="line">                     * if necessary.</span><br><span class="line">                     */</span><br><span class="line">                    ident = downcase_truncate_identifier(yytext, yyleng, true);</span><br><span class="line">                    yylval-&gt;str = ident;</span><br><span class="line">                    return IDENT;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">&#123;other&#125;         &#123;</span><br><span class="line">                    SET_YYLLOC();</span><br><span class="line">                    return yytext[0];</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">&lt;&lt;EOF&gt;&gt;         &#123;</span><br><span class="line">                    SET_YYLLOC();</span><br><span class="line">                    yyterminate();</span><br><span class="line">                &#125;</span><br></pre></td></tr></table></figure>
+
+<p>您可以结合<a href="https://www.postgresql.org/docs/14/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS">文档</a>来阅读这部分内容。标识符由 <code>ident_start</code> 和 <code>ident_cont</code> 两部分组成，它们的主要区别在于 <code>ident_start</code> 里面不包含数字，即标识符不能以数字开头。</p>
+<p>接着，我们来看看解析器中 <code>SELECT</code> 触发的操作。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">simple_select:</span><br><span class="line">            SELECT opt_all_clause opt_target_list</span><br><span class="line">            into_clause from_clause where_clause</span><br><span class="line">            group_clause having_clause window_clause</span><br><span class="line">                &#123;</span><br><span class="line">                    SelectStmt *n = makeNode(SelectStmt);</span><br><span class="line">                    n-&gt;targetList = $3;</span><br><span class="line">                    n-&gt;intoClause = $4;</span><br><span class="line">                    n-&gt;fromClause = $5;</span><br><span class="line">                    n-&gt;whereClause = $6;</span><br><span class="line">                    n-&gt;groupClause = ($7)-&gt;list;</span><br><span class="line">                    n-&gt;groupDistinct = ($7)-&gt;distinct;</span><br><span class="line">                    n-&gt;havingClause = $8;</span><br><span class="line">                    n-&gt;windowClause = $9;</span><br><span class="line">                    $$ = (Node *)n;</span><br><span class="line">                &#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里仅给出了部分语法规则的实现，<code>SELECT</code> 语句还包含其他语法规则，您可以在 <code>gram.y</code> 文件的 <code>simple_select</code> 中找到。从上面我们可以看到，解析器将 <code>SELECT</code> 语句的解析结果存放到了 <code>SelectStmt</code> 结构中，<code>SelectStmt</code> 的定义如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">SelectStmt</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    NodeTag     type;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * These fields are used only in &quot;leaf&quot; SelectStmts.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    List       *distinctClause; <span class="comment">/* NULL, list of DISTINCT ON exprs, or</span></span><br><span class="line"><span class="comment">                                 * lcons(NIL,NIL) for all (SELECT DISTINCT) */</span></span><br><span class="line">    IntoClause *intoClause;     <span class="comment">/* target for SELECT INTO */</span></span><br><span class="line">    List       *targetList;     <span class="comment">/* the target list (of ResTarget) */</span></span><br><span class="line">    List       *fromClause;     <span class="comment">/* the FROM clause */</span></span><br><span class="line">    Node       *whereClause;    <span class="comment">/* WHERE qualification */</span></span><br><span class="line">    List       *groupClause;    <span class="comment">/* GROUP BY clauses */</span></span><br><span class="line">    <span class="keyword">bool</span>        groupDistinct;  <span class="comment">/* Is this GROUP BY DISTINCT? */</span></span><br><span class="line">    Node       *havingClause;   <span class="comment">/* HAVING conditional-expression */</span></span><br><span class="line">    List       *windowClause;   <span class="comment">/* WINDOW window_name AS (...), ... */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * In a &quot;leaf&quot; node representing a VALUES list, the above fields are all</span></span><br><span class="line"><span class="comment">     * null, and instead this field is set.  Note that the elements of the</span></span><br><span class="line"><span class="comment">     * sublists are just expressions, without ResTarget decoration. Also note</span></span><br><span class="line"><span class="comment">     * that a list element can be DEFAULT (represented as a SetToDefault</span></span><br><span class="line"><span class="comment">     * node), regardless of the context of the VALUES list. It&#x27;s up to parse</span></span><br><span class="line"><span class="comment">     * analysis to reject that where not valid.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    List       *valuesLists;    <span class="comment">/* untransformed list of expression lists */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * These fields are used in both &quot;leaf&quot; SelectStmts and upper-level</span></span><br><span class="line"><span class="comment">     * SelectStmts.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    List       *sortClause;     <span class="comment">/* sort clause (a list of SortBy&#x27;s) */</span></span><br><span class="line">    Node       *limitOffset;    <span class="comment">/* # of result tuples to skip */</span></span><br><span class="line">    Node       *limitCount;     <span class="comment">/* # of result tuples to return */</span></span><br><span class="line">    LimitOption limitOption;    <span class="comment">/* limit type */</span></span><br><span class="line">    List       *lockingClause;  <span class="comment">/* FOR UPDATE (list of LockingClause&#x27;s) */</span></span><br><span class="line">    WithClause *withClause;     <span class="comment">/* WITH clause */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * These fields are used only in upper-level SelectStmts.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    SetOperation op;            <span class="comment">/* type of set op */</span></span><br><span class="line">    <span class="keyword">bool</span>        all;            <span class="comment">/* ALL specified? */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">SelectStmt</span> *<span class="title">larg</span>;</span>    <span class="comment">/* left child */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">SelectStmt</span> *<span class="title">rarg</span>;</span>    <span class="comment">/* right child */</span></span><br><span class="line">    <span class="comment">/* Eventually add fields for CORRESPONDING spec here */</span></span><br><span class="line">&#125; SelectStmt;</span><br></pre></td></tr></table></figure>
+
+<p>解析阶段所用到的数据类型基本上都定义在 <code>src/include/nodes/parsenodes.h</code> 文件中，如 <code>ResTarget</code>、<code>RangeVar</code>、和 <code>ColumnRef</code> 等。</p>
+<h3 id="转换过程"><a href="#转换过程" class="headerlink" title="转换过程"></a>转换过程</h3><p>解析器阶段仅使用有关 SQL 语法结构的固定规则创建解析树。它不会在系统目录中进行任何查找，因此不可能了解所请求操作的详细语义。解析器完成后，转换过程将解析器返回的树作为输入，并进行语义解释以了解查询引用了哪些表、函数和运算符。为表示此信息而构建的数据结构称为查询树（query tree）。</p>
+<p>我们将原始解析与语义分析分开的原因是系统目录查找只能在事务内完成，然而，我们并不希望在收到查询字符串后立即启动事务。原始解析阶段足以识别事务控制命令（<code>BEGIN</code>、<code>ROLLBACK</code> 等），然后无需任何进一步分析即可正确执行这些命令。一旦我们知道我们正在处理一个实际的查询（例如 <code>SELECT</code> 或 <code>UPDATE</code>），如果我们还没有进入一个事务，就可以开始一个事务。只有这样才能调用转换过程。</p>
+<p>转换过程创建的查询树在大多数地方与原始解析树在结构上类似，但在细节上有很多不同。例如，解析树中的 <code>FuncCall</code> 节点表示在语法上看起来像函数调用的东西。这可能会转换为 <code>FuncExpr</code> 或 <code>Aggref</code> 节点，具体取决于引用的名称是普通函数还是聚合函数。此外，有关列的实际数据类型和表达式结果的信息会添加到查询树中。</p>
+<p>转换过程则是通过一系列 <code>transformXXX()</code> 函数实现的，它从顶层的 <code>transformTopLevelStmt()</code> 函数开始，如果需要将针对 <code>SELECT INTO</code> 语句进行处理，最终到 <code>transformStmt()</code> 函数，该函数内部主要是一个 <code>switch ... case ...</code> 语句，针对不同的语句调用对应的 <code>transform</code> 函数，最后将返回一个查询树（query tree）。</p>
+<h2 id="规则系统"><a href="#规则系统" class="headerlink" title="规则系统"></a>规则系统</h2><p>PostgreSQL 支持强大的规则系统来规范视图和模糊视图更新。最初的 PostgreSQL 规则系统由两个实现组成：</p>
+<ul>
+<li>第一个使用行级（row level）处理工作，并在执行程序的深处实现。每当访问单个行时，就会调用规则系统。这个实现在 1995 年被删除，当时伯克利 Postgres 项目的最后一个正式版本被转换成 Postgres95。</li>
+<li>规则系统的第二种实现是一种称为查询重写的技术。重写系统是一个存在于解析器阶段和计划器/优化器之间的模块。</li>
+</ul>
+<p>关于查询重写在 <a href="https://www.postgresql.org/docs/14/rules.html">PostgreSQL 文档</a>中有详细的说明，这也是一个比较大的主题，这里我们简要介绍一下。</p>
+<p>查询重写通过函数 <code>QueryRewrite()</code> 实现，它的输入和输出都是查询树，即树中的表示或语义细节级别没有变化。您可以把它认为是一种宏扩展。<code>QueryRewrite()</code> 函数分为三个步骤：</p>
+<ol>
+<li>应用所有非 <code>SELECT</code> 规则，这可能得到 0 个或多个查询树。</li>
+<li>对每个查询应用 RIR 规则。</li>
+<li>确定哪个结果查询应该设置命令结果标签；并相应地更新 <code>canSetTag</code> 字段。</li>
+</ol>
+<h2 id="计划器-优化器"><a href="#计划器-优化器" class="headerlink" title="计划器/优化器"></a>计划器/优化器</h2><p>计划器/优化器的任务是创建一个最佳的执行计划。一个给定的 SQL 查询（今后称为查询树）实际上可以有多种执行方式，每种方式都将产生相同的结果。如果在计算上可行，查询优化器将检查这些可能的执行计划中的每一个，最终选择预期运行速度最快的执行计划。</p>
+<p>在某些情况下，检查一个查询所有可能的执行方式会耗费非常多的时间和内存空间。特别是当涉及大量表做连接操作的时候。为了能在合理的时间内给出一个合理的（不一定是最优的）查询计划，当连接数量超过 <a href="https://www.postgresql.org/docs/14/runtime-config-query.html#GUC-GEQO-THRESHOLD">geqo_threshold</a> 时，PostgreSQL 将使用一种<a href="https://www.postgresql.org/docs/14/geqo.html">遗传查询优化器</a>。</p>
+<p>计划器的搜索过程实际上使用称为路径（path）的数据结构，这些数据结构只是计划的简化表示，仅包含规划器做出决策所需的信息。在确定最便宜的路径后，将构建一个完整的计划树以传递给执行者。</p>
+<p>计划器/优化器首先为每个独立的表生产计划，其中可能的计划取决于该表上可用的索引。通常表上只是存在一个顺序扫描的计划。假设在表上定义了一个索引（例如 B-tree 索引）并且查询包含 <code>relation.attribute OPR constant</code> 限制，如果 <code>relation.attribute</code> 恰好与 B-tree 索引的键匹配、并且 <code>OPR</code> 是索引的运算符中列出的运算符之一，那么将使用 B-tree 索引创建一个扫描计划。如果存在更多索引并且查询中的限制恰好与索引的键匹配，则将考虑这些扫描计划。此外，还有可能为匹配 <code>ORDER BY</code> 子句（如果有）的排序或者对归并连接（merge joining）有用的排序索引生成索引扫描计划。</p>
+<p>如果查询包含两个或多个表的连接操作，在找到表的所有扫描计划之后，才会考虑表的连接计划。PostgreSQL 提供了三种策略的连接：</p>
+<ul>
+<li>嵌套循环连接（nested loop join）- 对于左侧表中的每一行，右侧的表都会执行一次扫描。这种策略实现比较简单，但是非常耗时。但是，如果可以使用索引扫描来扫描右侧的表，这可能是一个很好的策略。可以使用来自左表当前行的值作为右表索引扫描的键。</li>
+<li>归并连接（merge join）- 在连接之前，每个表都依据连接属性列进行排序，接着并行的扫描两个表，匹配的行被整合为连接的行。由于每个表都只需扫描一次，因此非常具有吸引力。它所要求的排序可以通过一个显示的排序或使用一个连接键上的索引扫描得到。</li>
+<li>哈希连接（hash join）- 首先扫描右侧的表并将其连接键作为哈希键存放到哈希表中。接下来扫描左侧的表并将找到的每一行的适当值用作散列键来定位表中的匹配行。</li>
+</ul>
+<p>当查询涉及两个以上的表时，最终结果必须由连接树构建，每个连接树有两个输入。规划器检查不同的可能连接序列以找到最便宜的连接序列。</p>
+<p>如下图所示，计划中的 JOIN 节点的数据来其子节点，最简单的就是其下有两个扫描节点。</p>
+<img src="/2021/11/the-path-of-a-query/join.jpg" class="">
+
+<p>最终的计划树由基本上的顺序或索引扫描，加上可能的嵌套循环连接、归并连接和哈希连接，以及可能的其他辅助节点（例如，排序节点、聚合函数计算节点）组成。这些计划节点类型中的大多数都具有进行选择（丢弃不满足指定布尔条件的行）和投影（根据给定的列值计算派生列集，即在需要时评估标量表达式）的附加能力。计划者的职责之一是将来自 <code>WHERE</code> 子句的选择条件和所需输出表达式的计算附加到计划树的最合适的节点上。</p>
+<h2 id="执行器"><a href="#执行器" class="headerlink" title="执行器"></a>执行器</h2><p>执行器采用计划器/优化器创建的计划并递归处理它以提取所需的行集。 这本质上是一种需求拉动的管道机制。 每次调用计划节点时，它都必须再交付一行，或者报告已完成交付行。</p>
+<p>以下图的例子来看，顶部节点是一个 MergeJoin 节点。在进行任何合并之前，必须获取两行（每个子计划中的一行）。所以执行器递归调用自己来处理子计划（它从附加到左树的子计划开始）。新的顶部节点（左侧子计划的顶部节点）是一个 Sort 节点，并且需要再次递归来获取输入行。Sort 的子节点是一个 SeqScan 节点，代表对表的实际读取。执行此节点会导致执行程序从表中获取一行并将其返回给调用节点。Sort 节点会反复调用它的子节点来获取所有要排序的行。当输入用完时（如子节点返回 NULL 而不是行），Sort 代码执行排序，最后能够返回其第一个输出行，即排序顺序中的第一个。它保存剩余的行，以便它可以按排序顺序传送它们以响应以后的需求。</p>
+<img src="/2021/11/the-path-of-a-query/merge-join.jpg" class="">
+
+<p>MergeJoin 节点同样要求其右侧子计划的第一行。然后比较两行，看是否可以连接；如果是，它向调用者返回一个连接行。在下一次调用时，或者如果它无法加入当前的输入对，它会立即前进到一个表或另一个表的下一行（取决于比较的结果），并再次检查是否匹配。最终，一个或另一个子计划用完，并且 MergeJoin 节点返回 NULL 以指示不能形成更多的连接行。</p>
+<p>复杂的查询可能涉及多个级别的计划节点，但一般方法是相同的：每个节点每次调用时都会计算并返回其下一个输出行。每个节点还负责应用规划器分配给它的任何选择或投影表达式。</p>
+<p>执行器机制用于执行四种基本 SQL 查询类型：<code>SELECT</code>、<code>INSERT</code>、<code>UPDATE</code> 和 <code>DELETE</code>。对于 <code>SELECT</code>，顶层的执行器代码只需要将查询计划树返回的每一行发送给客户端。<code>INSERT ... SELECT</code>、<code>UPDATE</code> 和 <code>DELETE</code> 是在名为 <code>ModifyTable</code> 的特殊顶层计划节点下的 <code>SELECT</code>。</p>
+<p><code>INSERT ... SELECT</code> 将行记录返回给 <code>ModifyTable</code> 节点执行插入。对于 <code>UPDATE</code>，计划器安排每个计算行包括所有更新的列值，加上原始目标行的 <code>TID</code>（元组 <code>ID</code>，或行 <code>ID</code>）；该数据被传送到 <code>ModifyTable</code> 节点，该节点使用该信息创建一个新的更新行并将旧行标记为已删除。对于 <code>DELETE</code>，计划实际仅返回唯一的 <code>TID</code> 列，<code>ModifyTable</code> 节点使用 <code>TID</code> 访问每个目标行并将其标记为删除。</p>
+<p>一个简单的 <code>INSERT ... VALUES</code> 命令创建一个由单个 <code>Result</code> 节点组成的简单计划树，它只计算一个结果行，将其馈送到 <code>ModifyTable</code> 以执行插入。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/14/query-path.html">https://www.postgresql.org/docs/14/query-path.html</a><br>[2] <a href="https://momjian.us/main/writings/pgsql/internalpics.pdf">https://momjian.us/main/writings/pgsql/internalpics.pdf</a></p>
+<div class="just-for-fun">
+笑林广记 - 垛子助阵
+
+<p>一武官出征将败，忽有神兵助阵，反大胜。<br>官叩头请神姓名，神曰：“我是垛子。”<br>武官曰：“小将何德，敢劳垛子尊神见救。”<br>答曰：“感汝平昔在教场从不曾伤我一箭。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>源码</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 使用 JDBC 调用存储过程错误</title>
+    <url>/2021/11/postgresql-jdbc-call-procedure/</url>
+    <content><![CDATA[<p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在将 Oracle 中的存储过程迁移到 PostgreSQL 中，我们遇到了一个如下的存储过程（经过了简化）：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> proc(a <span class="keyword">INOUT</span> <span class="type">bigint</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span>(a);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
+
+<p>随后在 Java 程序中使用 JDBC 去调用这个存储过程，调用代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">CallableStatement proc = conn.prepareCall(<span class="string">&quot;&#123;call proc( ? )&#125;&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>运行时程序报如下错误：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2674)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2364)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:354)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:484)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:404)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:162)</span><br><span class="line">        at org.postgresql.jdbc.PgCallableStatement.executeWithFlags(PgCallableStatement.java:83)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.execute(PgPreparedStatement.java:151)</span><br><span class="line">        at PGTest.main(PGTest.java:52)</span><br><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br></pre></td></tr></table></figure>
+
+<p>错误提示我们调用的是一个存储过程，应该使用 <code>CALL</code> 来调用存储过程？WTF? 难道我在程序里使用的不是 <code>CALL</code> 么？真的是老眼昏花了吗？</p>
+<p>经过一番尝试之后发现还是不能解决这个问题，当时由于敢进度，就选择了曲线救国的思路，将存储过程改为函数，折腾了一番之后总算是可以用了。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>晚上回来继续研究，这次选择了查看<a href="https://jdbc.postgresql.org/documentation/head/callproc.html">官方文档</a>，浏览了一下发现 PostgreSQL 的 JDBC 在处理存储过程没有返回值的时候需要设置 <code>escapeSyntaxCallMode</code> 参数。如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Ensure EscapeSyntaxCallmode property set to support procedures if no return value</span></span><br><span class="line">props.setProperty(<span class="string">&quot;escapeSyntaxCallMode&quot;</span>, <span class="string">&quot;callIfNoReturn&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>根据注释来看，设置 <code>escapeSyntaxCallMode</code> 为 <code>callIfNoReturn</code> 可以确保存储过程在没有返回值的时候依然正常工作，经验证，通过这个设置，存储过程便能正确执行了。</p>
+<p>这个问题虽然不大，但是对于不懂 Java 的我来说定位还是比较费事的，不过还好 PostgreSQL 的 jdbc 文档比较完善，虽然走了一些弯路，从这个也能看出，官方文档才是第一手资料，其他的都是浮云啊。</p>
+<p>此外，<a href="https://jdbc.postgresql.org/documentation/head/connect.html">这里</a> 包含了 PostgreSQL 数据库 jdbc 连接的所有参数信息。拿上面的 <code>escapeSyntaxCallMode</code> 来说，您可以看到如下内容：</p>
+<blockquote>
+<ul>
+<li><p>escapeSyntaxCallMode = String</p>
+<p>Specifies how the driver transforms JDBC escape call syntax into underlying SQL, for invoking procedures or functions. In escapeSyntaxCallMode=select mode (the default), the driver always uses a SELECT statement (allowing function invocation only). In escapeSyntaxCallMode=callIfNoReturn mode, the driver uses a CALL statement (allowing procedure invocation) if there is no return parameter specified, otherwise the driver uses a SELECT statement. In escapeSyntaxCallMode=call mode, the driver always uses a CALL statement (allowing procedure invocation only).</p>
+<p>The default is select</p>
+</li>
+</ul>
+</blockquote>
+<p>从上面的说明可以看到，<code>escapeSyntaxCallMode</code> 参数制定了如何调用底层的函数和存储过程，它有三种模式：</p>
+<ul>
+<li><strong>select</strong> - 默认值，jdbc 驱动使用 <code>SELECT</code> 来调用函数和存储过程。</li>
+<li><strong>callIfNoReturn</strong> - 当存储过程没有返回值时使用 <code>CALL</code> 来调用，其他情况则使用 <code>SELECT</code> 来调用。</li>
+<li><strong>call</strong> - 所有的函数和存储过程都使用 <code>CALL</code> 来调用。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://jdbc.postgresql.org/documentation/head/callproc.html">https://jdbc.postgresql.org/documentation/head/callproc.html</a><br>[2] <a href="https://jdbc.postgresql.org/documentation/head/connect.html">https://jdbc.postgresql.org/documentation/head/connect.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 进士第
+
+<p>一介弟横行于乡，怨家骂曰：“兄登黄甲，与汝何干，而豪横若此？”<br>答曰：“尔不见匾额上面写着‘进士第（弟）’么？”</p>
+</div>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>Java</tag>
+        <tag>JDBC</tag>
       </tags>
   </entry>
 </search>
