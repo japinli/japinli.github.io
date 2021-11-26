@@ -286,44 +286,14 @@
     
     <div class="post-body" itemprop="articleBody">
           <p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在将 Oracle 中的存储过程迁移到 PostgreSQL 中，我们遇到了一个如下的存储过程（经过了简化）：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> proc(a <span class="keyword">INOUT</span> <span class="type">bigint</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span>(a);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
-
-<p>随后在 Java 程序中使用 JDBC 去调用这个存储过程，调用代码如下所示：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CallableStatement proc = conn.prepareCall(<span class="string">&quot;&#123;call proc( ? )&#125;&quot;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>运行时程序报如下错误：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2674)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2364)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:354)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:484)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:404)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:162)</span><br><span class="line">        at org.postgresql.jdbc.PgCallableStatement.executeWithFlags(PgCallableStatement.java:83)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.execute(PgPreparedStatement.java:151)</span><br><span class="line">        at PGTest.main(PGTest.java:52)</span><br><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br></pre></td></tr></table></figure>
-
-<p>错误提示我们调用的是一个存储过程，应该使用 <code>CALL</code> 来调用存储过程？WTF? 难道我在程序里使用的不是 <code>CALL</code> 么？真的是老眼昏花了吗？</p>
-<p>经过一番尝试之后发现还是不能解决这个问题，当时由于敢进度，就选择了曲线救国的思路，将存储过程改为函数，折腾了一番之后总算是可以用了。</p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>晚上回来继续研究，这次选择了查看<a target="_blank" rel="noopener" href="https://jdbc.postgresql.org/documentation/head/callproc.html">官方文档</a>，浏览了一下发现 PostgreSQL 的 JDBC 在处理存储过程没有返回值的时候需要设置 <code>escapeSyntaxCallMode</code> 参数。如下所示：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Ensure EscapeSyntaxCallmode property set to support procedures if no return value</span></span><br><span class="line">props.setProperty(<span class="string">&quot;escapeSyntaxCallMode&quot;</span>, <span class="string">&quot;callIfNoReturn&quot;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>根据注释来看，设置 <code>escapeSyntaxCallMode</code> 为 <code>callIfNoReturn</code> 可以确保存储过程在没有返回值的时候依然正常工作，经验证，通过这个设置，存储过程便能正确执行了。</p>
-<p>这个问题虽然不大，但是对于不懂 Java 的我来说定位还是比较费事的，不过还好 PostgreSQL 的 jdbc 文档比较完善，虽然走了一些弯路，从这个也能看出，官方文档才是第一手资料，其他的都是浮云啊。</p>
-<p>此外，<a target="_blank" rel="noopener" href="https://jdbc.postgresql.org/documentation/head/connect.html">这里</a> 包含了 PostgreSQL 数据库 jdbc 连接的所有参数信息。拿上面的 <code>escapeSyntaxCallMode</code> 来说，您可以看到如下内容：</p>
-<blockquote>
-<ul>
-<li><p>escapeSyntaxCallMode = String</p>
-<p>Specifies how the driver transforms JDBC escape call syntax into underlying SQL, for invoking procedures or functions. In escapeSyntaxCallMode=select mode (the default), the driver always uses a SELECT statement (allowing function invocation only). In escapeSyntaxCallMode=callIfNoReturn mode, the driver uses a CALL statement (allowing procedure invocation) if there is no return parameter specified, otherwise the driver uses a SELECT statement. In escapeSyntaxCallMode=call mode, the driver always uses a CALL statement (allowing procedure invocation only).</p>
-<p>The default is select</p>
-</li>
-</ul>
-</blockquote>
-<p>从上面的说明可以看到，<code>escapeSyntaxCallMode</code> 参数制定了如何调用底层的函数和存储过程，它有三种模式：</p>
-<ul>
-<li><strong>select</strong> - 默认值，jdbc 驱动使用 <code>SELECT</code> 来调用函数和存储过程。</li>
-<li><strong>callIfNoReturn</strong> - 当存储过程没有返回值时使用 <code>CALL</code> 来调用，其他情况则使用 <code>SELECT</code> 来调用。</li>
-<li><strong>call</strong> - 所有的函数和存储过程都使用 <code>CALL</code> 来调用。</li>
-</ul>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://jdbc.postgresql.org/documentation/head/callproc.html">https://jdbc.postgresql.org/documentation/head/callproc.html</a><br>[2] <a target="_blank" rel="noopener" href="https://jdbc.postgresql.org/documentation/head/connect.html">https://jdbc.postgresql.org/documentation/head/connect.html</a></p>
-<div class="just-for-fun">
-笑林广记 - 进士第
-
-<p>一介弟横行于乡，怨家骂曰：“兄登黄甲，与汝何干，而豪横若此？”<br>答曰：“尔不见匾额上面写着‘进士第（弟）’么？”</p>
-</div>
-
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/11/postgresql-jdbc-call-procedure/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 

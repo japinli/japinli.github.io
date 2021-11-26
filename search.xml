@@ -6508,6 +6508,8 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
     <title>PostgreSQL 使用 JDBC 调用存储过程错误</title>
     <url>/2021/11/postgresql-jdbc-call-procedure/</url>
     <content><![CDATA[<p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
+<span id="more"></span>
+
 <h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在将 Oracle 中的存储过程迁移到 PostgreSQL 中，我们遇到了一个如下的存储过程（经过了简化）：</p>
 <figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> proc(a <span class="keyword">INOUT</span> <span class="type">bigint</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span>(a);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
 
