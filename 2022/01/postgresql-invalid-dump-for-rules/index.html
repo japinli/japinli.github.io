@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近在浏览邮件列表时发现通过 pg_dump 导出带有行类型的规则导出之后无法导入到数据库中，已确认为 bug，目前已被修复。 commit 43c2175121c829c8591fc5117b725f1f22bfb670 Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt; Date:   Thu Jan 13 17:49:25 2022 -0500      F">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 行类型规则导出错误">
+<meta property="og:url" content="https://blog.japinli.top/2022/01/postgresql-invalid-dump-for-rules/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近在浏览邮件列表时发现通过 pg_dump 导出带有行类型的规则导出之后无法导入到数据库中，已确认为 bug，目前已被修复。 commit 43c2175121c829c8591fc5117b725f1f22bfb670 Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt; Date:   Thu Jan 13 17:49:25 2022 -0500      F">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-01-14T14:09:24.000Z">
+<meta property="article:modified_time" content="2022-04-24T01:04:18.707Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/01/postgresql-invalid-dump-for-rules/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/01/postgresql-invalid-dump-for-rules/","path":"2022/01/postgresql-invalid-dump-for-rules/","title":"PostgreSQL 行类型规则导出错误"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 行类型规则导出错误 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">现象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-invalid-dump-for-rules/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 行类型规则导出错误
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-01-14 22:09:24" itemprop="dateCreated datePublished" datetime="2022-01-14T22:09:24+08:00">2022-01-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近在浏览邮件列表时发现通过 pg_dump 导出带有行类型的规则导出之后无法导入到数据库中，已确认为 bug，目前已被修复。</p>
+<pre><code>commit 43c2175121c829c8591fc5117b725f1f22bfb670
+Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt;
+Date:   Thu Jan 13 17:49:25 2022 -0500
+
+    Fix ruleutils.c&#39;s dumping of whole-row Vars in more contexts.
+
+    Commit 7745bc352 intended to ensure that whole-row Vars would be
+    printed with &quot;::type&quot; decoration in all contexts where plain
+    &quot;var.*&quot; notation would result in star-expansion, notably in
+    ROW() and VALUES() constructs.  However, it missed the case of
+    INSERT with a single-row VALUES, as reported by Timur Khanjanov.
+
+    Nosing around ruleutils.c, I found a second oversight: the
+    code for RowCompareExpr generates ROW() notation without benefit
+    of an actual RowExpr, and naturally it wasn&#39;t in sync :-(.
+    (The code for FieldStore also does this, but we don&#39;t expect that
+    to generate strictly parsable SQL anyway, so I left it alone.)
+
+    Back-patch to all supported branches.
+
+    Discussion: https://postgr.es/m/efaba6f9-4190-56be-8ff2-7a1674f9194f@intrans.baku.az
+</code></pre>
+<span id="more"></span>
+
+<h2 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h2><p>首先我们创建两张表和一条规则，如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> test(a <span class="type">int</span>);</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> test_log(<span class="keyword">old</span> test);</span><br><span class="line"><span class="keyword">CREATE</span> RULE del <span class="keyword">AS</span> <span class="keyword">ON</span> <span class="keyword">DELETE</span> <span class="keyword">TO</span> test DO <span class="keyword">INSERT</span> <span class="keyword">INTO</span> test_log <span class="keyword">VALUES</span>(<span class="keyword">old</span>);</span><br></pre></td></tr></table></figure>
+
+<p>当我们向其中插入、删除数据一切正常。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">mydb=# INSERT INTO test VALUES (1);</span><br><span class="line">INSERT 0 1</span><br><span class="line">mydb=# DELETE FROM test;</span><br><span class="line">DELETE 1</span><br><span class="line">mydb=# SELECT * FROM test_log;</span><br><span class="line"> old</span><br><span class="line">-----</span><br><span class="line"> (1)</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>当我们尝试使用 pg_dump 导出时，一切正常，但是通过 psql 导入时则出现错误了。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ pg_dump mydb -f mydb.sql</span><br><span class="line">$ psql tdb -f mydb.sql</span><br><span class="line">[...]</span><br><span class="line">psql:mydb.sql:68: ERROR:  column &quot;old&quot; is of type public.test but expression is of type integer</span><br><span class="line">LINE 3:   VALUES (old.*);</span><br><span class="line">                  ^</span><br><span class="line">HINT:  You will need to rewrite or cast the expression.</span><br></pre></td></tr></table></figure>
+
+<p>从 mydb.sql 文件中可以看到错误正好发生在 <code>CREATE RULE</code> 位置处，如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> RULE del <span class="keyword">AS</span></span><br><span class="line">    <span class="keyword">ON</span> <span class="keyword">DELETE</span> <span class="keyword">TO</span> public.test DO  <span class="keyword">INSERT</span> <span class="keyword">INTO</span> public.test_log (<span class="keyword">old</span>)</span><br><span class="line">  <span class="keyword">VALUES</span> (old.<span class="operator">*</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>正如 Tom Lane 在提交日志中所说，提交记录 7745bc352 确保在所有上下文中，当纯 <code>var.*</code> 符号会导致 <code>*</code> 扩展时，尤其是在 row() 和 VALUES() 构造中时，使用 <code>::type</code> 装饰来打印整行变量。然而，正如 Timur Khanjanov 所报告的那样，它忽略了使用单行值插入的情况。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/utils/adt/ruleutils.c b/src/backend/utils/adt/ruleutils.c</span></span><br><span class="line"><span class="comment">index 51391f6a4e..3388f7c17e 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/adt/ruleutils.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/adt/ruleutils.c</span></span><br><span class="line"><span class="meta">@@ -391,6 +391,8 @@</span> static void appendContextKeyword(deparse_context *context, const char *str,</span><br><span class="line"> static void removeStringInfoSpaces(StringInfo str);</span><br><span class="line"> static void get_rule_expr(Node *node, deparse_context *context,</span><br><span class="line"> 			  bool showimplicit);</span><br><span class="line"><span class="addition">+static void get_rule_expr_toplevel(Node *node, deparse_context *context,</span></span><br><span class="line"><span class="addition">+					   bool showimplicit);</span></span><br><span class="line"> static void get_oper_expr(OpExpr *expr, deparse_context *context);</span><br><span class="line"> static void get_func_expr(FuncExpr *expr, deparse_context *context,</span><br><span class="line"> 			  bool showimplicit);</span><br><span class="line"><span class="meta">@@ -4347,10 +4349,10 @@</span> get_values_def(List *values_lists, deparse_context *context)</span><br><span class="line"></span><br><span class="line"> 			/*</span><br><span class="line"> 			 * Strip any top-level nodes representing indirection assignments,</span><br><span class="line"><span class="deletion">-			 * then print the result.</span></span><br><span class="line"><span class="addition">+			 * then print the result.  Whole-row Vars need special treatment.</span></span><br><span class="line"> 			 */</span><br><span class="line"><span class="deletion">-			get_rule_expr(processIndirection(col, context, false),</span></span><br><span class="line"><span class="deletion">-						  context, false);</span></span><br><span class="line"><span class="addition">+			get_rule_expr_toplevel(processIndirection(col, context, false),</span></span><br><span class="line"><span class="addition">+								   context, false);</span></span><br><span class="line"> 		&#125;</span><br><span class="line"> 		appendStringInfoChar(buf, &#x27;)&#x27;);</span><br><span class="line"> 	&#125;</span><br><span class="line"><span class="meta">@@ -4771,7 +4773,8 @@</span> get_target_list(List *targetList, deparse_context *context,</span><br><span class="line"> 		 * the top level of a SELECT list it&#x27;s not right (the parser will</span><br><span class="line"> 		 * expand that notation into multiple columns, yielding behavior</span><br><span class="line"> 		 * different from a whole-row Var).  We need to call get_variable</span><br><span class="line"><span class="deletion">-		 * directly so that we can tell it to do the right thing.</span></span><br><span class="line"><span class="addition">+		 * directly so that we can tell it to do the right thing, and so that</span></span><br><span class="line"><span class="addition">+		 * we can get the attribute name which is the default AS label.</span></span><br><span class="line"> 		 */</span><br><span class="line"> 		if (tle-&gt;expr &amp;&amp; (IsA(tle-&gt;expr, Var)))</span><br><span class="line"> 		&#123;</span><br><span class="line"><span class="meta">@@ -7515,7 +7518,8 @@</span> get_rule_expr(Node *node, deparse_context *context,</span><br><span class="line"> 						!tupdesc-&gt;attrs[i]-&gt;attisdropped)</span><br><span class="line"> 					&#123;</span><br><span class="line"> 						appendStringInfoString(buf, sep);</span><br><span class="line"><span class="deletion">-						get_rule_expr(e, context, true);</span></span><br><span class="line"><span class="addition">+						/* Whole-row Vars need special treatment here */</span></span><br><span class="line"><span class="addition">+						get_rule_expr_toplevel(e, context, true);</span></span><br><span class="line"> 						sep = &quot;, &quot;;</span><br><span class="line"> 					&#125;</span><br><span class="line"> 					i++;</span><br><span class="line"><span class="meta">@@ -7941,6 +7945,27 @@</span> get_rule_expr(Node *node, deparse_context *context,</span><br><span class="line"> 	&#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="addition">+/*</span></span><br><span class="line"><span class="addition">+ * get_rule_expr_toplevel		- Parse back a toplevel expression</span></span><br><span class="line"><span class="addition">+ *</span></span><br><span class="line"><span class="addition">+ * Same as get_rule_expr(), except that if the expr is just a Var, we pass</span></span><br><span class="line"><span class="addition">+ * istoplevel = true not false to get_variable().  This causes whole-row Vars</span></span><br><span class="line"><span class="addition">+ * to get printed with decoration that will prevent expansion of &quot;*&quot;.</span></span><br><span class="line"><span class="addition">+ * We need to use this in contexts such as ROW() and VALUES(), where the</span></span><br><span class="line"><span class="addition">+ * parser would expand &quot;foo.*&quot; appearing at top level.  (In principle we&#x27;d</span></span><br><span class="line"><span class="addition">+ * use this in get_target_list() too, but that has additional worries about</span></span><br><span class="line"><span class="addition">+ * whether to print AS, so it needs to invoke get_variable() directly anyway.)</span></span><br><span class="line"><span class="addition">+ */</span></span><br><span class="line"><span class="addition">+static void</span></span><br><span class="line"><span class="addition">+get_rule_expr_toplevel(Node *node, deparse_context *context,</span></span><br><span class="line"><span class="addition">+					   bool showimplicit)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	if (node &amp;&amp; IsA(node, Var))</span></span><br><span class="line"><span class="addition">+		(void) get_variable((Var *) node, 0, true, context);</span></span><br><span class="line"><span class="addition">+	else</span></span><br><span class="line"><span class="addition">+		get_rule_expr(node, context, showimplicit);</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br></pre></td></tr></table></figure>
+
+<p>从代码层面来看，主要的修改在于针对 <code>get_rule_expr()</code> 函数进行了封装，当 <code>node</code> 参数仅仅是一个 <code>Var</code> 时，函数 <code>get_variable()</code> 的 <code>istoplevel</code> 参数被设置为 <code>true</code>，以便其被正确的处理。</p>
+<div class="just-for-fun">
+笑林广记 - 公子封君
+
+<p>有公子兼封君者，父对之乃欣羡不已。<br>讶问其故，曰：“你的爷既胜过我的爷，你的儿又胜过我的儿。”</p>
+</div>
+
+
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/11/the-path-of-a-query/" rel="bookmark">PostgreSQL SQL 查询路径</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/01/postgresql-invalid-dump-for-rules/" title="PostgreSQL 行类型规则导出错误">https://blog.japinli.top/2022/01/postgresql-invalid-dump-for-rules/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81/" rel="tag"># 源码</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/01/postgresql-locking-row-locks/" rel="prev" title="【译】PostgreSQL 锁 - Row Locks">
+                  <i class="fa fa-chevron-left"></i> 【译】PostgreSQL 锁 - Row Locks
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/01/postgresql-jsonlog/" rel="next" title="PostgreSQL 15 特性 - jsonlog 日志">
+                  PostgreSQL 15 特性 - jsonlog 日志 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

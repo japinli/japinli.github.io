@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="在上一篇文章中介绍了如何修改用户或数据库级别的参数，已经它们的存储位置（pg_db_role_setting 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL pg_db_role_setting 参数修改">
+<meta property="og:url" content="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="在上一篇文章中介绍了如何修改用户或数据库级别的参数，已经它们的存储位置（pg_db_role_setting 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/graceful.png">
+<meta property="article:published_time" content="2022-08-03T14:48:10.000Z">
+<meta property="article:modified_time" content="2022-08-04T16:00:45.173Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/graceful.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/","path":"2022/08/postgresql-parameters-in-pg-db-role-setting/","title":"PostgreSQL pg_db_role_setting 参数修改"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL pg_db_role_setting 参数修改 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B"><span class="nav-number">1.</span> <span class="nav-text">示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">2.</span> <span class="nav-text">解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%9D%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">思考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL pg_db_role_setting 参数修改
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-08-03 22:48:10" itemprop="dateCreated datePublished" datetime="2022-08-03T22:48:10+08:00">2022-08-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>在<a href="/2022/08/postgresql-parameters-for-database-and-role/" title="上一篇">上一篇</a>文章中介绍了如何修改用户或数据库级别的参数，已经它们的存储位置（<code>pg_db_role_setting</code> 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。</p>
+<span id="more"></span>
+
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>我尝试通过 <code>ALTER ROLE all SET local_preload_libraries TO fdafd;</code> 修改配置，退出之后，我尝试重新登录时遇到如下问题（这里仅供测试，不要在生成环境这样操作，修改用户或数据库参数时，请确保参数的合法性）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ psql postgres</span><br><span class="line">psql: error: connection to server on socket &quot;/tmp/.s.PGSQL.5432&quot; failed: FATAL:  could not access file &quot;$libdir/plugins/fdafd&quot;: No such file or directory</span><br></pre></td></tr></table></figure>
+
+<p>嗷了个熬… :( 登录不上了，现在也没有机会修改了。该咋个办呢？</p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>在<a href="/2022/08/postgresql-parameters-for-database-and-role/" title="前面的文章">前面的文章</a>中我们提到 <code>pg_db_role_setting</code> 里面的参数是通过 <code>process_setting()</code> 函数加载的，我们再看看其实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Load GUC settings from pg_db_role_setting.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * We try specific settings for the database/role combination, as well as</span></span><br><span class="line"><span class="comment"> * general for this database and for this user.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">process_settings</span><span class="params">(Oid databaseid, Oid roleid)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    Relation    relsetting;</span><br><span class="line">    Snapshot    snapshot;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!IsUnderPostmaster)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    relsetting = table_open(DbRoleSettingRelationId, AccessShareLock);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* read all the settings under the same snapshot for efficiency */</span></span><br><span class="line">    snapshot = RegisterSnapshot(GetCatalogSnapshot(DbRoleSettingRelationId));</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Later settings are ignored if set earlier. */</span></span><br><span class="line">    ApplySetting(snapshot, databaseid, roleid, relsetting, PGC_S_DATABASE_USER);</span><br><span class="line">    ApplySetting(snapshot, InvalidOid, roleid, relsetting, PGC_S_USER);</span><br><span class="line">    ApplySetting(snapshot, databaseid, InvalidOid, relsetting, PGC_S_DATABASE);</span><br><span class="line">    ApplySetting(snapshot, InvalidOid, InvalidOid, relsetting, PGC_S_GLOBAL);</span><br><span class="line"></span><br><span class="line">    UnregisterSnapshot(snapshot);</span><br><span class="line">    table_close(relsetting, AccessShareLock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的代码，我们可以得知 <code>pg_db_role_setting</code> 中的参数仅在 <code>IsUnderPostmaster = true</code> 时才会被加载，因此我们可以使用单用户模式运行数据库实例（感谢 Kyotaro Horiguchi 给的建议），从而来修改这个参数。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ pg_ctl stop</span><br><span class="line">$ postgres --single postgres</span><br><span class="line"></span><br><span class="line">PostgreSQL stand-alone backend 16devel</span><br><span class="line">backend&gt; SELECT * FROM pg_db_role_setting;</span><br><span class="line">         1: setdatabase (typeid = 26, len = 4, typmod = -1, byval = t)</span><br><span class="line">         2: setrole     (typeid = 26, len = 4, typmod = -1, byval = t)</span><br><span class="line">         3: setconfig   (typeid = 1009, len = -1, typmod = -1, byval = f)</span><br><span class="line">        ----</span><br><span class="line">         1: setdatabase = <span class="string">&quot;0&quot;</span>   (typeid = 26, len = 4, typmod = -1, byval = t)</span><br><span class="line">         2: setrole = <span class="string">&quot;0&quot;</span>       (typeid = 26, len = 4, typmod = -1, byval = t)</span><br><span class="line">         3: setconfig = <span class="string">&quot;&#123;local_preload_libraries=fdafd&#125;&quot;</span>       (typeid = 1009, len = -1, typmod = -1, byval = f)</span><br><span class="line">        ----</span><br></pre></td></tr></table></figure>
+
+<p>接着我们重值该参数：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">backend&gt; ALTER ROLE ALL RESET local_preload_libraries;</span><br><span class="line">backend&gt; SELECT * FROM pg_db_role_setting;</span><br><span class="line">         1: setdatabase (typeid = 26, len = 4, typmod = -1, byval = t)</span><br><span class="line">         2: setrole     (typeid = 26, len = 4, typmod = -1, byval = t)</span><br><span class="line">         3: setconfig   (typeid = 1009, len = -1, typmod = -1, byval = f)</span><br><span class="line">        ----</span><br></pre></td></tr></table></figure>
+
+<p>接着按 <code>Ctrl-D</code> 退出单用户模式，并重启数据库，再次连接数据库，一切就正常了。上述解决方案最大的问题是需要重启数据库服务。</p>
+<h2 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h2><p>我们是否可以提供一种方式，让其在线修改 <code>pg_db_role_setting</code> 参数的加载呢？答案是肯定可以的，但是社区不接受这样的修改。下面是引用 Tom Lane 对此的看法。</p>
+<blockquote>
+<p>There is not, and never will be, a version of Postgres in which it’s impossible for a superuser to shoot himself in the foot.</p>
+<p>Test your settings more carefully before applying them to a production database that you can’t afford to mess up.</p>
+</blockquote>
+<p>但是谁又能 100% 保证这种事情不会发生呢？这个功能实现起来也不困难，我们只需要在一个参数即可，下面是一个样例。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/utils/init/postinit.c b/src/backend/utils/init/postinit.c</span></span><br><span class="line"><span class="comment">index 29f70accb2..decd828248 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/init/postinit.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/init/postinit.c</span></span><br><span class="line"><span class="meta">@@ -82,6 +82,7 @@</span> static bool ThereIsAtLeastOneRole(void);</span><br><span class="line"> static void process_startup_options(Port *port, bool am_superuser);</span><br><span class="line"> static void process_settings(Oid databaseid, Oid roleid);</span><br><span class="line"></span><br><span class="line"><span class="addition">+bool load_db_role_settings = true;</span></span><br><span class="line"></span><br><span class="line"> /*** InitPostgres support ***/</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -1221,7 +1222,7 @@</span> process_settings(Oid databaseid, Oid roleid)</span><br><span class="line"> 	Relation	relsetting;</span><br><span class="line"> 	Snapshot	snapshot;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	if (!IsUnderPostmaster)</span></span><br><span class="line"><span class="addition">+	if (!IsUnderPostmaster || !load_db_role_settings)</span></span><br><span class="line"> 		return;</span><br><span class="line"></span><br><span class="line"> 	relsetting = table_open(DbRoleSettingRelationId, AccessShareLock);</span><br><span class="line"><span class="comment">diff --git a/src/backend/utils/misc/guc.c b/src/backend/utils/misc/guc.c</span></span><br><span class="line"><span class="comment">index af4a1c3068..c0d14a9c6c 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/misc/guc.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/misc/guc.c</span></span><br><span class="line"><span class="meta">@@ -151,6 +151,8 @@</span> extern bool trace_syncscan;</span><br><span class="line"> extern bool optimize_bounded_sort;</span><br><span class="line"> #endif</span><br><span class="line"></span><br><span class="line"><span class="addition">+extern bool load_db_role_settings;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> static int	GUC_check_errcode_value;</span><br><span class="line"></span><br><span class="line"> static List *reserved_class_prefix = NIL;</span><br><span class="line"><span class="meta">@@ -2182,6 +2184,15 @@</span> static struct config_bool ConfigureNamesBool[] =</span><br><span class="line"> 		NULL, NULL, NULL</span><br><span class="line"> 	&#125;,</span><br><span class="line"></span><br><span class="line"><span class="addition">+	&#123;</span></span><br><span class="line"><span class="addition">+		&#123;&quot;load_db_role_settings&quot;, PGC_SIGHUP, CLIENT_CONN_PRELOAD,</span></span><br><span class="line"><span class="addition">+			gettext_noop(&quot;Whether to load parameters from pg_db_role_setting.&quot;),</span></span><br><span class="line"><span class="addition">+		&#125;,</span></span><br><span class="line"><span class="addition">+		&amp;load_db_role_settings,</span></span><br><span class="line"><span class="addition">+		true,</span></span><br><span class="line"><span class="addition">+		NULL, NULL, NULL</span></span><br><span class="line"><span class="addition">+	&#125;,</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 	/* End-of-list marker */</span><br><span class="line"> 	&#123;</span><br><span class="line"> 		&#123;NULL, 0, 0, NULL, NULL&#125;, NULL, false, NULL, NULL, NULL</span><br><span class="line"><span class="comment">diff --git a/src/backend/utils/misc/postgresql.conf.sample b/src/backend/utils/misc/postgresql.conf.sample</span></span><br><span class="line"><span class="comment">index b4bc06e5f5..c71b7891d9 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/misc/postgresql.conf.sample</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/misc/postgresql.conf.sample</span></span><br><span class="line"><span class="meta">@@ -745,6 +745,7 @@</span></span><br><span class="line"></span><br><span class="line"> #dynamic_library_path = &#x27;$libdir&#x27;</span><br><span class="line"> #gin_fuzzy_search_limit = 0</span><br><span class="line"><span class="addition">+#load_db_role_settings = on</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"> #------------------------------------------------------------------------------</span><br></pre></td></tr></table></figure>
+
+<p>原以为这就完了，Too young, too simple! Daniel Verite 给出了一个更为优雅的解决方案，即通过 <code>PGOPTIONS</code> 选项来覆盖 <code>pg_db_role_setting</code> 中的配置。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ PGOPTIONS=<span class="string">&quot;-c local_preload_libraries=&quot;</span> psql postgres</span><br><span class="line">psql (16devel)</span><br><span class="line">Type <span class="string">&quot;help&quot;</span> <span class="keyword">for</span> <span class="built_in">help</span>.</span><br><span class="line"></span><br><span class="line">postgres=<span class="comment">#</span></span><br></pre></td></tr></table></figure>
+
+<img src="/2022/08/postgresql-parameters-in-pg-db-role-setting/graceful.png" class="">
+
+<p>下面是关于 <code>PGOPTIONS</code> 和 <code>pg_db_role_setting</code> 的处理流程，可以看得到 <code>PGOPTIONS</code> 的处理先于 <code>pg_db_role_setting</code>，这里后面的配置并不会覆盖前面的配置，因此程序在启动时采用了 <code>PGOPTIONS</code> 中的 <code>local_preload_libraries</code> 配置，我们也可以通过调试，在后续的 <code>process_session_preload_libraries()</code> 函数中看到 <code>local_preload_libraries</code> 的值为空（即 <code>PGOPTIONS</code> 中给出的值。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">InitPostgres</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *in_dbname, Oid dboid,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">const</span> <span class="keyword">char</span> *username, Oid useroid,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">bool</span> load_session_libraries,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">bool</span> override_allow_connections,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">char</span> *out_dbname)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Now process any command-line switches and any additional GUC variable</span></span><br><span class="line"><span class="comment">     * settings passed in the startup packet.   We couldn&#x27;t do this before</span></span><br><span class="line"><span class="comment">     * because we didn&#x27;t know if client is a superuser.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (MyProcPort != <span class="literal">NULL</span>)</span><br><span class="line">        process_startup_options(MyProcPort, am_superuser);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Process pg_db_role_setting options */</span></span><br><span class="line">    process_settings(MyDatabaseId, GetSessionUserId());</span><br><span class="line"></span><br><span class="line">    [....]</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">     * If this is an interactive session, load any libraries that should be</span></span><br><span class="line"><span class="comment">     * preloaded at backend start.  Since those are determined by GUCs, this</span></span><br><span class="line"><span class="comment">     * can&#x27;t happen until GUC settings are complete, but we want it to happen</span></span><br><span class="line"><span class="comment">     * during the initial transaction in case anything that requires database</span></span><br><span class="line"><span class="comment">     * access needs to be done.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (load_session_libraries)</span><br><span class="line">        process_session_preload_libraries();</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/app-postgres.html">https://www.postgresql.org/docs/current/app-postgres.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/MEYP282MB166955E4B68992FC86C4DC48B69A9%40MEYP282MB1669.AUSP282.PROD.OUTLOOK.COM">https://www.postgresql.org/message-id/MEYP282MB166955E4B68992FC86C4DC48B69A9%40MEYP282MB1669.AUSP282.PROD.OUTLOOK.COM</a></p>
+<div class="just-for-fun">
+笑林广记 - 吃乳饼
+
+<p>富翁与人论及童子多肖乳母，为吃其乳，气相感也。<br>其人谓富翁曰：“若是如此，想来足下从幼是吃乳饼长大的。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/" title="PostgreSQL pg_db_role_setting 参数修改">https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/08/postgresql-parameters-for-database-and-role/" rel="prev" title="PostgreSQL 修改用户或数据库参数">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 修改用户或数据库参数
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

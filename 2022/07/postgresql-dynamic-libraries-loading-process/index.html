@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="在使用 pg_backtrace 插件时，必须执行 SELECT pg_backtrace_init();，不执行该函数插件就不生效，官方文档也特别说明了，而实际上该函数是一个空函数，为什么必须要执行该函数才生效呢？  这是一个朋友问我关于 pg_backtrace 的问题，这主要涉及到 PostgreSQL 中动态库的加载过程。本文在分析问题的基础之上，简要梳理一下 PostgreSQL 中动">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 动态库加载过程">
+<meta property="og:url" content="https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="在使用 pg_backtrace 插件时，必须执行 SELECT pg_backtrace_init();，不执行该函数插件就不生效，官方文档也特别说明了，而实际上该函数是一个空函数，为什么必须要执行该函数才生效呢？  这是一个朋友问我关于 pg_backtrace 的问题，这主要涉及到 PostgreSQL 中动态库的加载过程。本文在分析问题的基础之上，简要梳理一下 PostgreSQL 中动">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/postgres-dynamic-libraries-loading-process.png">
+<meta property="article:published_time" content="2022-07-23T03:36:29.000Z">
+<meta property="article:modified_time" content="2022-08-01T01:51:03.649Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/postgres-dynamic-libraries-loading-process.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/","path":"2022/07/postgresql-dynamic-libraries-loading-process/","title":"PostgreSQL 动态库加载过程"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 动态库加载过程 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8D%E7%8E%B0"><span class="nav-number">1.</span> <span class="nav-text">重现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A2%E7%B4%A2"><span class="nav-number">3.</span> <span class="nav-text">探索</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 动态库加载过程
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-07-23 11:36:29" itemprop="dateCreated datePublished" datetime="2022-07-23T11:36:29+08:00">2022-07-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <blockquote>
+<p>在使用 pg_backtrace 插件时，必须执行 <code>SELECT pg_backtrace_init();</code>，不执行该函数插件就不生效，官方文档也特别说明了，而实际上该函数是一个空函数，为什么必须要执行该函数才生效呢？</p>
+</blockquote>
+<p>这是一个朋友问我关于 pg_backtrace 的问题，这主要涉及到 PostgreSQL 中动态库的加载过程。本文在分析问题的基础之上，简要梳理一下 PostgreSQL 中动态库的加载过程。</p>
+<span id="more"></span>
+
+<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>首先编译安装 PostgreSQL 数据库（16devel），随后下载 <a target="_blank" rel="noopener" href="https://github.com/TsinghuaLucky912/pg_backtrace">pg_backtrace</a> 编译安装。接着初始化数据库并启动，最后添加 pg_backtrace 插件。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ initdb -D testdb</span><br><span class="line">$ pg_ctl -l <span class="built_in">log</span> -D testdb start</span><br><span class="line">$ psql postgres -c <span class="string">&#x27;CREATE EXTENSION pg_backtrace&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>一切准备就绪，我们来重现一下问题，使用 psql 登录数据库，并执行下面的 SQL。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="number">1</span> <span class="operator">/</span> <span class="number">0</span>;</span><br><span class="line">ERROR:  division <span class="keyword">by</span> zero</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> pg_backtrace_init();</span><br><span class="line"> pg_backtrace_init</span><br><span class="line"><span class="comment">-------------------</span></span><br><span class="line"></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="number">1</span> <span class="operator">/</span> <span class="number">0</span>;</span><br><span class="line">ERROR:  division <span class="keyword">by</span> zero</span><br><span class="line">CONTEXT:        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(int4div<span class="operator">+</span><span class="number">0x6e</span>) [<span class="number">0x564f9872a279</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x386543</span>) [<span class="number">0x564f983e3543</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(ExecInterpExprStillValid<span class="operator">+</span><span class="number">0x53</span>) [<span class="number">0x564f983e56be</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x51553a</span>) [<span class="number">0x564f9857253a</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(evaluate_expr<span class="operator">+</span><span class="number">0xa1</span>) [<span class="number">0x564f9857a364</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x51c4ca</span>) [<span class="number">0x564f985794ca</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x51b627</span>) [<span class="number">0x564f98578627</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x518b5d</span>) [<span class="number">0x564f98575b5d</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(expression_tree_mutator<span class="operator">+</span><span class="number">0x1500</span>) [<span class="number">0x564f984ad27f</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x51af88</span>) [<span class="number">0x564f98577f88</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(expression_tree_mutator<span class="operator">+</span><span class="number">0x197b</span>) [<span class="number">0x564f984ad6fa</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x51af88</span>) [<span class="number">0x564f98577f88</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(eval_const_expressions<span class="operator">+</span><span class="number">0x6f</span>) [<span class="number">0x564f98575168</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x4ee403</span>) [<span class="number">0x564f9854b403</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(subquery_planner<span class="operator">+</span><span class="number">0x56a</span>) [<span class="number">0x564f9854a8b8</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(standard_planner<span class="operator">+</span><span class="number">0x2b8</span>) [<span class="number">0x564f98549a86</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(planner<span class="operator">+</span><span class="number">0x58</span>) [<span class="number">0x564f985497c4</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(pg_plan_query<span class="operator">+</span><span class="number">0x7f</span>) [<span class="number">0x564f9868e277</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(pg_plan_queries<span class="operator">+</span><span class="number">0xfa</span>) [<span class="number">0x564f9868e3c1</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x63179f</span>) [<span class="number">0x564f9868e79f</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(PostgresMain<span class="operator">+</span><span class="number">0x7b5</span>) [<span class="number">0x564f986933ef</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x55e0c2</span>) [<span class="number">0x564f985bb0c2</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x55d9b0</span>) [<span class="number">0x564f985ba9b0</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x559c28</span>) [<span class="number">0x564f985b6c28</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(PostmasterMain<span class="operator">+</span><span class="number">0x1367</span>) [<span class="number">0x564f985b63d9</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(<span class="operator">+</span><span class="number">0x41d5f5</span>) [<span class="number">0x564f9847a5f5</span>]</span><br><span class="line">        <span class="operator">/</span>lib<span class="operator">/</span>x86_64<span class="operator">-</span>linux<span class="operator">-</span>gnu<span class="operator">/</span>libc.so<span class="number">.6</span>(__libc_start_main<span class="operator">+</span><span class="number">0xe7</span>) [<span class="number">0x7f3feebc2c87</span>]</span><br><span class="line">        postgres: japin postgres [<span class="keyword">local</span>] <span class="keyword">SELECT</span>(_start<span class="operator">+</span><span class="number">0x2a</span>) [<span class="number">0x564f981282ba</span>]</span><br></pre></td></tr></table></figure>
+
+<p>从上面的结果可以看到我们需要执行 <code>pg_backtrace()</code> 函数，才能在错误消息中打印出详细的堆栈信息。那么它做了什么呢？我前面已经提到了，它什么都没有做，其实现如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Datum <span class="title">pg_backtrace_init</span><span class="params">(PG_FUNCTION_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">        PG_RETURN_VOID();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>既然它什么都没有做，为什么前后两次的执行效果不一致呢？它必然在后面做了一些操作。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>既然是 <code>pg_backtrace_init()</code> 函数引起的不同，那么我们就针对这个函数来看看它都干了什么，我们可以通过 gdb 附加进程并在该函数打断点从而确定其调用栈。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b pg_backtrace_init</span><br><span class="line">Function &quot;pg_backtrace_init&quot; not defined.</span><br><span class="line">Make breakpoint pending on future shared library load? (y or [n]) y</span><br><span class="line">Breakpoint 1 (pg_backtrace_init) pending.</span><br></pre></td></tr></table></figure>
+
+<p>从上面的提示，您是否已经猜到答案了？如果没有请继续看下面的分析。</p>
+<p>设置好断点之后，我们来执行 <code>SELECT pg_backtrace_init();</code>，可以看到程序在 <code>pg_backtrace_init()</code> 处停止下来，查看堆栈发现并没有什么特别的，我们在继续执行也没有什么有关 pg_backtrace 的特殊处理。这是怎么回事呢？我们在回头来看看 gdb 下断点时给出的提示信息，在当前的代码中没有找到 <code>pg_backtrace_init()</code> 函数，使断点在将来的共享库加载时挂起。我们实际上也在 <code>pg_backtrace_init()</code> 处停止下来了，那么这个动态库肯定是加载了。它又是何时加载的呢？</p>
+<p>既然会加载动态库，我们知道 PostgreSQL 在加载动态库时会执行 <code>_PG_init()</code> 函数，我们看看 pg_backtrace 中该函数的实现。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> _PG_init(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	signal_handlers[SIGSEGV] = pqsignal(SIGSEGV, backtrace_handler);</span><br><span class="line">	signal_handlers[SIGBUS] = pqsignal(SIGBUS, backtrace_handler);</span><br><span class="line">	signal_handlers[SIGFPE] = pqsignal(SIGFPE, backtrace_handler);</span><br><span class="line">	signal_handlers[SIGINT] = pqsignal(SIGINT, backtrace_handler);</span><br><span class="line">	prev_executor_run_hook = ExecutorRun_hook;</span><br><span class="line">	ExecutorRun_hook = backtrace_executor_run_hook;</span><br><span class="line"></span><br><span class="line">	prev_utility_hook = ProcessUtility_hook;</span><br><span class="line">	ProcessUtility_hook = backtrace_utility_hook;</span><br><span class="line"></span><br><span class="line">	prev_post_parse_analyze_hook = post_parse_analyze_hook;</span><br><span class="line">	post_parse_analyze_hook = backtrace_post_parse_analyze_hook;</span><br><span class="line"></span><br><span class="line">	DefineCustomEnumVariable(<span class="string">&quot;pg_backtrace.level&quot;</span>,</span><br><span class="line">							 <span class="string">&quot;Set error level for dumping backtrace&quot;</span>,</span><br><span class="line">							 <span class="literal">NULL</span>,</span><br><span class="line">							 &amp;backtrace_level,</span><br><span class="line">							 ERROR,</span><br><span class="line">							 backtrace_level_options,</span><br><span class="line">							 PGC_USERSET, <span class="number">0</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>它添加了三个 hook，拦截了 4 个信号，同时定义了一个配置参数。看到这里我们就能猜到为什么执行 <code>pg_backtrace_init()</code> 之后结果不一样了。空函数 <code>pg_backtrace_init()</code> 主要的作用是加载 <code>pg_backtracs.so</code> 动态库，一旦该动态库加载之后，pg_backtrace 就可以执行自定义 hook 来进行处理。这里就不在对 hook 的具体实现做分析。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">(gdb) b _PG_init</span><br><span class="line">Function &quot;_PG_init&quot; not defined.</span><br><span class="line">Make breakpoint pending on future shared library load? (y or [n]) y</span><br><span class="line">Breakpoint 1 (_PG_init) pending.</span><br><span class="line">(gdb) b pg_backtrace_init</span><br><span class="line">Function &quot;pg_backtrace_init&quot; not defined.</span><br><span class="line">Make breakpoint pending on future shared library load? (y or [n]) y</span><br><span class="line">Breakpoint 2 (pg_backtrace_init) pending.</span><br></pre></td></tr></table></figure>
+
+<p>当我们再次执行 <code>SELECT pg_backtrace_init()</code> 时，您可以看到如下的堆栈信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">#0  _PG_init () at pg_backtrace.c:142</span><br><span class="line">#1  0x0000564f98857ec5 in internal_load_library (</span><br><span class="line">    libname=0x564f9924a198 &quot;/mnt/workspace/postgresql/build/pg/lib/pg_backtrace.so&quot;)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/utils/fmgr/dfmgr.c:289</span><br><span class="line">#2  0x0000564f98857873 in load_external_function (</span><br><span class="line">    filename=0x564f9924a0c8 &quot;$libdir/pg_backtrace&quot;,</span><br><span class="line">    funcname=0x564f9924a090 &quot;pg_backtrace_init&quot;, signalNotFound=true,</span><br><span class="line">    filehandle=0x7fff9a88fde8)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/utils/fmgr/dfmgr.c:116</span><br><span class="line">#3  0x0000564f9885963d in fmgr_info_C_lang (functionId=16385, finfo=0x564f9924a000,</span><br><span class="line">    procedureTuple=0x7f3fe59defd8)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/utils/fmgr/fmgr.c:400</span><br><span class="line">#4  0x0000564f9885912d in fmgr_info_cxt_security (functionId=16385,</span><br><span class="line">    finfo=0x564f9924a000, mcxt=0x564f99249800, ignore_security=false)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/utils/fmgr/fmgr.c:248</span><br><span class="line">#5  0x0000564f98858dcf in fmgr_info (functionId=16385, finfo=0x564f9924a000)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/utils/fmgr/fmgr.c:128</span><br><span class="line">#6  0x0000564f983dde2a in ExecInitFunc (scratch=0x7fff9a890400, node=0x564f991835f0,</span><br><span class="line">    args=0x0, funcid=16385, inputcollid=0, state=0x564f99249f70)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/executor/execExpr.c:2748</span><br><span class="line">#7  0x0000564f983d9fda in ExecInitExprRec (node=0x564f991835f0, state=0x564f99249f70,</span><br></pre></td></tr></table></figure>
+
+<p>即 pg_backtrace 插件是通过 <code>internal_load_library()</code> 函数加载的，我们在 gdb 中执行<br><code>continue</code>，它会执行 <code>pg_backtrace_init()</code> 函数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">(gdb) continue</span><br><span class="line">Continuing.</span><br><span class="line"></span><br><span class="line">Breakpoint 2, pg_backtrace_init (fcinfo=0x564f9924a058) at pg_backtrace.c:182</span><br><span class="line">182             PG_RETURN_VOID();</span><br></pre></td></tr></table></figure>
+
+<p>分析到这里，我们已经清楚了为什么 <code>pg_backtrace_init()</code> 函数为空，而 pg_backtrace 却能在执行该函数之后输出堆栈信息了。</p>
+<h2 id="探索"><a href="#探索" class="headerlink" title="探索"></a>探索</h2><p>根据上面的分析，要想使用使用 pg_backtrace 提供的功能，我们仅需要加载动态库即可。我们知道 PostgreSQL 提供了 <code>shared_preload_libraries</code> 和 <code>session_preload_libraries</code> 来个参数指定需要添加的动态库。其中 <code>shared_preload_libraries</code> 是所有后端进程（backend）共享的，而 <code>session_preload_libraries</code> 则是单个会话的。那我们将其添加到这个两个参数中的其中一个是否不需要执行 <code>pg_backtrace_init()</code> 函数即可使用 pg_backtrace 提供的功能呢？答案当然是不需要了。</p>
+<p>但是，当我将其配置在 <code>shared_preload_libraries</code> 参数中时，我通过 <code>pg_ctl stop [-m fast]</code> 却不能将数据库停下，这又是为什么呢？如果使用 <code>pg_ctl stop -m &#123; smart | immediate &#125;</code> 则可以将数据库停下。</p>
+<p>通过查看源码，我们知道 <code>pg_ctl stop [-m fast]</code> 实际上是发送的 <code>SIGINT</code> 信号给主进程，我们注意到 pg_backtrace 在加载时拦截了 <code>SIGINT</code> 信息，其信号处理函数如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">backtrace_handler</span><span class="params">(SIGNAL_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	inside_signal_handler = <span class="literal">true</span>;</span><br><span class="line">	elog(LOG, <span class="string">&quot;Caught signal %d&quot;</span>, postgres_signal_arg);</span><br><span class="line">	inside_signal_handler = <span class="literal">false</span>;</span><br><span class="line">	<span class="keyword">if</span> (postgres_signal_arg != SIGINT &amp;&amp; signal_handlers[postgres_signal_arg])</span><br><span class="line">		signal_handlers[postgres_signal_arg](postgres_signal_arg);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当遇到 <code>SIGINT</code> 信号时，pg_backtrace 直接将其忽略了，这就是为什么主进程在执行 <code>pg_ctl stop [-m fast]</code> 不能停机的原因。</p>
+<p>那么为什么设置在 <code>session_preload_libraries</code> 中又可以呢？这就涉及到两个参数加载的时机问题以及 PostgreSQL 父子进程对于 <code>SIGINT</code> 信号的处理了。下图简要给出了这两个参数的处理流程：</p>
+<img src="/2022/07/postgresql-dynamic-libraries-loading-process/postgres-dynamic-libraries-loading-process.png" class="">
+
+<p>PostgreSQL 在主进程中使用 <code>SIGINT</code> 作为停机的一种方式，它会其子进程发送 <code>SIGTERM</code> 信号，而子进程（不一定是所有的子进程）则使用 <code>SIGINT</code> 作为取消查询的一种方式。因此，即便我们将 pg_backtrace 设置在 <code>session_preload_libraries</code> 中，依然会导致问题。当然，只要您使用了该插件，都会遇到这个问题，要么是无法使用 <code>pg_ctl stop [-m fast]</code> 正常停机（配置在 <code>shared_preload_libraries</code> 中），要么是无法取消正在执行的查询（配置在 <code>session_preload_libraries</code> 或 <code>local_preload_libraries</code> 或者执行 <code>pg_backtrace_init()</code>）。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>从这个过程中，我们对 PostgreSQL 的动态库加载有了一个基本的认识，它提供了三种加载方式。</p>
+<ol>
+<li>通过 <code>process_shared_preload_libraries()</code> 全局加载。</li>
+<li>通过 <code>process_session_preload_libraries()</code> 仅在后端进程中加载。</li>
+<li>通过 <code>load_external_function()</code> 按需动态加载。</li>
+</ol>
+<div class="just-for-fun">
+笑林广记 - 借牛
+
+<p>有走柬借牛于富翁者，翁方对客，讳不识字，伪启缄视之，对来使曰：“知道了，少刻我自来也。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/" title="PostgreSQL 动态库加载过程">https://blog.japinli.top/2022/07/postgresql-dynamic-libraries-loading-process/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/07/memory-leak-in-psql-describe/" rel="prev" title="Psql 内存泄漏">
+                  <i class="fa fa-chevron-left"></i> Psql 内存泄漏
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/07/postgres-relcache-and-syscache/" rel="next" title="PostgreSQL RelCache 和 SysCache 缓存">
+                  PostgreSQL RelCache 和 SysCache 缓存 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

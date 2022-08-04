@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近在邮件列表中发现一个 btree_gist 索引上的 Index Only 扫描问题，该问题由 Alexander Lakhin 提交，在 char(n) 数据类型的 btree_gist 索引上会出现，本文简要记录一下该问题。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 在 btree_gist 索引上 Index Only 扫描问题">
+<meta property="og:url" content="https://blog.japinli.top/2022/01/postgresql-index-only-scan-on-btree-gist-index/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近在邮件列表中发现一个 btree_gist 索引上的 Index Only 扫描问题，该问题由 Alexander Lakhin 提交，在 char(n) 数据类型的 btree_gist 索引上会出现，本文简要记录一下该问题。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-01-07T10:54:54.000Z">
+<meta property="article:modified_time" content="2022-04-24T01:04:18.705Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/01/postgresql-index-only-scan-on-btree-gist-index/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/01/postgresql-index-only-scan-on-btree-gist-index/","path":"2022/01/postgresql-index-only-scan-on-btree-gist-index/","title":"PostgreSQL 在 btree_gist 索引上 Index Only 扫描问题"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 在 btree_gist 索引上 Index Only 扫描问题 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">现象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3"><span class="nav-number">3.</span> <span class="nav-text">解决</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-index-only-scan-on-btree-gist-index/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 在 btree_gist 索引上 Index Only 扫描问题
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-01-07 18:54:54" itemprop="dateCreated datePublished" datetime="2022-01-07T18:54:54+08:00">2022-01-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>8 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近在邮件列表中发现一个 <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/696c995b-b37f-5526-f45d-04abe713179f@gmail.com">btree_gist 索引上的 Index Only 扫描问题</a>，该问题由 Alexander Lakhin 提交，在 <code>char(n)</code> 数据类型的 <code>btree_gist</code> 索引上会出现，本文简要记录一下该问题。</p>
+<span id="more"></span>
+
+<h2 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h2><p>首先，我们来复现这个问题，该问题依赖于 <code>btree_gist</code> 插件，我们先安装该插件，随后新建 <code>chartmp</code> 表并向其中插入一条记录，最后我们在该列上创建一个 <code>gist</code> 索引。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION btree_gist;</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> chartmp (a <span class="type">char</span>(<span class="number">32</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> chartmp <span class="keyword">VALUES</span>(<span class="string">&#x27;31b0&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> INDEX charidx <span class="keyword">ON</span> chartmp <span class="keyword">USING</span> gist (a);</span><br></pre></td></tr></table></figure>
+
+<p>我们先看看查询出来的结果。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># EXPLAIN VERBOSE <span class="keyword">SELECT</span> <span class="operator">*</span>, <span class="keyword">octet_length</span>(a) <span class="keyword">FROM</span> chartmp <span class="keyword">WHERE</span> a <span class="keyword">BETWEEN</span> <span class="string">&#x27;31a&#x27;</span> <span class="keyword">AND</span> <span class="string">&#x27;31c&#x27;</span>;</span><br><span class="line">                                QUERY PLAN</span><br><span class="line"><span class="comment">---------------------------------------------------------------------------</span></span><br><span class="line"> Seq Scan <span class="keyword">on</span> public.chartmp  (cost<span class="operator">=</span><span class="number">0.00</span>.<span class="number">.1</span><span class="number">.02</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">1</span> width<span class="operator">=</span><span class="number">136</span>)</span><br><span class="line">   Output: a, <span class="keyword">octet_length</span>(a)</span><br><span class="line">   <span class="keyword">Filter</span>: ((chartmp.a <span class="operator">&gt;=</span> <span class="string">&#x27;31a&#x27;</span>::bpchar) <span class="keyword">AND</span> (chartmp.a <span class="operator">&lt;=</span> <span class="string">&#x27;31c&#x27;</span>::bpchar))</span><br><span class="line">(<span class="number">3</span> <span class="keyword">rows</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span>, <span class="keyword">octet_length</span>(a) <span class="keyword">FROM</span> chartmp <span class="keyword">WHERE</span> a <span class="keyword">BETWEEN</span> <span class="string">&#x27;31a&#x27;</span> <span class="keyword">AND</span> <span class="string">&#x27;31c&#x27;</span>;</span><br><span class="line">                a                 <span class="operator">|</span> <span class="keyword">octet_length</span></span><br><span class="line"><span class="comment">----------------------------------+--------------</span></span><br><span class="line"> <span class="number">31</span>b0                             <span class="operator">|</span>           <span class="number">32</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>从查询计划可以看到，现在是顺序扫描（肯定是顺序扫描啦，毕竟才一条数据嘛），由于问题是在 Index Only 扫描上，那我们势必要走 Index Only 扫描才可以复现问题，因此，我们这里禁用顺序扫描，然后在看执行结果。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SET</span> enable_seqscan <span class="keyword">TO</span> off;</span><br><span class="line"><span class="keyword">SET</span></span><br><span class="line">postgres<span class="operator">=</span># EXPLAIN VERBOSE <span class="keyword">SELECT</span> <span class="operator">*</span>, <span class="keyword">octet_length</span>(a) <span class="keyword">FROM</span> chartmp <span class="keyword">WHERE</span> a <span class="keyword">BETWEEN</span> <span class="string">&#x27;31a&#x27;</span> <span class="keyword">AND</span> <span class="string">&#x27;31c&#x27;</span>;</span><br><span class="line">                                     QUERY PLAN</span><br><span class="line"><span class="comment">-------------------------------------------------------------------------------------</span></span><br><span class="line"> Index <span class="keyword">Only</span> Scan <span class="keyword">using</span> charidx <span class="keyword">on</span> public.chartmp  (cost<span class="operator">=</span><span class="number">0.12</span>.<span class="number">.8</span><span class="number">.15</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">1</span> width<span class="operator">=</span><span class="number">136</span>)</span><br><span class="line">   Output: a, <span class="keyword">octet_length</span>(a)</span><br><span class="line">   Index Cond: ((chartmp.a <span class="operator">&gt;=</span> <span class="string">&#x27;31a&#x27;</span>::bpchar) <span class="keyword">AND</span> (chartmp.a <span class="operator">&lt;=</span> <span class="string">&#x27;31c&#x27;</span>::bpchar))</span><br><span class="line">(<span class="number">3</span> <span class="keyword">rows</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span>, <span class="keyword">octet_length</span>(a) <span class="keyword">FROM</span> chartmp <span class="keyword">WHERE</span> a <span class="keyword">BETWEEN</span> <span class="string">&#x27;31a&#x27;</span> <span class="keyword">AND</span> <span class="string">&#x27;31c&#x27;</span>;</span><br><span class="line">  a   <span class="operator">|</span> <span class="keyword">octet_length</span></span><br><span class="line"><span class="comment">------+--------------</span></span><br><span class="line"> <span class="number">31</span>b0 <span class="operator">|</span>            <span class="number">4</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>可以看到这里出来的结果与顺序扫描结果不一致。这里的主要问题是，在索引存储中将会删除末尾的空白，而 Index Only 扫描在找到匹配的键时并不会回表来获取数据，从而导致数据不一致。我们可以通过索引扫描来验证这一点。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># EXPLAIN VERBOSE <span class="keyword">SELECT</span> <span class="operator">*</span>, <span class="keyword">octet_length</span>(a) <span class="keyword">FROM</span> chartmp <span class="keyword">WHERE</span> a <span class="keyword">BETWEEN</span> <span class="string">&#x27;31a&#x27;</span> <span class="keyword">AND</span> <span class="string">&#x27;31c&#x27;</span>;</span><br><span class="line">                                   QUERY PLAN</span><br><span class="line"><span class="comment">--------------------------------------------------------------------------------</span></span><br><span class="line"> Index Scan <span class="keyword">using</span> charidx <span class="keyword">on</span> public.chartmp  (cost<span class="operator">=</span><span class="number">0.12</span>.<span class="number">.8</span><span class="number">.15</span> <span class="keyword">rows</span><span class="operator">=</span><span class="number">1</span> width<span class="operator">=</span><span class="number">136</span>)</span><br><span class="line">   Output: a, <span class="keyword">octet_length</span>(a)</span><br><span class="line">   Index Cond: ((chartmp.a <span class="operator">&gt;=</span> <span class="string">&#x27;31a&#x27;</span>::bpchar) <span class="keyword">AND</span> (chartmp.a <span class="operator">&lt;=</span> <span class="string">&#x27;31c&#x27;</span>::bpchar))</span><br><span class="line">(<span class="number">3</span> <span class="keyword">rows</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span>, <span class="keyword">octet_length</span>(a) <span class="keyword">FROM</span> chartmp <span class="keyword">WHERE</span> a <span class="keyword">BETWEEN</span> <span class="string">&#x27;31a&#x27;</span> <span class="keyword">AND</span> <span class="string">&#x27;31c&#x27;</span>;</span><br><span class="line">                a                 <span class="operator">|</span> <span class="keyword">octet_length</span></span><br><span class="line"><span class="comment">----------------------------------+--------------</span></span><br><span class="line"> <span class="number">31</span>b0                             <span class="operator">|</span>           <span class="number">32</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>在构建 <code>char(n)</code> 类型的 <code>btree_gist</code> 索引时，将调用 <code>gbt_bpchar_compress()</code> 函数来对将进行处理（感谢 Tom Lane 提供的分析），其定义如下。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">gbt_bpchar_compress</span><span class="params">(PG_FUNCTION_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(<span class="number">0</span>);</span><br><span class="line">    GISTENTRY  *retval;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (tinfo.eml == <span class="number">0</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        tinfo.eml = pg_database_encoding_max_length();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (entry-&gt;leafkey)</span><br><span class="line">    &#123;</span><br><span class="line"></span><br><span class="line">        Datum       d = DirectFunctionCall1(rtrim1, entry-&gt;key);</span><br><span class="line">        GISTENTRY   trim;</span><br><span class="line"></span><br><span class="line">        gistentryinit(trim, d,</span><br><span class="line">                      entry-&gt;rel, entry-&gt;page,</span><br><span class="line">                      entry-&gt;offset, <span class="literal">true</span>);</span><br><span class="line">        retval = gbt_var_compress(&amp;trim, &amp;tinfo);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        retval = entry;</span><br><span class="line"></span><br><span class="line">    PG_RETURN_POINTER(retval);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的代码可以看出，到是叶子节点时，将对键调用 <code>rtrim1()</code> 函数删除键最右边的空白字符，因此在 Index Only 扫描的时候我们获取不到的数据后面的空白填充。我们可以通过避免删除键最右边的空白字符来解决这个问题。在尝试移除 <code>gbt_bpchar_compress()</code> 中针对键的操作之后，我发现当使用等值查询时查不到结果。这是由于 <code>btree_gist</code> 在对 <code>bpchar</code> 类型的操作使用的是 <code>text</code> 类型的操作，例如等值查询将使用 <code>texteq()</code> 函数，这是在 <code>tinfo</code> 变量中定义的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">gbt_texteq</span><span class="params">(<span class="keyword">const</span> <span class="keyword">void</span> *a, <span class="keyword">const</span> <span class="keyword">void</span> *b, Oid collation, FmgrInfo *flinfo)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> DatumGetBool(DirectFunctionCall2Coll(texteq,</span><br><span class="line">                                                collation,</span><br><span class="line">                                                PointerGetDatum(a),</span><br><span class="line">                                                PointerGetDatum(b)));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> gbtree_vinfo tinfo =</span><br><span class="line">&#123;</span><br><span class="line">    gbt_t_text,</span><br><span class="line">    <span class="number">0</span>,</span><br><span class="line">    <span class="literal">false</span>,</span><br><span class="line">    gbt_textgt,</span><br><span class="line">    gbt_textge,</span><br><span class="line">    gbt_texteq,</span><br><span class="line">    gbt_textle,</span><br><span class="line">    gbt_textlt,</span><br><span class="line">    gbt_textcmp,</span><br><span class="line">    <span class="literal">NULL</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>而针对 <code>bpchar</code> (i.e. <code>char(n)</code>) 类型，实际上应该使用 <code>bpchareq()</code> 函数，该函数在比较是会将参数最右侧的空白字符删除，因此可以正常执行等值比较。<code>bpchareq()</code> 函数里面的 <code>bcTruelen()</code> 是关键，从下面可以看到，它在计算长度时忽略了末尾的空白字符。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* &quot;True&quot; length (not counting trailing blanks) of a BpChar */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">bcTruelen</span><span class="params">(BpChar *arg)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> bpchartruelen(VARDATA_ANY(arg), VARSIZE_ANY_EXHDR(arg));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">bpchartruelen</span><span class="params">(<span class="keyword">char</span> *s, <span class="keyword">int</span> len)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span>         i;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Note that we rely on the assumption that &#x27; &#x27; is a singleton unit on</span></span><br><span class="line"><span class="comment">     * every supported multibyte server encoding.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">for</span> (i = len - <span class="number">1</span>; i &gt;= <span class="number">0</span>; i--)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (s[i] != <span class="string">&#x27; &#x27;</span>)</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> i + <span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>我给出的 patch 只能说可以解决这个问题，但是不够优雅，最后 Tom Lane 给出了解决该问题的 patch，如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/contrib/btree_gist/btree_text.c b/contrib/btree_gist/btree_text.c</span></span><br><span class="line"><span class="comment">index 8019d11281..be0eac7975 100644</span></span><br><span class="line"><span class="comment">--- a/contrib/btree_gist/btree_text.c</span></span><br><span class="line"><span class="comment">+++ b/contrib/btree_gist/btree_text.c</span></span><br><span class="line"><span class="meta">@@ -90,6 +90,76 @@</span> static gbtree_vinfo tinfo =</span><br><span class="line"> 	NULL</span><br><span class="line"> &#125;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+/* bpchar needs its own comparison rules */</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+static bool</span></span><br><span class="line"><span class="addition">+gbt_bpchargt(const void *a, const void *b, Oid collation, FmgrInfo *flinfo)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	return DatumGetBool(DirectFunctionCall2Coll(bpchargt,</span></span><br><span class="line"><span class="addition">+												collation,</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(a),</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(b)));</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+static bool</span></span><br><span class="line"><span class="addition">+gbt_bpcharge(const void *a, const void *b, Oid collation, FmgrInfo *flinfo)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	return DatumGetBool(DirectFunctionCall2Coll(bpcharge,</span></span><br><span class="line"><span class="addition">+												collation,</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(a),</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(b)));</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+static bool</span></span><br><span class="line"><span class="addition">+gbt_bpchareq(const void *a, const void *b, Oid collation, FmgrInfo *flinfo)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	return DatumGetBool(DirectFunctionCall2Coll(bpchareq,</span></span><br><span class="line"><span class="addition">+												collation,</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(a),</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(b)));</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+static bool</span></span><br><span class="line"><span class="addition">+gbt_bpcharle(const void *a, const void *b, Oid collation, FmgrInfo *flinfo)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	return DatumGetBool(DirectFunctionCall2Coll(bpcharle,</span></span><br><span class="line"><span class="addition">+												collation,</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(a),</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(b)));</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+static bool</span></span><br><span class="line"><span class="addition">+gbt_bpcharlt(const void *a, const void *b, Oid collation, FmgrInfo *flinfo)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	return DatumGetBool(DirectFunctionCall2Coll(bpcharlt,</span></span><br><span class="line"><span class="addition">+												collation,</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(a),</span></span><br><span class="line"><span class="addition">+												PointerGetDatum(b)));</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+static int32</span></span><br><span class="line"><span class="addition">+gbt_bpcharcmp(const void *a, const void *b, Oid collation, FmgrInfo *flinfo)</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	return DatumGetInt32(DirectFunctionCall2Coll(bpcharcmp,</span></span><br><span class="line"><span class="addition">+												 collation,</span></span><br><span class="line"><span class="addition">+												 PointerGetDatum(a),</span></span><br><span class="line"><span class="addition">+												 PointerGetDatum(b)));</span></span><br><span class="line"><span class="addition">+&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+static gbtree_vinfo bptinfo =</span></span><br><span class="line"><span class="addition">+&#123;</span></span><br><span class="line"><span class="addition">+	gbt_t_bpchar,</span></span><br><span class="line"><span class="addition">+	0,</span></span><br><span class="line"><span class="addition">+	false,</span></span><br><span class="line"><span class="addition">+	gbt_bpchargt,</span></span><br><span class="line"><span class="addition">+	gbt_bpcharge,</span></span><br><span class="line"><span class="addition">+	gbt_bpchareq,</span></span><br><span class="line"><span class="addition">+	gbt_bpcharle,</span></span><br><span class="line"><span class="addition">+	gbt_bpcharlt,</span></span><br><span class="line"><span class="addition">+	gbt_bpcharcmp,</span></span><br><span class="line"><span class="addition">+	NULL</span></span><br><span class="line"><span class="addition">+&#125;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line"> /**************************************************</span><br><span class="line">  * Text ops</span><br><span class="line"><span class="meta">@@ -112,29 +182,8 @@</span> gbt_text_compress(PG_FUNCTION_ARGS)</span><br><span class="line"> Datum</span><br><span class="line"> gbt_bpchar_compress(PG_FUNCTION_ARGS)</span><br><span class="line"> &#123;</span><br><span class="line"><span class="deletion">-	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);</span></span><br><span class="line"><span class="deletion">-	GISTENTRY  *retval;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-	if (tinfo.eml == 0)</span></span><br><span class="line"><span class="deletion">-	&#123;</span></span><br><span class="line"><span class="deletion">-		tinfo.eml = pg_database_encoding_max_length();</span></span><br><span class="line"><span class="deletion">-	&#125;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-	if (entry-&gt;leafkey)</span></span><br><span class="line"><span class="deletion">-	&#123;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-		Datum		d = DirectFunctionCall1(rtrim1, entry-&gt;key);</span></span><br><span class="line"><span class="deletion">-		GISTENTRY	trim;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-		gistentryinit(trim, d,</span></span><br><span class="line"><span class="deletion">-					  entry-&gt;rel, entry-&gt;page,</span></span><br><span class="line"><span class="deletion">-					  entry-&gt;offset, true);</span></span><br><span class="line"><span class="deletion">-		retval = gbt_var_compress(&amp;trim, &amp;tinfo);</span></span><br><span class="line"><span class="deletion">-	&#125;</span></span><br><span class="line"><span class="deletion">-	else</span></span><br><span class="line"><span class="deletion">-		retval = entry;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-	PG_RETURN_POINTER(retval);</span></span><br><span class="line"><span class="addition">+	/* This should never have been distinct from gbt_text_compress */</span></span><br><span class="line"><span class="addition">+	return gbt_text_compress(fcinfo);</span></span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -179,18 +228,17 @@</span> gbt_bpchar_consistent(PG_FUNCTION_ARGS)</span><br><span class="line"> 	bool		retval;</span><br><span class="line"> 	GBT_VARKEY *key = (GBT_VARKEY *) DatumGetPointer(entry-&gt;key);</span><br><span class="line"> 	GBT_VARKEY_R r = gbt_var_key_readable(key);</span><br><span class="line"><span class="deletion">-	void	   *trim = (void *) DatumGetPointer(DirectFunctionCall1(rtrim1, PointerGetDatum(query)));</span></span><br><span class="line"></span><br><span class="line"> 	/* All cases served by this function are exact */</span><br><span class="line"> 	*recheck = false;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	if (tinfo.eml == 0)</span></span><br><span class="line"><span class="addition">+	if (bptinfo.eml == 0)</span></span><br><span class="line"> 	&#123;</span><br><span class="line"><span class="deletion">-		tinfo.eml = pg_database_encoding_max_length();</span></span><br><span class="line"><span class="addition">+		bptinfo.eml = pg_database_encoding_max_length();</span></span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	retval = gbt_var_consistent(&amp;r, trim, strategy, PG_GET_COLLATION(),</span></span><br><span class="line"><span class="deletion">-								GIST_LEAF(entry), &amp;tinfo, fcinfo-&gt;flinfo);</span></span><br><span class="line"><span class="addition">+	retval = gbt_var_consistent(&amp;r, query, strategy, PG_GET_COLLATION(),</span></span><br><span class="line"><span class="addition">+								GIST_LEAF(entry), &amp;bptinfo, fcinfo-&gt;flinfo);</span></span><br><span class="line"> 	PG_RETURN_BOOL(retval);</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">diff --git a/contrib/btree_gist/expected/char.out b/contrib/btree_gist/expected/char.out</span></span><br><span class="line"><span class="comment">index d715c045cc..45cf9f38d6 100644</span></span><br><span class="line"><span class="comment">--- a/contrib/btree_gist/expected/char.out</span></span><br><span class="line"><span class="comment">+++ b/contrib/btree_gist/expected/char.out</span></span><br><span class="line"><span class="meta">@@ -75,8 +75,8 @@</span> SELECT * FROM chartmp WHERE a BETWEEN &#x27;31a&#x27; AND &#x27;31c&#x27;;</span><br><span class="line"> (2 rows)</span><br><span class="line"></span><br><span class="line"> SELECT * FROM chartmp WHERE a BETWEEN &#x27;31a&#x27; AND &#x27;31c&#x27;;</span><br><span class="line"><span class="deletion">-  a</span></span><br><span class="line"><span class="comment">-------</span></span><br><span class="line"><span class="deletion">- 31b0</span></span><br><span class="line"><span class="addition">+                a</span></span><br><span class="line"><span class="addition">+----------------------------------</span></span><br><span class="line"><span class="addition">+ 31b0</span></span><br><span class="line"> (1 row)</span><br><span class="line"></span><br><span class="line"><span class="comment">diff --git a/contrib/btree_gist/expected/char_1.out b/contrib/btree_gist/expected/char_1.out</span></span><br><span class="line"><span class="comment">index 867318002b..7b7824b717 100644</span></span><br><span class="line"><span class="comment">--- a/contrib/btree_gist/expected/char_1.out</span></span><br><span class="line"><span class="comment">+++ b/contrib/btree_gist/expected/char_1.out</span></span><br><span class="line"><span class="meta">@@ -75,8 +75,8 @@</span> SELECT * FROM chartmp WHERE a BETWEEN &#x27;31a&#x27; AND &#x27;31c&#x27;;</span><br><span class="line"> (2 rows)</span><br><span class="line"></span><br><span class="line"> SELECT * FROM chartmp WHERE a BETWEEN &#x27;31a&#x27; AND &#x27;31c&#x27;;</span><br><span class="line"><span class="deletion">-  a</span></span><br><span class="line"><span class="comment">-------</span></span><br><span class="line"><span class="deletion">- 31b0</span></span><br><span class="line"><span class="addition">+                a</span></span><br><span class="line"><span class="addition">+----------------------------------</span></span><br><span class="line"><span class="addition">+ 31b0</span></span><br><span class="line"> (1 row)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong>上面的 diff 文件中末尾的空白被移除了，因此不能直接用，您需要在<a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/attachment/129615/fix-btree_gist-bpchar-trimming.patch">这里</a>获取 patch 文件。</p>
+<p><del>目前，该 patch 还未合并到主分支，尚待验证。</del> 2022 年 01 月 08 日已被合并到主分支，并 back-patch 回所有支持的分支。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/flat/696c995b-b37f-5526-f45d-04abe713179f%40gmail.com">https://www.postgresql.org/message-id/flat/696c995b-b37f-5526-f45d-04abe713179f%40gmail.com</a></p>
+<div class="just-for-fun">
+笑林广记 - 嘲武举诗
+
+<p>头戴银雀顶，脚踏粉底皂。<br>也去参主考，也来谒孔庙。<br>颜渊喟然叹，夫子莞尔笑。<br>子路愠见曰：“这般呆狗屎，我若行三军，都去喂马料。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/01/postgresql-index-only-scan-on-btree-gist-index/" title="PostgreSQL 在 btree_gist 索引上 Index Only 扫描问题">https://blog.japinli.top/2022/01/postgresql-index-only-scan-on-btree-gist-index/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/12/postgresql-toast-index-could-not-read-block/" rel="prev" title="PostgreSQL TOAST 索引读取失败">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL TOAST 索引读取失败
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/01/postgresql-local-data-changes/" rel="next" title="【译】PostgreSQL locale 设置更改">
+                  【译】PostgreSQL locale 设置更改 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

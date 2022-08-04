@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 主分支中针对 pg_waldump 新增了四类过滤选项，分别为 RelFileNode、BlockNumber、ForkNum 和 FPW。本文将简要介绍一下这四个过滤选项。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 15 特性 - 新增 pg_waldump 过滤选项">
+<meta property="og:url" content="https://blog.japinli.top/2022/03/postgresql-pg-waldump-new-filters/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 主分支中针对 pg_waldump 新增了四类过滤选项，分别为 RelFileNode、BlockNumber、ForkNum 和 FPW。本文将简要介绍一下这四个过滤选项。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-03-28T13:31:55.000Z">
+<meta property="article:modified_time" content="2022-04-24T01:04:18.709Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="PG15">
+<meta property="article:tag" content="pg_waldump">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/03/postgresql-pg-waldump-new-filters/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/03/postgresql-pg-waldump-new-filters/","path":"2022/03/postgresql-pg-waldump-new-filters/","title":"PostgreSQL 15 特性 - 新增 pg_waldump 过滤选项"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 15 特性 - 新增 pg_waldump 过滤选项 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#RelFileNode-%E8%BF%87%E6%BB%A4%E9%80%89%E9%A1%B9"><span class="nav-number">1.</span> <span class="nav-text">RelFileNode 过滤选项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BlockNumber-%E8%BF%87%E6%BB%A4%E9%80%89%E9%A1%B9"><span class="nav-number">2.</span> <span class="nav-text">BlockNumber 过滤选项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ForkNum-%E8%BF%87%E6%BB%A4%E9%80%89%E9%A1%B9"><span class="nav-number">3.</span> <span class="nav-text">ForkNum 过滤选项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#FPW-%E8%BF%87%E6%BB%A4%E9%80%89%E9%A1%B9"><span class="nav-number">4.</span> <span class="nav-text">FPW 过滤选项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0"><span class="nav-number">5.</span> <span class="nav-text">实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/03/postgresql-pg-waldump-new-filters/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 15 特性 - 新增 pg_waldump 过滤选项
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-28 21:31:55" itemprop="dateCreated datePublished" datetime="2022-03-28T21:31:55+08:00">2022-03-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.5k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>8 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 主分支中针对 pg_waldump 新增了四类过滤选项，分别为 <code>RelFileNode</code>、<code>BlockNumber</code>、<code>ForkNum</code> 和 <code>FPW</code>。本文将简要介绍一下这四个过滤选项。</p>
+<span id="more"></span>
+
+<h2 id="RelFileNode-过滤选项"><a href="#RelFileNode-过滤选项" class="headerlink" title="RelFileNode 过滤选项"></a>RelFileNode 过滤选项</h2><p>该过滤选项可以通过 <code>Tablespace OID/Database OID/relfilenode</code> 的方式来过滤 WAL 日志。例如，我们新建一个表，并插入记录，如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> account(id <span class="type">int</span>, name text);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> account <span class="keyword">SELECT</span> id, <span class="string">&#x27;account&#x27;</span> <span class="operator">||</span> id::text <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">1000</span>) id;</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们通过下面的语句查询表 <code>account</code> 的表空间 OID、数据库 OID 以及 <code>relfilenode</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    relname,</span><br><span class="line">    <span class="keyword">CASE</span> <span class="keyword">WHEN</span> reltablespace <span class="operator">=</span> <span class="number">0</span></span><br><span class="line">        <span class="keyword">THEN</span> (<span class="keyword">SELECT</span> oid <span class="keyword">FROM</span> pg_tablespace <span class="keyword">WHERE</span> spcname <span class="operator">=</span> <span class="string">&#x27;pg_default&#x27;</span>)</span><br><span class="line">        <span class="keyword">ELSE</span> reltablespace</span><br><span class="line">    <span class="keyword">END</span> <span class="keyword">AS</span> tablespace,</span><br><span class="line">    (<span class="keyword">SELECT</span> oid <span class="keyword">FROM</span> pg_database <span class="keyword">WHERE</span> datname <span class="operator">=</span> current_database()) <span class="keyword">AS</span> database,</span><br><span class="line">    relfilenode</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    pg_class</span><br><span class="line"><span class="keyword">WHERE</span></span><br><span class="line">    relname <span class="operator">=</span> <span class="string">&#x27;account&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> relname | tablespace | database | relfilenode</span><br><span class="line">---------+------------+----------+-------------</span><br><span class="line"> account |       1663 |        5 |       16387</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>现在我们便可以通过 <code>RelFileNode</code> 的方式来过滤 WAL 日志，指定 <code>--relation</code> 选项。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> pg_waldump --relation 1663/5/16387 000000010000000000000001</span></span><br><span class="line">rmgr: Heap        len (rec/tot):     68/    68, tx:        723, lsn: 0/014C17A8, prev 0/014C1360, desc: INSERT+INIT off 1 flags 0x00, blkref #0: rel 1663/5/16387 blk 0</span><br><span class="line">rmgr: Heap        len (rec/tot):     68/    68, tx:        723, lsn: 0/014C17F0, prev 0/014C17A8, desc: INSERT off 2 flags 0x00, blkref #0: rel 1663/5/16387 blk 0</span><br><span class="line">rmgr: Heap        len (rec/tot):     68/    68, tx:        723, lsn: 0/014C1838, prev 0/014C17F0, desc: INSERT off 3 flags 0x00, blkref #0: rel 1663/5/16387 blk 0</span><br><span class="line">rmgr: Heap        len (rec/tot):     68/    68, tx:        723, lsn: 0/014C1880, prev 0/014C1838, desc: INSERT off 4 flags 0x00, blkref #0: rel 1663/5/16387 blk 0</span><br><span class="line">[...]</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4BE0, prev 0/014C4B98, desc: INSERT+INIT off 1 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4C28, prev 0/014C4BE0, desc: INSERT off 2 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4C70, prev 0/014C4C28, desc: INSERT off 3 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4CB8, prev 0/014C4C70, desc: INSERT off 4 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">[...]</span><br><span class="line">pg_waldump: fatal: error in WAL record at 0/14D66A0: invalid record length at 0/14D66D8: wanted 24, got 0</span><br></pre></td></tr></table></figure>
+
+<p>这里需要注意的是，<code>tablespace OID</code> 和 <code>relfilenode</code> 必须是非负数，而 <code>Database OID</code> 则可以为 <code>0</code>，例如，<code>pg_database</code> 表是共享的，我们可以通过指定 <code>--relation 1664/0/1262</code> 来查看该表的 WAL 日志。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ pg_waldump pgdata<span class="operator">/</span>pg_wal<span class="operator">/</span><span class="number">000000010000000000000001</span> <span class="comment">--relation 1664/0/1262 --fork vm --limit 1</span></span><br><span class="line">rmgr: Heap2       len (rec<span class="operator">/</span>tot):     <span class="number">64</span><span class="operator">/</span>  <span class="number">8256</span>, tx:          <span class="number">0</span>, lsn: <span class="number">0</span><span class="operator">/</span><span class="number">01491</span>F20, prev <span class="number">0</span><span class="operator">/</span><span class="number">01491</span>EC0, <span class="keyword">desc</span>: VISIBLE cutoff xid <span class="number">1</span> flags <span class="number">0x03</span>, blkref #<span class="number">0</span> : rel <span class="number">1664</span><span class="operator">/</span><span class="number">0</span><span class="operator">/</span><span class="number">1262</span> fork vm blk <span class="number">0</span> FPW, blkref #<span class="number">1</span>: rel <span class="number">1664</span><span class="operator">/</span><span class="number">0</span><span class="operator">/</span><span class="number">1262</span> blk <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="BlockNumber-过滤选项"><a href="#BlockNumber-过滤选项" class="headerlink" title="BlockNumber 过滤选项"></a>BlockNumber 过滤选项</h2><p><code>BlockNumber</code> 过滤选项（<code>--block</code> 选项）需要与 <code>RelFileNode</code> 过滤选项一起使用，即指定 <code>--block</code> 选项必须指定 <code>--relation</code> 选项，它可以显示指定的数据块的修改日志，如下所示。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> pg_waldump --block 1 --relation 1663/5/16387 000000010000000000000001</span></span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4BE0, prev 0/014C4B98, desc: INSERT+INIT off 1 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4C28, prev 0/014C4BE0, desc: INSERT off 2 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4C70, prev 0/014C4C28, desc: INSERT off 3 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4CB8, prev 0/014C4C70, desc: INSERT off 4 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4D00, prev 0/014C4CB8, desc: INSERT off 5 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4D48, prev 0/014C4D00, desc: INSERT off 6 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4D90, prev 0/014C4D48, desc: INSERT off 7 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4DD8, prev 0/014C4D90, desc: INSERT off 8 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4E20, prev 0/014C4DD8, desc: INSERT off 9 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4E68, prev 0/014C4E20, desc: INSERT off 10 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap        len (rec/tot):     70/    70, tx:        723, lsn: 0/014C4EB0, prev 0/014C4E68, desc: INSERT off 11 flags 0x00, blkref #0: rel 1663/5/16387 blk 1</span><br><span class="line">[...]</span><br><span class="line">pg_waldump: fatal: error in WAL record at 0/14D66A0: invalid record length at 0/14D66D8: wanted 24, got 0</span><br></pre></td></tr></table></figure>
+
+<h2 id="ForkNum-过滤选项"><a href="#ForkNum-过滤选项" class="headerlink" title="ForkNum 过滤选项"></a>ForkNum 过滤选项</h2><p>PostgreSQL 在后端存储的时候会将数据表组织为 <code>main</code>, <code>vm</code>, <code>fsm</code> 和 <code>init</code> 四种类型，他们被被称为 <code>ForkNum</code>，<code>ForkNum</code> 过滤选项（<code>--fork</code> 选项）可以过滤指定 <code>Fork</code> 类型的 WAL 日志。首先我们删除一些记录。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ANALYZE;</span><br><span class="line"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> account <span class="keyword">WHERE</span> id <span class="operator">&lt;</span> <span class="number">500</span>;</span><br><span class="line">ANALYZE;</span><br></pre></td></tr></table></figure>
+
+<p>接着我们通过 pg_waldump 来查看 <code>vm</code> 的修改日志。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> pg_waldump --fork vm --relation 1663/5/16387 000000010000000000000001</span></span><br><span class="line">rmgr: Heap2       len (rec/tot):     64/  8256, tx:          0, lsn: 0/01572228, prev 0/01572080, desc: VISIBLE cutoff xid 0 flags 0x03, blkref #0: rel 1663/5/16387 fork vm blk 0 FPW, blkref #1: rel 1663/5/16387 blk 0</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/    59, tx:          0, lsn: 0/01574760, prev 0/015745B8, desc: VISIBLE cutoff xid 0 flags 0x03, blkref #0: rel 1663/5/16387 fork vm blk 0, blkref #1: rel 1663/5/16387 blk 1</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/    59, tx:          0, lsn: 0/015754D0, prev 0/01575398, desc: VISIBLE cutoff xid 723 flags 0x01, blkref #0: rel 1663/5/16387 fork vm blk 0, blkref #1: rel 1663/5/16387 blk 2</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/    59, tx:          0, lsn: 0/01575510, prev 0/015754D0, desc: VISIBLE cutoff xid 723 flags 0x01, blkref #0: rel 1663/5/16387 fork vm blk 0, blkref #1: rel 1663/5/16387 blk 3</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/    59, tx:          0, lsn: 0/01575550, prev 0/01575510, desc: VISIBLE cutoff xid 723 flags 0x01, blkref #0: rel 1663/5/16387 fork vm blk 0, blkref #1: rel 1663/5/16387 blk 4</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/    59, tx:          0, lsn: 0/01575590, prev 0/01575550, desc: VISIBLE cutoff xid 723 flags 0x01, blkref #0: rel 1663/5/16387 fork vm blk 0, blkref #1: rel 1663/5/16387 blk 5</span><br><span class="line">pg_waldump: fatal: error in WAL record at 0/15A01E8: invalid record length at 0/15A0220: wanted 24, got 0</span><br></pre></td></tr></table></figure>
+
+<h2 id="FPW-过滤选项"><a href="#FPW-过滤选项" class="headerlink" title="FPW 过滤选项"></a><code>FPW</code> 过滤选项</h2><p><code>FPW</code> 过滤选项（<code>--fullpage</code> 选项），即 <code>full page write</code>，它可以用于过滤 <code>full page write</code> 相关的 WAL 日志。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CHECKPOINT</span><br><span class="line">UPDATE account <span class="keyword">SET</span> name <span class="operator">=</span> <span class="string">&#x27;xxx100&#x27;</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">600</span>;</span><br></pre></td></tr></table></figure>
+
+<p>如下所示，我们过滤了表 <code>account</code> 相关的 <code>full page write</code> 日志。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> pg_waldump --fullpage --relation 1663/5/16387 000000010000000000000001</span></span><br><span class="line">rmgr: Heap        len (rec/tot):     59/  8223, tx:        765, lsn: 0/0153B660, prev 0/0153B628, desc: DELETE off 1 flags 0x00 KEYS_UPDATED , blkref #0: rel 1663/5/16387 blk 0 FPW</span><br><span class="line">rmgr: Heap        len (rec/tot):     59/  8223, tx:        765, lsn: 0/0153FEF0, prev 0/0153FEB8, desc: DELETE off 1 flags 0x00 KEYS_UPDATED , blkref #0: rel 1663/5/16387 blk 1 FPW</span><br><span class="line">rmgr: Heap        len (rec/tot):     59/  8223, tx:        765, lsn: 0/01544798, prev 0/01544760, desc: DELETE off 1 flags 0x00 KEYS_UPDATED , blkref #0: rel 1663/5/16387 blk 2 FPW</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/   823, tx:          0, lsn: 0/01571D30, prev 0/01571CF8, desc: PRUNE latestRemovedXid 765 nredirected 0 ndead 185, blkref #0: rel 1663/5/16387 blk 0 FPW</span><br><span class="line">rmgr: Heap2       len (rec/tot):     64/  8256, tx:          0, lsn: 0/01572228, prev 0/01572080, desc: VISIBLE cutoff xid 0 flags 0x03, blkref #0: rel 1663/5/16387 fork vm blk 0 FPW, blkref #1: rel 1663/5/16387 blk 0</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/   823, tx:          0, lsn: 0/01574280, prev 0/01572228, desc: PRUNE latestRemovedXid 765 nredirected 0 ndead 185, blkref #0: rel 1663/5/16387 blk 1 FPW</span><br><span class="line">rmgr: Heap2       len (rec/tot):     59/  3063, tx:          0, lsn: 0/015747A0, prev 0/01574760, desc: PRUNE latestRemovedXid 765 nredirected 0 ndead 129, blkref #0: rel 1663/5/16387 blk 2 FPW</span><br><span class="line">rmgr: Heap        len (rec/tot):     59/  8223, tx:        806, lsn: 0/015A0308, prev 0/015A02D0, desc: LOCK off 45: xid 806: flags 0x00 LOCK_ONLY EXCL_LOCK , blkref #0: rel 1663/5/16387 blk 3 FPW</span><br><span class="line">pg_waldump: fatal: error in WAL record at 0/15A23C0: invalid record length at 0/15A23F8: wanted 24, got 0</span><br></pre></td></tr></table></figure>
+
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>上述四个过滤选项的实现还是比较简单的，它在 pg_waldump 新增了 <code>XLogRecordMatchesRelationBlock()</code> 和 <code>XLogRecordHasFPW()</code> 来判断 WAL 日志是否满足过滤条件，您可以在<a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=127aea2a65cd89c1c28357c6db199683e219491e">这里</a>看到完整的代码，后续<a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=52b5568432963b721698a2df1f37a0795b9611dc">这个</a>提交涉及到了 <code>fork</code> 的优化。下面是 <code>XLogRecordMatchesRelationBlock()</code> 和 <code>XLogRecordHasFPW()</code> 函数的源码。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Boolean to return whether the given WAL record matches a specific relation</span></span><br><span class="line"><span class="comment"> * and optionally block.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">XLogRecordMatchesRelationBlock</span><span class="params">(XLogReaderState *record,</span></span></span><br><span class="line"><span class="params"><span class="function">                                                          RelFileNode matchRnode,</span></span></span><br><span class="line"><span class="params"><span class="function">                                                          BlockNumber matchBlock,</span></span></span><br><span class="line"><span class="params"><span class="function">                                                          ForkNumber matchFork)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">       <span class="keyword">int</span>                     block_id;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">for</span> (block_id = <span class="number">0</span>; block_id &lt;= XLogRecMaxBlockId(record); block_id++)</span><br><span class="line">       &#123;</span><br><span class="line">               RelFileNode rnode;</span><br><span class="line">               ForkNumber      forknum;</span><br><span class="line">               BlockNumber blk;</span><br><span class="line"></span><br><span class="line">               <span class="keyword">if</span> (!XLogRecHasBlockRef(record, block_id))</span><br><span class="line">                       <span class="keyword">continue</span>;</span><br><span class="line"></span><br><span class="line">               XLogRecGetBlockTag(record, block_id, &amp;rnode, &amp;forknum, &amp;blk);</span><br><span class="line"></span><br><span class="line">               <span class="keyword">if</span> ((matchFork == InvalidForkNumber || matchFork == forknum) &amp;&amp;</span><br><span class="line">                       (RelFileNodeEquals(matchRnode, emptyRelFileNode) ||</span><br><span class="line">                        RelFileNodeEquals(matchRnode, rnode)) &amp;&amp;</span><br><span class="line">                       (matchBlock == InvalidBlockNumber || matchBlock == blk))</span><br><span class="line">                       <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Boolean to return whether the given WAL record contains a full page write.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">XLogRecordHasFPW</span><span class="params">(XLogReaderState *record)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">       <span class="keyword">int</span>                     block_id;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">for</span> (block_id = <span class="number">0</span>; block_id &lt;= XLogRecMaxBlockId(record); block_id++)</span><br><span class="line">       &#123;</span><br><span class="line">               <span class="keyword">if</span> (!XLogRecHasBlockRef(record, block_id))</span><br><span class="line">                       <span class="keyword">continue</span>;</span><br><span class="line"></span><br><span class="line">               <span class="keyword">if</span> (XLogRecHasBlockImage(record, block_id))</span><br><span class="line">                       <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>逻辑还是比较简单的，就是从 WAL 日志里面读取，然后匹配过滤选项。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://postgr.es/m/3a4c2e93-7976-2320-fc0a-32097fe148a7%40enterprisedb.com">https://postgr.es/m/3a4c2e93-7976-2320-fc0a-32097fe148a7%40enterprisedb.com</a><br>[2] <a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=127aea2a65cd89c1c28357c6db199683e219491e">https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=127aea2a65cd89c1c28357c6db199683e219491e</a><br>[3] <a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=52b5568432963b721698a2df1f37a0795b9611dc">https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=52b5568432963b721698a2df1f37a0795b9611dc</a></p>
+<div class="just-for-fun">
+笑林广记 - 借药碾
+
+<p>一监生临终，谓妻曰：“我一生挣得这副衣冠，死后必为我殡殓。”<br>妻诺，既死穿衣套靴讫，惟圆帽左右欹侧难戴。<br>妻哭曰：“我的天，一顶帽子也无福戴。”<br>生复还魂张目谓妻曰：“必要戴的。”<br>妻曰：“非不欲带，恨枕不稳耳。”<br>生曰：“对门某医生家药碾槽，借来好做枕。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/01/postgresql-basebackup-target/" rel="bookmark">PostgreSQL 15 特性 - 基础备份存储位置</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/03/postgresql-merge-into-syntax/" rel="bookmark">PostgreSQL 15 特性 - MERGE INTO 语法</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/03/postgresql-pg-waldump-new-filters/" title="PostgreSQL 15 特性 - 新增 pg_waldump 过滤选项">https://blog.japinli.top/2022/03/postgresql-pg-waldump-new-filters/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/PG15/" rel="tag"># PG15</a>
+              <a href="/tags/pg-waldump/" rel="tag"># pg_waldump</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/03/queries-in-postgresql-statistics/" rel="prev" title="【译】PostgreSQL 中的查询 - 统计信息">
+                  <i class="fa fa-chevron-left"></i> 【译】PostgreSQL 中的查询 - 统计信息
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/03/postgresql-merge-into-syntax/" rel="next" title="PostgreSQL 15 特性 - MERGE INTO 语法">
+                  PostgreSQL 15 特性 - MERGE INTO 语法 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

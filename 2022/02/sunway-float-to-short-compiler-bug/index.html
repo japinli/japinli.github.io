@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近在做申威平台的兼容时发现一个关于编译器优化的 BUG。第一次遇到编译器优化的问题，因此在这里对其进行简要的记录。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="申威平台 float 到 short 类型转换的编译器优化问题">
+<meta property="og:url" content="https://blog.japinli.top/2022/02/sunway-float-to-short-compiler-bug/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近在做申威平台的兼容时发现一个关于编译器优化的 BUG。第一次遇到编译器优化的问题，因此在这里对其进行简要的记录。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-02-25T16:04:01.000Z">
+<meta property="article:modified_time" content="2022-04-24T01:04:18.722Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="BUG">
+<meta property="article:tag" content="Sunway">
+<meta property="article:tag" content="Compiler">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/02/sunway-float-to-short-compiler-bug/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/02/sunway-float-to-short-compiler-bug/","path":"2022/02/sunway-float-to-short-compiler-bug/","title":"申威平台 float 到 short 类型转换的编译器优化问题"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>申威平台 float 到 short 类型转换的编译器优化问题 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">环境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%97%AE%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">问题</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/02/sunway-float-to-short-compiler-bug/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          申威平台 float 到 short 类型转换的编译器优化问题
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-02-26 00:04:01" itemprop="dateCreated datePublished" datetime="2022-02-26T00:04:01+08:00">2022-02-26</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近在做申威平台的兼容时发现一个关于编译器优化的 BUG。第一次遇到编译器优化的问题，因此在这里对其进行简要的记录。</p>
+<span id="more"></span>
+
+<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><p>下面是此次主角的基本信息，包括 CPU 硬件、操作系统和 GCC 编译器信息。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> lscpu</span></span><br><span class="line">架构：           sw_64</span><br><span class="line">CPU 运行模式：   64-bit</span><br><span class="line">字节序：         Little Endian</span><br><span class="line">Address sizes:   48 bits physical, 53 bits virtual</span><br><span class="line">CPU:             64</span><br><span class="line">在线 CPU 列表：  0-63</span><br><span class="line">每个核的线程数： 1</span><br><span class="line">每个座的核数：   32</span><br><span class="line">座：             2</span><br><span class="line">NUMA 节点：      2</span><br><span class="line">厂商 ID：        sunway</span><br><span class="line">CPU 系列：       6</span><br><span class="line">型号：           49</span><br><span class="line">型号名称：       SW3231 CPU @ 2.40GHz</span><br><span class="line">CPU MHz：        2400.00</span><br><span class="line">BogoMIPS：       4800.00</span><br><span class="line">L1d 缓存：       2 MiB</span><br><span class="line">L1i 缓存：       2 MiB</span><br><span class="line">L2 缓存：        32 MiB</span><br><span class="line">L3 缓存：        64 MiB</span><br><span class="line">NUMA 节点0 CPU： 0-31</span><br><span class="line">NUMA 节点1 CPU： 32-63</span><br><span class="line">标记：           fpu simd vpn upn cpuid</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> uname -a</span></span><br><span class="line">Linux localhost.localdomain 4.19.90-25.0.v2101.ky10.sw_64 #1 SMP Wed Jun 16 18:08:09 CST 2021 sw_64 sw_64 sw_64 GNU/Linux</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc --version</span></span><br><span class="line">gcc (GCC) 8.3.0 20190222 (Kylin 8.3.0-4)</span><br><span class="line">Copyright (C) 2018 Free Software Foundation, Inc.</span><br><span class="line">This is free software; see the source for copying conditions.  There is NO</span><br><span class="line">warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</span><br></pre></td></tr></table></figure>
+
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>这个问题是在进行数据库产品兼容互认证的时候发现的。我当时采用 <code>-O2</code> 在该平台上编译代码，随后跑回归测试，发现回归测试失败，其中一条信息如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"> -- test edge-case coercions to integer</span><br><span class="line"> SELECT &#x27;32767.4&#x27;::float4::int2;</span><br><span class="line"><span class="deletion">- int2</span></span><br><span class="line"><span class="comment">--------</span></span><br><span class="line"><span class="deletion">- 32767</span></span><br><span class="line"><span class="deletion">-(1 row)</span></span><br><span class="line"><span class="addition">+ERROR:  smallint out of range</span></span><br></pre></td></tr></table></figure>
+
+<p>这就很奇怪了，为什么超出了范围呢？这个代码在 x86 平台上是可以正常通过的啊！！！于是乎我尝试使用 <code>-O0</code> 来编译想要调试一下，在调试之前，我跑了一下回归测试，发现居然通过了！怎么回事？是我哪儿搞错了吗？我再次尝试 <code>-O2</code> 优化，回归测试依然不过。既然 <code>-O0</code> 编译是正常的那么调试这个版本就没有意义了，为此我使用 <code>-O2 -g</code> 来编译并对其进行调试，发现其在执行 <code>rint()</code> 函数的时候出现了异常，如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">1317    ftoi2(PG_FUNCTION_ARGS)</span><br><span class="line">1318    &#123;</span><br><span class="line">1319    	float4	num = PG_GETARG_FLOAT4(0);</span><br><span class="line">1320</span><br><span class="line">1321    	/*</span><br><span class="line">1322    	 * Get rid of any fractional part in the input.  This is so we don&#x27;t fail</span><br><span class="line">(gdb) n</span><br><span class="line">1326    	num = rint(num);</span><br><span class="line">(gdb) p num</span><br><span class="line">$15 = 32767.4004</span><br><span class="line">(gdb) n</span><br><span class="line">1329    	if (unlikely(isnan(num) || !FLOAT4_FITS_IN_INT16(num)))</span><br><span class="line">(gdb) p num</span><br><span class="line">$15 = 32768</span><br></pre></td></tr></table></figure>
+
+<p>上面出现了异常，正常情况下调用了 <code>rint()</code> 函数之后应该返回 <code>32767</code>，然而这里却返回了 <code>32768</code>。</p>
+<p>为了方便申威那边的人员调试，我将这个用例进行了简化，最开始我是直接调用 <code>rint()</code> 函数（如下所示），发现这样做并不能重现这个问题。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat test.c</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;math.h&gt;</span></span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(void)</span><br><span class="line">&#123;</span><br><span class="line">    float num = 32767.4;</span><br><span class="line">    float t = rint(num);</span><br><span class="line">    printf(&quot;rint(%f) = %d\n&quot;, num, (short) t);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O2 -g -o t2 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t2</span></span><br><span class="line">rint(32767.400391) = 32767</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O0 -g -o t0 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t0</span></span><br><span class="line">rint(32767.400391) = 32767</span><br></pre></td></tr></table></figure>
+
+<p>上面的测试一切都是正常的。为什么在我们的数据库代码中就不行呢？考虑到数据库的代码是通过函数调用的，因此我将其封装成函数调用来进行测试。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat test.c</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;math.h&gt;</span></span><br><span class="line"></span><br><span class="line">void</span><br><span class="line">ftoi2(float num)</span><br><span class="line">&#123;</span><br><span class="line">    float t = rint(num);</span><br><span class="line">    printf(&quot;rint(%f) = %d\n&quot;, num, (short) t);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(void)</span><br><span class="line">&#123;</span><br><span class="line">    ftoi2(32767.4);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O2 -g -o t2 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t2</span></span><br><span class="line">rint(32767.400391) = -32768</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O0 -g -o t0 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t0</span></span><br><span class="line">rint(32767.400391) = 32767</span><br></pre></td></tr></table></figure>
+
+<p>是不是很神奇！！！反正我是被惊艳到了。现在，问题得到复现了，从上面的结果来看，可以肯定的是申威平台上的 GCC 编译器优化存在问题，从而导致了计算结果错误。看到这里，我就没办法继续深入下去了，主要还是由于对申威平台不了解、不熟悉他的汇编指令，因此，我将这个问题转给了申威的人继续跟踪，期待这个问题能早日解决。</p>
+<p>当前主流的趋势是国产替代，然而我们还是应该要认识到自身与西方国家差距，不能光靠 PPT。只有当潮水退去时，您才知道谁一直在裸泳。希望国产软件不是那个一直裸泳的。</p>
+<div class="just-for-fun">
+笑林广记 - 监生娘娘
+
+<p>监生至城隍庙，傍有监生案，塑监生娘娘像。<br>归谓妻曰：“原来我们监生恁般尊贵，连你的像，早已都塑在城隍庙里了。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/03/sunway-asm-operand-out-of-range/" rel="bookmark">申威编译器优化指令操作数越界问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/postgresql-buffer-usage-overflow/" rel="bookmark">PostgreSQL buffer usage 溢出</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/postgresql-custom-variables-identifier/" rel="bookmark">PostgreSQL 自定义参数的标识符问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/" rel="bookmark">PostgreSQL 无法更改外键引用的聚集列的数据类型</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/04/sunway-postgresql-llvm-crash/" rel="bookmark">申威平台 PostgreSQL 使用 LLVM 导致崩溃</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/02/sunway-float-to-short-compiler-bug/" title="申威平台 float 到 short 类型转换的编译器优化问题">https://blog.japinli.top/2022/02/sunway-float-to-short-compiler-bug/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/BUG/" rel="tag"># BUG</a>
+              <a href="/tags/Sunway/" rel="tag"># Sunway</a>
+              <a href="/tags/Compiler/" rel="tag"># Compiler</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/02/postgresql-custom-variables-identifier/" rel="prev" title="PostgreSQL 自定义参数的标识符问题">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 自定义参数的标识符问题
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/02/postgresql-buffer-usage-overflow/" rel="next" title="PostgreSQL buffer usage 溢出">
+                  PostgreSQL buffer usage 溢出 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

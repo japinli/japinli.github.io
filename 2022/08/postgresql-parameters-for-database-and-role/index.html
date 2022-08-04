@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 支持不同级别的参数配置，最简单的是全局配置，此外还有针对用户级别和数据库级别的配置，本文就来看看 PostgreSQL 中用户级别和数据库级别的配置的实现。 我们可以实现下面的 SQL 命令来修改用户级别的配置： 1234ALTER ROLE &amp;#123; role_specification | ALL &amp;#125; [ IN DATABASE database_name">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 修改用户或数据库参数">
+<meta property="og:url" content="https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 支持不同级别的参数配置，最简单的是全局配置，此外还有针对用户级别和数据库级别的配置，本文就来看看 PostgreSQL 中用户级别和数据库级别的配置的实现。 我们可以实现下面的 SQL 命令来修改用户级别的配置： 1234ALTER ROLE &amp;#123; role_specification | ALL &amp;#125; [ IN DATABASE database_name">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/parameter-priority.png">
+<meta property="article:published_time" content="2022-08-01T14:27:02.000Z">
+<meta property="article:modified_time" content="2022-08-03T02:20:41.699Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/parameter-priority.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/","path":"2022/08/postgresql-parameters-for-database-and-role/","title":"PostgreSQL 修改用户或数据库参数"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 修改用户或数据库参数 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 修改用户或数据库参数
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-08-01 22:27:02" itemprop="dateCreated datePublished" datetime="2022-08-01T22:27:02+08:00">2022-08-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>6.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 支持不同级别的参数配置，最简单的是全局配置，此外还有针对用户级别和数据库级别的配置，本文就来看看 PostgreSQL 中用户级别和数据库级别的配置的实现。</p>
+<p>我们可以实现下面的 SQL 命令来修改用户级别的配置：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125; [ <span class="keyword">IN</span> DATABASE database_name ] <span class="keyword">SET</span> configuration_parameter &#123; <span class="keyword">TO</span> <span class="operator">|</span> <span class="operator">=</span> &#125; &#123; <span class="keyword">value</span> <span class="operator">|</span> <span class="keyword">DEFAULT</span> &#125;</span><br><span class="line"><span class="keyword">ALTER</span> ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125; [ <span class="keyword">IN</span> DATABASE database_name ] <span class="keyword">SET</span> configuration_parameter <span class="keyword">FROM</span> <span class="keyword">CURRENT</span></span><br><span class="line"><span class="keyword">ALTER</span> ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125; [ <span class="keyword">IN</span> DATABASE database_name ] RESET configuration_parameter</span><br><span class="line"><span class="keyword">ALTER</span> ROLE &#123; role_specification <span class="operator">|</span> <span class="keyword">ALL</span> &#125; [ <span class="keyword">IN</span> DATABASE database_name ] RESET <span class="keyword">ALL</span></span><br></pre></td></tr></table></figure>
+
+<p>从上面的语法可以看出 PostgreSQL 配置的灵活性，您可以针对某个用户进行配置，也可以针对某个用户连接某个数据库进行配置。</p>
+<p>数据库级别的配置相对于用户级别来说就要简单一些了，如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> DATABASE name <span class="keyword">SET</span> configuration_parameter &#123; <span class="keyword">TO</span> <span class="operator">|</span> <span class="operator">=</span> &#125; &#123; <span class="keyword">value</span> <span class="operator">|</span> <span class="keyword">DEFAULT</span> &#125;</span><br><span class="line"><span class="keyword">ALTER</span> DATABASE name <span class="keyword">SET</span> configuration_parameter <span class="keyword">FROM</span> <span class="keyword">CURRENT</span></span><br><span class="line"><span class="keyword">ALTER</span> DATABASE name RESET configuration_parameter</span><br><span class="line"><span class="keyword">ALTER</span> DATABASE name RESET <span class="keyword">ALL</span></span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<p>例如，我们想将当前用户连接数据库的 <code>work_mem</code> 修改为 <code>64M</code>，使用下面的命令即可：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> ROLE <span class="built_in">current_user</span> <span class="keyword">SET</span> work_mem <span class="keyword">TO</span> <span class="string">&#x27;64MB&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>当我们重新登录时，可以发现 <code>work_mem</code> 变成了 <code>64MB</code>，如果我们换一个用户登录，可以发现其 <code>work_mem</code> 仍然为默认的 <code>4MB</code>。接下来我们新建一个 <code>testdb</code> 数据库，并修改当前用户登录该数据库的 <code>work_mem</code> 设置为 <code>32MB</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> DATABASE testdb;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">USER</span> <span class="built_in">current_user</span> <span class="keyword">IN</span> DATABASE testdb <span class="keyword">SET</span> work_mem <span class="keyword">TO</span> <span class="string">&#x27;32MB&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>我们再次使用当前用户登录 <code>testdb</code> 数据库，可以发现此时 <code>work_mem</code> 是 <code>32MB</code>，而不是 <code>64MB</code>。</p>
+<p>数据库的参数修改类似，例如，修改 <code>testdb</code> 的 <code>maintenance_work_mem</code> 为 <code>128MB</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> DATABASE testdb <span class="keyword">SET</span> maintenance_work_mem <span class="keyword">TO</span> <span class="string">&#x27;128MB&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>接着使用当前用户登录 <code>testdb</code> 数据库时，<code>maintenance_work_mem</code> 被设置为 <code>128MB</code>，当我们切换到其他数据库时，<code>maintenance_work_mem</code> 还是默认的 <code>64MB</code>。</p>
+<p>我们知道全局的配置信息是存储在配置文件（<code>postgresql.conf</code> 或 <code>postgresql.auto.conf</code>）中，那上述命令修改的配置存放在哪儿呢？</p>
+<p>通过查看系统表，我们可以看到有一个 <code>pg_db_role_setting</code> 的表，大胆猜测一下就是这个表来存储上述的参数信息了。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_db_role_setting;</span><br><span class="line"> setdatabase <span class="operator">|</span> setrole <span class="operator">|</span>          setconfig</span><br><span class="line"><span class="comment">-------------+---------+------------------------------</span></span><br><span class="line">           <span class="number">0</span> <span class="operator">|</span>      <span class="number">10</span> <span class="operator">|</span> &#123;work_mem<span class="operator">=</span><span class="number">64</span>MB&#125;</span><br><span class="line">       <span class="number">16388</span> <span class="operator">|</span>      <span class="number">10</span> <span class="operator">|</span> &#123;work_mem<span class="operator">=</span><span class="number">32</span>MB&#125;</span><br><span class="line">           <span class="number">0</span> <span class="operator">|</span>       <span class="number">0</span> <span class="operator">|</span> &#123;work_mem<span class="operator">=</span><span class="number">1</span>MB&#125;</span><br><span class="line">       <span class="number">16388</span> <span class="operator">|</span>       <span class="number">0</span> <span class="operator">|</span> &#123;maintenance_work_mem<span class="operator">=</span><span class="number">128</span>MB&#125;</span><br><span class="line">(<span class="number">4</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>不出所料，果然是该表存储了上述参数信息。如果不熟悉 PostgreSQL 的系统表，我们也可以从源码来分析其存放的位置。</p>
+<p>既然可以通过 <code>ALTER ROLE</code> 的方式进行修改，那么我们看看 <code>gram.y</code> 中关于 <code>ALTER ROLE</code> 是如何做语法分析的。通过搜索 <code>AlterRole</code>，我们可以找到如下代码段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">AlterRoleSetStmt:</span><br><span class="line">            ALTER ROLE RoleSpec opt_in_database SetResetClause</span><br><span class="line">                &#123;</span><br><span class="line">                    AlterRoleSetStmt *n = makeNode(AlterRoleSetStmt);</span><br><span class="line"></span><br><span class="line">                    n-&gt;role = $<span class="number">3</span>;</span><br><span class="line">                    n-&gt;database = $<span class="number">4</span>;</span><br><span class="line">                    n-&gt;setstmt = $<span class="number">5</span>;</span><br><span class="line">                    $$ = (Node *) n;</span><br><span class="line">                &#125;</span><br><span class="line">            | ALTER ROLE ALL opt_in_database SetResetClause</span><br><span class="line">                &#123;</span><br><span class="line">                    AlterRoleSetStmt *n = makeNode(AlterRoleSetStmt);</span><br><span class="line"></span><br><span class="line">                    n-&gt;role = <span class="literal">NULL</span>;</span><br><span class="line">                    n-&gt;database = $<span class="number">4</span>;</span><br><span class="line">                    n-&gt;setstmt = $<span class="number">5</span>;</span><br><span class="line">                    $$ = (Node *) n;</span><br><span class="line">                &#125;</span><br><span class="line">            | ALTER USER RoleSpec opt_in_database SetResetClause</span><br><span class="line">                &#123;</span><br><span class="line">                    AlterRoleSetStmt *n = makeNode(AlterRoleSetStmt);</span><br><span class="line"></span><br><span class="line">                    n-&gt;role = $<span class="number">3</span>;</span><br><span class="line">                    n-&gt;database = $<span class="number">4</span>;</span><br><span class="line">                    n-&gt;setstmt = $<span class="number">5</span>;</span><br><span class="line">                    $$ = (Node *) n;</span><br><span class="line">                &#125;</span><br><span class="line">            | ALTER USER ALL opt_in_database SetResetClause</span><br><span class="line">                &#123;</span><br><span class="line">                    AlterRoleSetStmt *n = makeNode(AlterRoleSetStmt);</span><br><span class="line"></span><br><span class="line">                    n-&gt;role = <span class="literal">NULL</span>;</span><br><span class="line">                    n-&gt;database = $<span class="number">4</span>;</span><br><span class="line">                    n-&gt;setstmt = $<span class="number">5</span>;</span><br><span class="line">                    $$ = (Node *) n;</span><br><span class="line">                &#125;</span><br><span class="line">        ;</span><br></pre></td></tr></table></figure>
+
+<p>显然，关于 <code>ALTER ROLE ... SET ...</code> 是通过 <code>AlterRoleSetStmt</code> 来解析的，再次搜索：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ grep <span class="string">&#x27;AlterRoleSetStmt&#x27;</span> -rn src/ --include <span class="string">&#x27;*.c&#x27;</span></span><br><span class="line">src/backend/commands/user.c:828:AlterRoleSet(AlterRoleSetStmt *stmt)</span><br><span class="line">src/backend/tcop/utility.c:159:         <span class="keyword">case</span> T_AlterRoleSetStmt:</span><br><span class="line">src/backend/tcop/utility.c:919:         <span class="keyword">case</span> T_AlterRoleSetStmt:</span><br><span class="line">src/backend/tcop/utility.c:921:                 AlterRoleSet((AlterRoleSetStmt *) parsetree);</span><br><span class="line">src/backend/tcop/utility.c:2962:                <span class="keyword">case</span> T_AlterRoleSetStmt:</span><br><span class="line">src/backend/tcop/utility.c:3583:                <span class="keyword">case</span> T_AlterRoleSetStmt:</span><br></pre></td></tr></table></figure>
+
+<p>可以发现其在 <code>src/backend/commands/user.c</code> 文件中有一个 <code>AlterRoleSet()</code> 的函数，那么一切就明朗了，查看 <code>AlterRoleSet()</code> 函数，其核心是调用 <code>AlterSetting()</code> 来修改配置。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * ALTER ROLE ... SET</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function">Oid</span></span><br><span class="line"><span class="function"><span class="title">AlterRoleSet</span><span class="params">(AlterRoleSetStmt *stmt)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    AlterSetting(databaseid, roleid, stmt-&gt;setstmt);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> roleid;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>而 <code>AlterSetting()</code> 则是读写 <code>pg_db_role_setting</code> 系统表来完成配置的修改。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">AlterSetting</span><span class="params">(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    rel = table_open(DbRoleSettingRelationId, RowExclusiveLock);</span><br><span class="line">    ScanKeyInit(&amp;scankey[<span class="number">0</span>],</span><br><span class="line">                Anum_pg_db_role_setting_setdatabase,</span><br><span class="line">                BTEqualStrategyNumber, F_OIDEQ,</span><br><span class="line">                ObjectIdGetDatum(databaseid));</span><br><span class="line">    ScanKeyInit(&amp;scankey[<span class="number">1</span>],</span><br><span class="line">                Anum_pg_db_role_setting_setrole,</span><br><span class="line">                BTEqualStrategyNumber, F_OIDEQ,</span><br><span class="line">                ObjectIdGetDatum(roleid));</span><br><span class="line">    scan = systable_beginscan(rel, DbRoleSettingDatidRolidIndexId, <span class="literal">true</span>,</span><br><span class="line">                              <span class="literal">NULL</span>, <span class="number">2</span>, scankey);</span><br><span class="line">    tuple = systable_getnext(scan);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * There are three cases:</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * - in RESET ALL, request GUC to reset the settings array and update the</span></span><br><span class="line"><span class="comment">     * catalog if there&#x27;s anything left, delete it otherwise</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * - in other commands, if there&#x27;s a tuple in pg_db_role_setting, update</span></span><br><span class="line"><span class="comment">     * it; if it ends up empty, delete it</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * - otherwise, insert a new pg_db_role_setting tuple, but only if the</span></span><br><span class="line"><span class="comment">     * command is not RESET</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line"></span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    InvokeObjectPostAlterHookArg(DbRoleSettingRelationId,</span><br><span class="line">                                 databaseid, <span class="number">0</span>, roleid, <span class="literal">false</span>);</span><br><span class="line"></span><br><span class="line">    systable_endscan(scan);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Close pg_db_role_setting, but keep lock till commit */</span></span><br><span class="line">    table_close(rel, NoLock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>类似的，您也可以找到 <code>AlterDatabaseSet()</code> 函数，其本质上也是调用 <code>AlterSetting()</code> 函数来进行修改。</p>
+<p>从上面的配置，我们可以看出，这些选项可能在不同的级别上存在冲突。例如：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> DATABASE testdb <span class="keyword">SET</span> temp_buffers <span class="keyword">TO</span> <span class="string">&#x27;10MB&#x27;</span>;</span><br><span class="line"><span class="keyword">ALTER</span> ROLE <span class="built_in">current_user</span> <span class="keyword">SET</span> temp_buffers <span class="keyword">TO</span> <span class="string">&#x27;11MB&#x27;</span>;</span><br><span class="line"><span class="keyword">ALTER</span> ROLE <span class="built_in">current_user</span> <span class="keyword">IN</span> DATABASE testdb <span class="keyword">SET</span> temp_buffers <span class="keyword">TO</span> <span class="string">&#x27;12MB&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_db_role_setting;</span><br><span class="line"> setdatabase <span class="operator">|</span> setrole <span class="operator">|</span>                   setconfig</span><br><span class="line"><span class="comment">-------------+---------+------------------------------------------------</span></span><br><span class="line">           <span class="number">0</span> <span class="operator">|</span>       <span class="number">0</span> <span class="operator">|</span> &#123;work_mem<span class="operator">=</span><span class="number">1</span>MB&#125;</span><br><span class="line">       <span class="number">16388</span> <span class="operator">|</span>       <span class="number">0</span> <span class="operator">|</span> &#123;maintenance_work_mem<span class="operator">=</span><span class="number">128</span>MB,temp_buffers<span class="operator">=</span><span class="number">10</span>MB&#125;</span><br><span class="line">           <span class="number">0</span> <span class="operator">|</span>      <span class="number">10</span> <span class="operator">|</span> &#123;work_mem<span class="operator">=</span><span class="number">64</span>MB,temp_buffers<span class="operator">=</span><span class="number">11</span>MB&#125;</span><br><span class="line">       <span class="number">16388</span> <span class="operator">|</span>      <span class="number">10</span> <span class="operator">|</span> &#123;work_mem<span class="operator">=</span><span class="number">32</span>MB,temp_buffers<span class="operator">=</span><span class="number">12</span>MB&#125;</span><br><span class="line">(<span class="number">4</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>我们重新登录，查看 <code>temp_buffers</code>，其结构如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">testdb<span class="operator">=</span># <span class="keyword">SHOW</span> temp_buffers;</span><br><span class="line"> temp_buffers</span><br><span class="line"><span class="comment">--------------</span></span><br><span class="line"> <span class="number">12</span>MB</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>那它是如何加载这些参数的呢？以及它们的优先级设怎样的呢？我们可以在 <code>src/backend/catalog/pg_db_role_setting.c</code> 文件中看到 <code>ApplySetting()</code> 函数，通过查找该函数，我们可以知道它是由 <code>process_settings()</code> 函数调用的，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Load GUC settings from pg_db_role_setting.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * We try specific settings for the database/role combination, as well as</span></span><br><span class="line"><span class="comment"> * general for this database and for this user.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">process_settings</span><span class="params">(Oid databaseid, Oid roleid)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    Relation    relsetting;</span><br><span class="line">    Snapshot    snapshot;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!IsUnderPostmaster)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    relsetting = table_open(DbRoleSettingRelationId, AccessShareLock);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* read all the settings under the same snapshot for efficiency */</span></span><br><span class="line">    snapshot = RegisterSnapshot(GetCatalogSnapshot(DbRoleSettingRelationId));</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Later settings are ignored if set earlier. */</span></span><br><span class="line">    ApplySetting(snapshot, databaseid, roleid, relsetting, PGC_S_DATABASE_USER);</span><br><span class="line">    ApplySetting(snapshot, InvalidOid, roleid, relsetting, PGC_S_USER);</span><br><span class="line">    ApplySetting(snapshot, databaseid, InvalidOid, relsetting, PGC_S_DATABASE);</span><br><span class="line">    ApplySetting(snapshot, InvalidOid, InvalidOid, relsetting, PGC_S_GLOBAL);</span><br><span class="line"></span><br><span class="line">    UnregisterSnapshot(snapshot);</span><br><span class="line">    table_close(relsetting, AccessShareLock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>而 <code>process_settings()</code> 函数则是在 backend 进程起来之后由 <code>PostgresMain()</code> 到 <code>InitPostgres()</code> 调用，在之后便是接收客户端的请求，并执行相应的查询。至此，我们便找到了这些参数的加载过程。根据上面的参数应用规则，我们可以得到如下所示的参数优先级示意图：</p>
+<img src="/2022/08/postgresql-parameters-for-database-and-role/parameter-priority.png" class="">
+
+<p>关于参数是如何应用的，不在本文的讨论范畴，感兴趣的朋友可以去看看 <code>ProcessGUCArray()</code> 函数以及 PostgreSQL guc 的相关处理过程。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/sql-alterdatabase.html">https://www.postgresql.org/docs/current/sql-alterdatabase.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/sql-alterrole.html">https://www.postgresql.org/docs/current/sql-alterrole.html</a><br>[3] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/catalog-pg-db-role-setting.html">https://www.postgresql.org/docs/current/catalog-pg-db-role-setting.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 江心赋
+
+<p>有富翁同友远出，泊舟江中，偶上岸散步，见壁间题“江心赋”三字，错认“赋”字为“贼”字，惊欲走匿。<br>友问故，指曰：“此处有贼。”<br>友曰：“赋也，非贼也。”<br>其人曰：“赋便赋了，终是有些贼形。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/" title="PostgreSQL 修改用户或数据库参数">https://blog.japinli.top/2022/08/postgresql-parameters-for-database-and-role/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/07/postgres-relcache-and-syscache/" rel="prev" title="PostgreSQL RelCache 和 SysCache 缓存">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL RelCache 和 SysCache 缓存
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/08/postgresql-parameters-in-pg-db-role-setting/" rel="next" title="PostgreSQL pg_db_role_setting 参数修改">
+                  PostgreSQL pg_db_role_setting 参数修改 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

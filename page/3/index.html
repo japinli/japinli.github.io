@@ -84,9 +84,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">37</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">99</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -162,7 +162,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">99</span>
+          <span class="site-state-item-count">127</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -173,7 +173,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-count">49</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -225,7 +225,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/06/oracle-desdecrypt-to-postgresql/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-index-scan-ordering-operators/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.png">
@@ -238,7 +238,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/06/oracle-desdecrypt-to-postgresql/" class="post-title-link" itemprop="url">Oracle 迁移 PostgreSQL - DESDecrypt 函数</a>
+          <a href="/2022/01/postgresql-index-scan-ordering-operators/" class="post-title-link" itemprop="url">PostgreSQL 索引扫描排序运算符</a>
         </h2>
 
         <div class="post-meta-container">
@@ -249,7 +249,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2021-06-08 18:01:24" itemprop="dateCreated datePublished" datetime="2021-06-08T18:01:24+08:00">2021-06-08</time>
+      <time title="创建时间：2022-01-23 14:15:10" itemprop="dateCreated datePublished" datetime="2022-01-23T14:15:10+08:00">2022-01-23</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -267,14 +267,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>3.4k</span>
+      <span>8.2k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>3 分钟</span>
+      <span>7 分钟</span>
     </span>
 </div>
 
@@ -285,10 +285,13 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>最近在工作中遇到了 Oracle DES 加解密迁移到 PostgreSQL 中的问题，本文简要记录一下这个问题的解决过程。</p>
+          <p><a target="_blank" rel="noopener" href="https://pgfans.cn/q/649">最近看到一个问题</a>，说是在 <code>ExecIndexBuildScanKeys()</code> 函数中的 <code>isorderby</code> 参数在有 <code>ORDER BY</code> 字句时，<code>IndexScan</code> 中的 <code>indexorderby</code> 也为空。例如下面两个查询：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> col <span class="keyword">FROM</span> table_name <span class="keyword">ORDER</span> <span class="keyword">BY</span> index_key op const LIMIT <span class="number">5</span>;</span><br><span class="line"><span class="keyword">SELECT</span> col <span class="keyword">FROM</span> table_name <span class="keyword">WHERE</span> index_key op const;</span><br></pre></td></tr></table></figure>
+
+<p>这两个查询在执行 <code>ExecIndexBuildScanKeys()</code> 时 <code>IndexScan</code> 结构中的 <code>indexorderby</code> 均为空。然而，<code>IndexScan-&gt;indexorderby</code> 的注释为 <code>list of index ORDER BY exprs</code>，即 <code>ORDER BY</code> 语句后面的索引表达式，第一个 SQL 语句明显有 <code>ORDER BY</code> 字句，那么为什么此时的 <code>indexorderby</code> 为空呢？</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/06/oracle-desdecrypt-to-postgresql/#more" rel="contents">
+              <a class="btn" href="/2022/01/postgresql-index-scan-ordering-operators/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -319,7 +322,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/06/gtags-exclude-some-directories/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-basebackup-target/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.png">
@@ -332,7 +335,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/06/gtags-exclude-some-directories/" class="post-title-link" itemprop="url">Gtags 忽略不相关的目录</a>
+          <a href="/2022/01/postgresql-basebackup-target/" class="post-title-link" itemprop="url">PostgreSQL 15 特性 - 基础备份存储位置</a>
         </h2>
 
         <div class="post-meta-container">
@@ -343,7 +346,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2021-06-05 17:09:59" itemprop="dateCreated datePublished" datetime="2021-06-05T17:09:59+08:00">2021-06-05</time>
+      <time title="创建时间：2022-01-22 08:41:33" itemprop="dateCreated datePublished" datetime="2022-01-22T08:41:33+08:00">2022-01-22</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -351,7 +354,7 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
         </span>
     </span>
 
@@ -361,14 +364,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>997</span>
+      <span>5.9k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>5 分钟</span>
     </span>
 </div>
 
@@ -379,10 +382,47 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>我在 Emacs 中使用 gtags (GNU global source code tag system) 来作为代码导航的基本工具，它默认标记根目录及其子目录，但是有一些子目录其实我并不想要被标记。本文简要记录一下如何告知 gtags 忽略某些目录或文件。</p>
+          <p>最近 Robert Haas 提交了一个关于 pg_basebackup 指定备份存储位置的功能，详细信息如下：</p>
+<pre><code>commit 3500ccc39b0dadd1068a03938e4b8ff562587ccc
+Author: Robert Haas &lt;rhaas@postgresql.org&gt;
+Date:   Tue Nov 16 15:20:50 2021 -0500
+
+    Support base backup targets.
+
+    pg_basebackup now has a --target=TARGET[:DETAIL] option. If specfied,
+    it is sent to the server as the value of the TARGET option to the
+    BASE_BACKUP command. If DETAIL is included, it is sent as the value of
+    the new TARGET_DETAIL option to the BASE_BACKUP command.  If the
+    target is anything other than &#39;client&#39;, pg_basebackup assumes that it
+    will now be the server&#39;s job to write the backup in a location somehow
+    defined by the target, and that it therefore needs to write nothing
+    locally. However, the server will still send messages to the client
+    for progress reporting purposes.
+
+    On the server side, we now support two additional types of backup
+    targets.  There is a &#39;blackhole&#39; target, which just throws away the
+    backup data without doing anything at all with it. Naturally, this
+    should only be used for testing and debugging purposes, since you will
+    not actually have a backup when it finishes running. More usefully,
+    there is also a &#39;server&#39; target, so you can now use something like
+    &#39;pg_basebackup -Xnone -t server:/SOME/PATH&#39; to write a backup to some
+    location on the server. We can extend this to more types of targets
+    in the future, and might even want to create an extensibility
+    mechanism for adding new target types.
+
+    Since WAL fetching is handled with separate client-side logic, it&#39;s
+    not part of this mechanism; thus, backups with non-default targets
+    must use -Xnone or -Xfetch.
+
+    Patch by me, with a bug fix by Jeevan Ladhe.  The patch set of which
+    this is a part has also had review and/or testing from Tushar Ahuja,
+    Suraj Kharage, Dipesh Pandit, and Mark Dilger.
+
+    Discussion: http://postgr.es/m/CA+TgmoaYZbz0=Yk797aOJwkGJC-LK3iXn+wzzMx7KdwNpZhS5g@mail.gmail.com
+</code></pre>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/06/gtags-exclude-some-directories/#more" rel="contents">
+              <a class="btn" href="/2022/01/postgresql-basebackup-target/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -413,7 +453,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/05/MongoDB-sharding/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-jsonlog/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.png">
@@ -426,7 +466,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/05/MongoDB-sharding/" class="post-title-link" itemprop="url">MongoDB 数据库分片集群入门</a>
+          <a href="/2022/01/postgresql-jsonlog/" class="post-title-link" itemprop="url">PostgreSQL 15 特性 - jsonlog 日志</a>
         </h2>
 
         <div class="post-meta-container">
@@ -437,7 +477,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2021-05-23 08:34:22" itemprop="dateCreated datePublished" datetime="2021-05-23T08:34:22+08:00">2021-05-23</time>
+      <time title="创建时间：2022-01-17 22:17:24" itemprop="dateCreated datePublished" datetime="2022-01-17T22:17:24+08:00">2022-01-17</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -455,196 +495,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>10k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>9 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>本文结合官方文档整理记录了一下关于 MongoDB 中分片的概念以及如何搭建一个分片集群。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/05/MongoDB-sharding/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/logo.png">
-      <meta itemprop="name" content="Japin Li">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Japin">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" class="post-title-link" itemprop="url">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2021-05-21 16:29:27" itemprop="dateCreated datePublished" datetime="2021-05-21T16:29:27+08:00">2021-05-21</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>2k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>2 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>本文简要记录一下如何将 Oracle 数据库中的 <code>sys_connect_by_path()</code> 函数迁移到 PostgreSQL 数据库中。</p>
-<p>函数 <code>sys_connect_by_path()</code> 通常是与 Oracle 中的 <code>connect by</code> 子句一起使用的，而 <code>connect by</code> 子句转换到 PostgreSQL 中时通常是使用 <code>WITH RECUSIVE</code> 来实现。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/05/postgresql-security/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/logo.png">
-      <meta itemprop="name" content="Japin Li">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Japin">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/05/postgresql-security/" class="post-title-link" itemprop="url">PostgreSQL 安全性配置概要</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2021-05-20 14:47:46" itemprop="dateCreated datePublished" datetime="2021-05-20T14:47:46+08:00">2021-05-20</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>4.2k</span>
+      <span>4.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -662,11 +513,40 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>本文从网络、数据库实例、数据库、schema 和表对象几个层面对 PostgreSQL 数据库的安全性配置进行了简要的回顾。</p>
-<img src="/2021/05/postgresql-security/pg_security.png" class="">
+          <p>PostgreSQL 15 新增了 jsonlog 日志选项，即可以将日志存储为 json 格式，下面是详细的提交信息。</p>
+<pre><code>commit dc686681e0799b12c40f44f85fc5bfd7fed4e57f
+Author: Michael Paquier &lt;michael@paquier.xyz&gt;
+Date:   Mon Jan 17 10:16:53 2022 +0900
+
+    Introduce log_destination=jsonlog
+
+    &quot;jsonlog&quot; is a new value that can be added to log_destination to provide
+    logs in the JSON format, with its output written to a file, making it
+    the third type of destination of this kind, after &quot;stderr&quot; and
+    &quot;csvlog&quot;.  The format is convenient to feed logs to other applications.
+    There is also a plugin external to core that provided this feature using
+    the hook in elog.c, but this had to overwrite the output of &quot;stderr&quot; to
+    work, so being able to do both at the same time was not possible.  The
+    files generated by this log format are suffixed with &quot;.json&quot;, and use
+    the same rotation policies as the other two formats depending on the
+    backend configuration.
+
+    This takes advantage of the refactoring work done previously in ac7c807,
+    bed6ed3, 8b76f89 and 2d77d83 for the backend parts, and 72b76f7 for the
+    TAP tests, making the addition of any new file-based format rather
+    straight-forward.
+
+    The documentation is updated to list all the keys and the values that
+    can exist in this new format.  pg_current_logfile() also required a
+    refresh for the new option.
+
+    Author: Sehrope Sarkuni, Michael Paquier
+    Reviewed-by: Nathan Bossart, Justin Pryzby
+    Discussion: https://postgr.es/m/CAH7T-aqswBM6JWe4pDehi1uOiufqe06DJWaU5=X7dDLyqUExHg@mail.gmail.com
+</code></pre>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/05/postgresql-security/#more" rel="contents">
+              <a class="btn" href="/2022/01/postgresql-jsonlog/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -697,7 +577,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-invalid-dump-for-rules/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.png">
@@ -710,7 +590,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/" class="post-title-link" itemprop="url">PostgreSQL 类型转换时无效的类型输入</a>
+          <a href="/2022/01/postgresql-invalid-dump-for-rules/" class="post-title-link" itemprop="url">PostgreSQL 行类型规则导出错误</a>
         </h2>
 
         <div class="post-meta-container">
@@ -721,7 +601,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2021-05-12 18:35:21" itemprop="dateCreated datePublished" datetime="2021-05-12T18:35:21+08:00">2021-05-12</time>
+      <time title="创建时间：2022-01-14 22:09:24" itemprop="dateCreated datePublished" datetime="2022-01-14T22:09:24+08:00">2022-01-14</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -739,14 +619,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1.2k</span>
+      <span>4.6k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>4 分钟</span>
     </span>
 </div>
 
@@ -757,13 +637,32 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>最近在做 Oracle 迁移的时候发现一个类型错误，如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ERROR:  invalid input syntax for type numeric: &quot;null&quot;</span><br></pre></td></tr></table></figure>
+          <p>最近在浏览邮件列表时发现通过 pg_dump 导出带有行类型的规则导出之后无法导入到数据库中，已确认为 bug，目前已被修复。</p>
+<pre><code>commit 43c2175121c829c8591fc5117b725f1f22bfb670
+Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt;
+Date:   Thu Jan 13 17:49:25 2022 -0500
 
-<p>这个问题其实很简单，就是原始数据里面包含 <code>&#39;null&#39;</code> 的字符串导致的。解决这个问题的办法就是将数据中为 <code>&#39;null&#39;</code> 的异常数据转换为正常数据。</p>
+    Fix ruleutils.c&#39;s dumping of whole-row Vars in more contexts.
+
+    Commit 7745bc352 intended to ensure that whole-row Vars would be
+    printed with &quot;::type&quot; decoration in all contexts where plain
+    &quot;var.*&quot; notation would result in star-expansion, notably in
+    ROW() and VALUES() constructs.  However, it missed the case of
+    INSERT with a single-row VALUES, as reported by Timur Khanjanov.
+
+    Nosing around ruleutils.c, I found a second oversight: the
+    code for RowCompareExpr generates ROW() notation without benefit
+    of an actual RowExpr, and naturally it wasn&#39;t in sync :-(.
+    (The code for FieldStore also does this, but we don&#39;t expect that
+    to generate strictly parsable SQL anyway, so I left it alone.)
+
+    Back-patch to all supported branches.
+
+    Discussion: https://postgr.es/m/efaba6f9-4190-56be-8ff2-7a1674f9194f@intrans.baku.az
+</code></pre>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/#more" rel="contents">
+              <a class="btn" href="/2022/01/postgresql-invalid-dump-for-rules/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -794,7 +693,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/05/go-in-action/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-locking-row-locks/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.png">
@@ -807,7 +706,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/05/go-in-action/" class="post-title-link" itemprop="url">Go 语言实战</a>
+          <a href="/2022/01/postgresql-locking-row-locks/" class="post-title-link" itemprop="url">【译】PostgreSQL 锁 - Row Locks</a>
         </h2>
 
         <div class="post-meta-container">
@@ -818,101 +717,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2021-05-07 22:56:32" itemprop="dateCreated datePublished" datetime="2021-05-07T22:56:32+08:00">2021-05-07</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E7%BC%96%E7%A8%8B/" itemprop="url" rel="index"><span itemprop="name">编程</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>1.3k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>最近由于需要从事 Go 语言相关的工作，为此花了约一个星期的时间将《Go 语言实战》这本书过了一遍，对 Go 语言有了一个基本的认识。这本书短小精悍，全书 200 多页，详细介绍了 Go 语言的数组、切片的底层原理，Go 语言的类型系统、并发、通道以及测试。当然部分内容也没有深入的讲解，如映射，其底层的实现介绍的不是很充分。《Go 语言实战》这本书适合有一定语言编程经验的读者。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/05/go-in-action/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/04/postgresql-truncate-table-in-synchronous-logical-replication/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/logo.png">
-      <meta itemprop="name" content="Japin Li">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Japin">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/04/postgresql-truncate-table-in-synchronous-logical-replication/" class="post-title-link" itemprop="url">PostgreSQL 同步逻辑复制 TRUNCATE 表 hang 住</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2021-04-16 23:09:12" itemprop="dateCreated datePublished" datetime="2021-04-16T23:09:12+08:00">2021-04-16</time>
+      <time title="创建时间：2022-01-13 21:32:04" itemprop="dateCreated datePublished" datetime="2022-01-13T21:32:04+08:00">2022-01-13</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -930,14 +735,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>22k</span>
+      <span>4.4k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>20 分钟</span>
+      <span>4 分钟</span>
     </span>
 </div>
 
@@ -948,10 +753,11 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>在目前的 PostgreSQL 13 中，如果我们采用同步逻辑复制，那么在同步 TRUNCATE 表时，可能会发生数据库 hang 住的可能。本文便是针对这一问题进行分析。</p>
+          <p>了解 PostgreSQL 锁对于构建可扩展的应用程序和避免停机很重要。现代计算机和服务器有许多 CPU 内核，可以并行执行多个查询。包含许多由查询或并行运行的后台进程进行更改的一致结构的数据库可能会使数据库崩溃甚至损坏数据。因此，我们需要能够防止来自并发进程的访问，同时更改共享内存结构或行。一个线程更新结构而所有其他线程等待（排他锁），或者多个线程读取结构并且所有写入等待。等待的副作用是锁争用和服务器资源浪费。因此，重要的是要了解为什么会发生等待以及涉及哪些锁。在本文中，我回顾了 PostgreSQL 行级锁（Row Level Locking）。</p>
+<p>在后续文章中，我将研究保护内部数据库结构的<a target="_blank" rel="noopener" href="https://www.percona.com/blog/2018/10/24/postgresql-locking-part-2-heavyweight-locks/">表级锁（Table Level Locks）</a>和 <a target="_blank" rel="noopener" href="https://www.percona.com/blog/2018/10/30/postgresql-locking-part-3-lightweight-locks/">latches 锁</a>。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/04/postgresql-truncate-table-in-synchronous-logical-replication/#more" rel="contents">
+              <a class="btn" href="/2022/01/postgresql-locking-row-locks/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -982,7 +788,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/03/oracle-wm-concat/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-local-data-changes/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.png">
@@ -995,7 +801,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/03/oracle-wm-concat/" class="post-title-link" itemprop="url">Oracle wm_concat 函数说明</a>
+          <a href="/2022/01/postgresql-local-data-changes/" class="post-title-link" itemprop="url">【译】PostgreSQL locale 设置更改</a>
         </h2>
 
         <div class="post-meta-container">
@@ -1006,16 +812,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2021-03-07 15:13:35" itemprop="dateCreated datePublished" datetime="2021-03-07T15:13:35+08:00">2021-03-07</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
-        </span>
+      <time title="创建时间：2022-01-11 16:23:46" itemprop="dateCreated datePublished" datetime="2022-01-11T16:23:46+08:00">2022-01-11</time>
     </span>
 
   
@@ -1024,7 +821,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1.7k</span>
+      <span>2.6k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -1042,10 +839,13 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>Oracle 数据库的 <code>wm_concat</code> 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。<br>本文主要介绍 <code>wm_concat</code> 函数的功能以及其在 PostgreSQL 数据库中的替换方法。</p>
+          <p>以下信息侧重于使用 GNU C 库 (glibc) 的操作系统，其中包括最流行的 Linux 发行版。所有版本的 PostgreSQL 都会受到影响。其他操作系统原则上可能存在相同的问题，但我们尚未收集任何相关信息。</p>
+<p>PostgreSQL 使用操作系统的 C 库提供的语言环境数据对文本进行排序。排序发生在各种上下文中，包括用户输出、合并连接、B 树索引和范围分区。在后两种情况下，排序后的数据被持久化到磁盘。如果 C 库中的语言环境在数据库的生命周期中发生变化，则持久化的数据可能会与预期的排序顺序不一致，从而导致错误的查询结果和其他不正确的行为。例如，如果索引未按照索引扫描所期望的方式进行排序，则查询可能无法找到实际存在的数据，并且更新可能会插入不应允许的重复数据。同样，在分区表中，查询可能会在错误的分区中查找，而更新可能会写入错误的分区。<em>因此，对于数据库的正确操作，避免语言环境在数据库的生命周期内发生不兼容的变化是至关重要的。</em></p>
+<p>操作系统供应商，尤其是 GNU C 库的作者，不时地以较小的方式更改语言环境以纠正错误或添加对更多语言的支持。虽然这在理论上违反了上述规则，但从历史上看，它影响的用户很少，也没有受到广泛关注。但是，<strong>在 2018-08-01 发布的 glibc 版本 2.28 中，包含了对语言环境数据的重大更新，这可能会影响许多用户的数据</strong>。需要注意的是，更新本身是合法的，因为它使语言环境符合当前的国际标准。但是，如果将这些更新应用于现有的 PostgreSQL 系统，则必然会出现问题。</p>
+<p>操作系统供应商负责将 glibc 更新集成到 Linux 发行版中。我们希望长期支持 Linux 发行版的供应商不会在给定版本中对其发行版应用不兼容的语言环境更新，但这只是一种预期，因为我们无法预测或影响未来的行动。此外，PostgreSQL 目前无法检测到不兼容的 glibc 更新。因此，在规划任何更新或升级时需要一些手动操作。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/03/oracle-wm-concat/#more" rel="contents">
+              <a class="btn" href="/2022/01/postgresql-local-data-changes/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1076,7 +876,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/02/postgresql-update-configure-file/">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-index-only-scan-on-btree-gist-index/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/logo.png">
@@ -1089,7 +889,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/02/postgresql-update-configure-file/" class="post-title-link" itemprop="url">PostgreSQL 更新 configure 引入无关更改</a>
+          <a href="/2022/01/postgresql-index-only-scan-on-btree-gist-index/" class="post-title-link" itemprop="url">PostgreSQL 在 btree_gist 索引上 Index Only 扫描问题</a>
         </h2>
 
         <div class="post-meta-container">
@@ -1100,7 +900,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2021-02-21 09:07:21" itemprop="dateCreated datePublished" datetime="2021-02-21T09:07:21+08:00">2021-02-21</time>
+      <time title="创建时间：2022-01-07 18:54:54" itemprop="dateCreated datePublished" datetime="2022-01-07T18:54:54+08:00">2022-01-07</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1118,14 +918,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1.4k</span>
+      <span>8.6k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>8 分钟</span>
     </span>
 </div>
 
@@ -1136,13 +936,302 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：</p>
-<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@@ -1187,6 +1189,15 @@</span> do</span><br><span class="line">   | -silent | --silent | --silen | --sile | --sil)</span><br><span class="line">     silent=yes ;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+  -runstatedir | --runstatedir | --runstatedi | --runstated \</span></span><br><span class="line"><span class="addition">+  | --runstate | --runstat | --runsta | --runst | --runs \</span></span><br><span class="line"><span class="addition">+  | --run | --ru | --r)</span></span><br><span class="line"><span class="addition">+    ac_prev=runstatedir ;;</span></span><br><span class="line"><span class="addition">+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \</span></span><br><span class="line"><span class="addition">+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \</span></span><br><span class="line"><span class="addition">+  | --run=* | --ru=* | --r=*)</span></span><br><span class="line"><span class="addition">+    runstatedir=$ac_optarg ;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -14714,7 +14738,7 @@</span> else</span><br><span class="line">     We can&#x27;t simply define LARGE_OFF_T to be 9223372036854775807,</span><br><span class="line">     since some C++ compilers masquerading as C compilers</span><br><span class="line">     incorrectly reject 9223372036854775807.  */</span><br><span class="line"><span class="deletion">-#define LARGE_OFF_T (((off_t) 1 &lt;&lt; 62) - 1 + ((off_t) 1 &lt;&lt; 62))</span></span><br><span class="line"><span class="addition">+#define LARGE_OFF_T ((((off_t) 1 &lt;&lt; 31) &lt;&lt; 31) - 1 + (((off_t) 1 &lt;&lt; 31) &lt;&lt; 31))</span></span><br><span class="line">   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721</span><br><span class="line">               &amp;&amp; LARGE_OFF_T % 2147483647 == 1)</span><br><span class="line">              ? 1 : -1];</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。</p>
+          <p>最近在邮件列表中发现一个 <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/696c995b-b37f-5526-f45d-04abe713179f@gmail.com">btree_gist 索引上的 Index Only 扫描问题</a>，该问题由 Alexander Lakhin 提交，在 <code>char(n)</code> 数据类型的 <code>btree_gist</code> 索引上会出现，本文简要记录一下该问题。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2021/02/postgresql-update-configure-file/#more" rel="contents">
+              <a class="btn" href="/2022/01/postgresql-index-only-scan-on-btree-gist-index/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/12/postgresql-toast-index-could-not-read-block/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2021/12/postgresql-toast-index-could-not-read-block/" class="post-title-link" itemprop="url">PostgreSQL TOAST 索引读取失败</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-12-29 22:19:14" itemprop="dateCreated datePublished" datetime="2021-12-29T22:19:14+08:00">2021-12-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>最近，应用开发报来一个问题，错误信息如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ERROR:  could not read block 0 in file &quot;base/16385/2294016&quot;: read only 0 of 8192 bytes</span><br><span class="line">CONTEXT:  SQL function &quot;obj_description&quot; during startup</span><br></pre></td></tr></table></figure>
+
+<p>这个错误信息和之前遇到的 <a href="/2020/02/postgresql-hash-index/" title="PostgreSQL HASH 索引拾遗">PostgreSQL HASH 索引拾遗</a>一文的情况很像。但是这里的数据库是 10.4，且是单节点模式，因此排除 HASH 索引的问题。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/12/postgresql-toast-index-could-not-read-block/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/11/postgresql-jdbc-call-procedure/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2021/11/postgresql-jdbc-call-procedure/" class="post-title-link" itemprop="url">PostgreSQL 使用 JDBC 调用存储过程错误</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-11-25 22:41:44" itemprop="dateCreated datePublished" datetime="2021-11-25T22:41:44+08:00">2021-11-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E7%BC%96%E7%A8%8B/" itemprop="url" rel="index"><span itemprop="name">编程</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/11/postgresql-jdbc-call-procedure/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2021/11/the-path-of-a-query/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2021/11/the-path-of-a-query/" class="post-title-link" itemprop="url">PostgreSQL SQL 查询路径</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2021-11-21 17:09:42" itemprop="dateCreated datePublished" datetime="2021-11-21T17:09:42+08:00">2021-11-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>12 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>在 PostgreSQL 中，查询一般会经历以下几个阶段：</p>
+<ol>
+<li>应用程序连接到 PostgreSQL 并发送查询请求，随后等待返回结果。</li>
+<li>解析器（parser）检查应用程序传输的查询的语法是否正确并创建查询树（query tree）。</li>
+<li>重写系统（rewrite system）采用解析器阶段创建的查询树，并查找存储在系统表中的规则来重写查询树，例如视图。</li>
+<li>规划器/优化器（planner/optimizer）采用（重写的）查询树并创建一个查询计划，该计划将作为执行器（executor）的输入。<br>它首先创建得到相同结果的所有路径。例如，在表上有索引，那么将会创建两个查询路径：顺序扫描和索引扫描。接下来估计每条路径的执行成本并选择最便宜的路径，将最便宜的路径扩展为执行器可以使用的完整计划。</li>
+<li>执行器递归地遍历计划树并以计划表示的方式检索行。执行器在扫描表时会使用存储系统、执行排序和连接、估算条件并最后归还得到的行。</li>
+</ol>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/11/the-path-of-a-query/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1166,7 +1255,7 @@
 
 
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/10/">10</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/13/">13</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 </div>
@@ -1178,7 +1267,7 @@
 
 <div class="copyright">
   &copy; 2018 – 
-  <span itemprop="copyrightYear">2021</span>
+  <span itemprop="copyrightYear">2022</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -1189,13 +1278,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">454k</span>
+    <span title="站点总字数">633k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">6:52</span>
+    <span title="站点阅读时长">9:36</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
@@ -1221,6 +1310,14 @@
 
 
 
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
 
 </body>
 </html>

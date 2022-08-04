@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近在邮件列表中看到一个关于聚集列的数据类型修改导致的异常问题 BUG #17409。本文简要记录一下分析过程以及解决方案。目前该问题已经被修复，在 14.1 和 14.2 版本中应该可以重现。 commit 641f3dffcdf1c7378cfb94c98b6642793181d6db Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt; Date:   Fri">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 无法更改外键引用的聚集列的数据类型">
+<meta property="og:url" content="https://blog.japinli.top/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近在邮件列表中看到一个关于聚集列的数据类型修改导致的异常问题 BUG #17409。本文简要记录一下分析过程以及解决方案。目前该问题已经被修复，在 14.1 和 14.2 版本中应该可以重现。 commit 641f3dffcdf1c7378cfb94c98b6642793181d6db Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt; Date:   Fri">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-03-12T06:00:48.000Z">
+<meta property="article:modified_time" content="2022-04-24T01:04:18.709Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="BUG">
+<meta property="article:tag" content="PG14">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/","path":"2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/","title":"PostgreSQL 无法更改外键引用的聚集列的数据类型"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 无法更改外键引用的聚集列的数据类型 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">现象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">3.</span> <span class="nav-text">解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 无法更改外键引用的聚集列的数据类型
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-12 14:00:48" itemprop="dateCreated datePublished" datetime="2022-03-12T14:00:48+08:00">2022-03-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近在邮件列表中看到一个关于聚集列的数据类型修改导致的异常问题 <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/17409-52871dda8b5741cb%40postgresql.org">BUG #17409</a>。本文简要记录一下分析过程以及解决方案。目前该问题已经被修复，在 14.1 和 14.2 版本中应该可以重现。</p>
+<pre><code>commit 641f3dffcdf1c7378cfb94c98b6642793181d6db
+Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt;
+Date:   Fri Mar 11 13:47:26 2022 -0500
+
+    Restore the previous semantics of get_constraint_index().
+
+    Commit 8b069ef5d changed this function to look at pg_constraint.conindid
+    rather than searching pg_depend.  That was a good performance improvement,
+    but it failed to preserve the exact semantics.  The old code would only
+    return an index that was &quot;owned by&quot; (internally dependent on) the
+    specified constraint, whereas the new code will also return indexes that
+    are just referenced by foreign key constraints.  This confuses ALTER
+    TABLE, which was implicitly expecting the previous semantics, into
+    failing with errors like
+        ERROR:  relation 146621 has multiple clustered indexes
+    or
+        ERROR:  &quot;pk_attbl&quot; is not an index for table &quot;atref&quot;
+
+    We can fix this without reverting the performance improvement by adding
+    a contype check in get_constraint_index().  Another way could be to
+    make ALTER TABLE check it, but I&#39;m worried that extension code could
+    also have subtle dependencies on the old semantics.
+
+    Tom Lane and Japin Li, per bug #17409 from Holly Roberts.
+    Back-patch to v14 where the error crept in.
+
+    Discussion: https://postgr.es/m/17409-52871dda8b5741cb@postgresql.org
+</code></pre>
+<span id="more"></span>
+
+<h2 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h2><p>我们可以通过如下的示例来重现这个问题（源码为 PostgreSQL e94bb1473）。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ psql postgres</span><br><span class="line">psql (<span class="number">15</span>devel)</span><br><span class="line">Type &quot;help&quot; <span class="keyword">for</span> help.</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> attbl (p1 <span class="type">int</span> <span class="keyword">constraint</span> pk_attbl <span class="keyword">primary</span> key);</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> atref (c1 <span class="type">int</span> <span class="keyword">references</span> attbl(p1));</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span></span><br><span class="line">postgres<span class="operator">=</span># CLUSTER attbl <span class="keyword">USING</span> pk_attbl;</span><br><span class="line">CLUSTER</span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">ALTER</span> <span class="keyword">TABLE</span> attbl <span class="keyword">ALTER</span> <span class="keyword">COLUMN</span> p1 <span class="keyword">SET</span> DATA TYPE <span class="type">bigint</span>;</span><br><span class="line">ERROR:  relation <span class="number">16384</span> has multiple clustered indexes</span><br><span class="line">postgres<span class="operator">=</span>#</span><br></pre></td></tr></table></figure>
+
+<p>然而实际上表 <code>attbl</code> 并不存在多个聚集索引，如下所示。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">postgres=# SELECT</span><br><span class="line">postgres-#     table_cls.relnamespace::regnamespace::text AS schema,</span><br><span class="line">postgres-#     table_cls.relname AS table,</span><br><span class="line">postgres-#     index_cls.relname AS index,</span><br><span class="line">postgres-#     indisclustered</span><br><span class="line">postgres-# FROM</span><br><span class="line">postgres-#     pg_index pi INNER JOIN pg_class index_cls ON (pi.indexrelid = index_cls.oid)</span><br><span class="line">postgres-#     INNER JOIN pg_class table_cls ON (pi.indrelid = table_cls.oid)</span><br><span class="line">postgres-# WHERE</span><br><span class="line">postgres-#     (table_cls.relnamespace::regnamespace::text, table_cls.relname) = (&#x27;public&#x27;, &#x27;attbl&#x27;);</span><br><span class="line"> schema | table |  index   | indisclustered</span><br><span class="line">--------+-------+----------+----------------</span><br><span class="line"> public | attbl | pk_attbl | t</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>因此可以断定这是一个 BUG。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>从邮件来看，这个问题应该是在 13 之后的版本中引入的。通过 <code>git bisect</code> 查找，我发现是在 <a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=8b069ef5dca97cd737a5fd64c420df3cd61ec1c9">8b069ef5dc</a> 提交中引入的这个问题。</p>
+<pre><code>commit 8b069ef5dca97cd737a5fd64c420df3cd61ec1c9
+Author: Peter Eisentraut &lt;peter@eisentraut.org&gt;
+Date:   Wed Dec 9 15:12:05 2020 +0100
+
+    Change get_constraint_index() to use pg_constraint.conindid
+
+    It was still using a scan of pg_depend instead of using the conindid
+    column that has been added since.
+
+    Since it is now just a catalog lookup wrapper and not related to
+    pg_depend, move from pg_depend.c to lsyscache.c.
+
+    Reviewed-by: Matthias van de Meent &lt;boekewurm+postgres@gmail.com&gt;
+    Reviewed-by: Tom Lane &lt;tgl@sss.pgh.pa.us&gt;
+    Reviewed-by: Michael Paquier &lt;michael@paquier.xyz&gt;
+    Discussion: https://www.postgresql.org/message-id/flat/4688d55c-9a2e-9a5a-d166-5f24fe0bf8db%40enterprisedb.com
+</code></pre>
+<p>该提交主要是修改了 <code>get_constraint_index()</code> 函数，在这之前，它是通过扫描 <code>pg_depend</code> 表来获取约束底层的索引信息（如果存在，返回索引的 oid）；在这之后，它是从 <code>syscache</code> 中获取（系统表 <code>pg_constraint</code>）。</p>
+<p>根据错误信息，我发现其是在 <code>RememberClusterOnForRebuilding()</code> 函数中报错，如下所示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Subroutine for ATExecAlterColumnType: remember any clustered index.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">RememberClusterOnForRebuilding</span><span class="params">(Oid indoid, AlteredTableInfo *tab)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!get_index_isclustered(indoid))</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (tab-&gt;clusterOnIndex)</span><br><span class="line">        elog(ERROR, <span class="string">&quot;relation %u has multiple clustered indexes&quot;</span>, tab-&gt;relid);</span><br><span class="line"></span><br><span class="line">    tab-&gt;clusterOnIndex = get_rel_name(indoid);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在该函数中，它使用 <code>tab-&gt;clusterOnIndex</code> 来判断是否已经存在聚集索引。这个问题就出在这个聚集索引出现了两次，通过调试发现，这两次的值都是一致的，这里出现两次调用是由于 <code>ALTER TABLE attbl ALTER COLUMN p1 SET DATA TYPE bigint;</code> 这个语句在内部还会生成一条 <code>ALTER TABLE public.tbref ADD CONSTRAINT fk_tbref FOREIGN KEY (c1) REFERENCES attbl(p1);</code> 语句（尚未分析这样做的原因）。由于在 <code>RememberClusterOnForRebuilding()</code> 函数中没有判断 <code>tab-&gt;clusterOnIndex</code> 是否为同一个对象，因此，当同一个对象出现两次时，也会报如上错误，经 Michael Paquier 指出，<code>RememberReplicaIdentityForRebuilding()</code> 存在相似的问题。</p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>经过上面的分析，我尝试在报错之前判断其是否为同一个对象，v1 版本就此诞生，如下所示。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/commands/tablecmds.c b/src/backend/commands/tablecmds.c</span></span><br><span class="line"><span class="comment">index 3e83f375b5..4c0689d62e 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/commands/tablecmds.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/commands/tablecmds.c</span></span><br><span class="line"><span class="meta">@@ -12853,13 +12853,22 @@</span> ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,</span><br><span class="line"> static void</span><br><span class="line"> RememberReplicaIdentityForRebuilding(Oid indoid, AlteredTableInfo *tab)</span><br><span class="line"> &#123;</span><br><span class="line"><span class="addition">+	char	*indname;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 	if (!get_index_isreplident(indoid))</span><br><span class="line"> 		return;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	if (tab-&gt;replicaIdentityIndex)</span></span><br><span class="line"><span class="addition">+	indname = get_rel_name(indoid);</span></span><br><span class="line"><span class="addition">+	if (tab-&gt;replicaIdentityIndex == NULL)</span></span><br><span class="line"><span class="addition">+	&#123;</span></span><br><span class="line"><span class="addition">+		tab-&gt;replicaIdentityIndex = get_rel_name(indoid);</span></span><br><span class="line"><span class="addition">+		return;</span></span><br><span class="line"><span class="addition">+	&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+	if (strcmp(tab-&gt;replicaIdentityIndex, indname) != 0)</span></span><br><span class="line"> 		elog(ERROR, &quot;relation %u has multiple indexes marked as replica identity&quot;, tab-&gt;relid);</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	tab-&gt;replicaIdentityIndex = get_rel_name(indoid);</span></span><br><span class="line"><span class="addition">+	pfree(indname);</span></span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> /*</span><br><span class="line"><span class="meta">@@ -12868,13 +12877,22 @@</span> RememberReplicaIdentityForRebuilding(Oid indoid, AlteredTableInfo *tab)</span><br><span class="line"> static void</span><br><span class="line"> RememberClusterOnForRebuilding(Oid indoid, AlteredTableInfo *tab)</span><br><span class="line"> &#123;</span><br><span class="line"><span class="addition">+	char	*indname;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 	if (!get_index_isclustered(indoid))</span><br><span class="line"> 		return;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	if (tab-&gt;clusterOnIndex)</span></span><br><span class="line"><span class="addition">+	indname = get_rel_name(indoid);</span></span><br><span class="line"><span class="addition">+	if (tab-&gt;clusterOnIndex == NULL)</span></span><br><span class="line"><span class="addition">+	&#123;</span></span><br><span class="line"><span class="addition">+		tab-&gt;clusterOnIndex = indname;</span></span><br><span class="line"><span class="addition">+		return;</span></span><br><span class="line"><span class="addition">+	&#125;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"><span class="addition">+	if (strcmp(tab-&gt;clusterOnIndex, indname) != 0)</span></span><br><span class="line"> 		elog(ERROR, &quot;relation %u has multiple clustered indexes&quot;, tab-&gt;relid);</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	tab-&gt;clusterOnIndex = get_rel_name(indoid);</span></span><br><span class="line"><span class="addition">+	pfree(indname);</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是，这种方式过于繁琐，因此，Tom Lane 尝试 <code>get_rel_name()</code> 延迟到之后来进行调用，从而避免反复的调用 <code>get_rel_name()</code> 函数，为此诞生了 v2 版本。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/commands/tablecmds.c b/src/backend/commands/tablecmds.c</span></span><br><span class="line"><span class="comment">index dc5872f988..19c924b7df 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/commands/tablecmds.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/commands/tablecmds.c</span></span><br><span class="line"><span class="meta">@@ -189,8 +189,8 @@</span> typedef struct AlteredTableInfo</span><br><span class="line"> 	List	   *changedConstraintDefs;	/* string definitions of same */</span><br><span class="line"> 	List	   *changedIndexOids;	/* OIDs of indexes to rebuild */</span><br><span class="line"> 	List	   *changedIndexDefs;	/* string definitions of same */</span><br><span class="line"><span class="deletion">-	char	   *replicaIdentityIndex;	/* index to reset as REPLICA IDENTITY */</span></span><br><span class="line"><span class="deletion">-	char	   *clusterOnIndex; /* index to use for CLUSTER */</span></span><br><span class="line"><span class="addition">+	Oid			replicaIdentityIndex;	/* index to reset as REPLICA IDENTITY */</span></span><br><span class="line"><span class="addition">+	Oid			clusterOnIndex; /* index to use for CLUSTER */</span></span><br><span class="line"> 	List	   *changedStatisticsOids;	/* OIDs of statistics to rebuild */</span><br><span class="line"> 	List	   *changedStatisticsDefs;	/* string definitions of same */</span><br><span class="line"> &#125; AlteredTableInfo;</span><br><span class="line"><span class="meta">@@ -12856,10 +12856,12 @@</span> RememberReplicaIdentityForRebuilding(Oid indoid, AlteredTableInfo *tab)</span><br><span class="line"> 	if (!get_index_isreplident(indoid))</span><br><span class="line"> 		return;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	if (tab-&gt;replicaIdentityIndex)</span></span><br><span class="line"><span class="addition">+	/* We must de-duplicate multiple requests */</span></span><br><span class="line"><span class="addition">+	if (OidIsValid(tab-&gt;replicaIdentityIndex) &amp;&amp;</span></span><br><span class="line"><span class="addition">+		tab-&gt;replicaIdentityIndex != indoid)</span></span><br><span class="line"> 		elog(ERROR, &quot;relation %u has multiple indexes marked as replica identity&quot;, tab-&gt;relid);</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	tab-&gt;replicaIdentityIndex = get_rel_name(indoid);</span></span><br><span class="line"><span class="addition">+	tab-&gt;replicaIdentityIndex = indoid;</span></span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> /*</span><br><span class="line"><span class="meta">@@ -12871,10 +12873,12 @@</span> RememberClusterOnForRebuilding(Oid indoid, AlteredTableInfo *tab)</span><br><span class="line"> 	if (!get_index_isclustered(indoid))</span><br><span class="line"> 		return;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	if (tab-&gt;clusterOnIndex)</span></span><br><span class="line"><span class="addition">+	/* We must de-duplicate multiple requests */</span></span><br><span class="line"><span class="addition">+	if (OidIsValid(tab-&gt;clusterOnIndex) &amp;&amp;</span></span><br><span class="line"><span class="addition">+		tab-&gt;clusterOnIndex != indoid)</span></span><br><span class="line"> 		elog(ERROR, &quot;relation %u has multiple clustered indexes&quot;, tab-&gt;relid);</span><br><span class="line"></span><br><span class="line"><span class="deletion">-	tab-&gt;clusterOnIndex = get_rel_name(indoid);</span></span><br><span class="line"><span class="addition">+	tab-&gt;clusterOnIndex = indoid;</span></span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> /*</span><br><span class="line"><span class="meta">@@ -13117,13 +13121,15 @@</span> ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)</span><br><span class="line"> 	/*</span><br><span class="line"> 	 * Queue up command to restore replica identity index marking</span><br><span class="line"> 	 */</span><br><span class="line"><span class="deletion">-	if (tab-&gt;replicaIdentityIndex)</span></span><br><span class="line"><span class="addition">+	if (OidIsValid(tab-&gt;replicaIdentityIndex))</span></span><br><span class="line"> 	&#123;</span><br><span class="line"> 		AlterTableCmd *cmd = makeNode(AlterTableCmd);</span><br><span class="line"> 		ReplicaIdentityStmt *subcmd = makeNode(ReplicaIdentityStmt);</span><br><span class="line"></span><br><span class="line"> 		subcmd-&gt;identity_type = REPLICA_IDENTITY_INDEX;</span><br><span class="line"><span class="deletion">-		subcmd-&gt;name = tab-&gt;replicaIdentityIndex;</span></span><br><span class="line"><span class="addition">+		subcmd-&gt;name = get_rel_name(tab-&gt;replicaIdentityIndex);</span></span><br><span class="line"><span class="addition">+		Assert(subcmd-&gt;name);</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"> 		cmd-&gt;subtype = AT_ReplicaIdentity;</span><br><span class="line"> 		cmd-&gt;def = (Node *) subcmd;</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -13135,12 +13141,13 @@</span> ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)</span><br><span class="line"> 	/*</span><br><span class="line"> 	 * Queue up command to restore marking of index used for cluster.</span><br><span class="line"> 	 */</span><br><span class="line"><span class="deletion">-	if (tab-&gt;clusterOnIndex)</span></span><br><span class="line"><span class="addition">+	if (OidIsValid(tab-&gt;clusterOnIndex))</span></span><br><span class="line"> 	&#123;</span><br><span class="line"> 		AlterTableCmd *cmd = makeNode(AlterTableCmd);</span><br><span class="line"></span><br><span class="line"> 		cmd-&gt;subtype = AT_ClusterOn;</span><br><span class="line"><span class="deletion">-		cmd-&gt;name = tab-&gt;clusterOnIndex;</span></span><br><span class="line"><span class="addition">+		cmd-&gt;name = get_rel_name(tab-&gt;clusterOnIndex);</span></span><br><span class="line"><span class="addition">+		Assert(cmd-&gt;name);</span></span><br><span class="line"></span><br><span class="line"> 		/* do it after indexes and constraints */</span><br><span class="line"> 		tab-&gt;subcmds[AT_PASS_OLD_CONSTR] =</span><br></pre></td></tr></table></figure>
+
+<p>上述两个版本都能解决这个问题，但是大神的脚本并没有因此而停下，Tom Lane 又继续分析了 <code>get_constraint_index()</code> 函数，他发现这个函数在前后的语义已经发生了变化。表 <code>attbl</code> 有 <code>pk_attbl</code> 主键约束，同时也有 <code>fk_attbl</code> 外键约束。函数 <code>get_constraint_index()</code> 的新实现返回 <code>pk_attbl</code> 索引作为两个约束的关联索引，而旧代码只为 <code>pk_attbl</code> 约束返回它。v3 版本则是在 <code>get_constraint_index()</code> 加入了对 <code>contype</code> 的判断。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/backend/utils/cache/lsyscache.c b/src/backend/utils/cache/lsyscache.c</span></span><br><span class="line"><span class="comment">index feef999863..1b7e11b93e 100644</span></span><br><span class="line"><span class="comment">--- a/src/backend/utils/cache/lsyscache.c</span></span><br><span class="line"><span class="comment">+++ b/src/backend/utils/cache/lsyscache.c</span></span><br><span class="line"><span class="meta">@@ -1126,8 +1126,13 @@</span> get_constraint_name(Oid conoid)</span><br><span class="line">  *		Given the OID of a unique, primary-key, or exclusion constraint,</span><br><span class="line">  *		return the OID of the underlying index.</span><br><span class="line">  *</span><br><span class="line"><span class="deletion">- * Return InvalidOid if the index couldn&#x27;t be found; this suggests the</span></span><br><span class="line"><span class="deletion">- * given OID is bogus, but we leave it to caller to decide what to do.</span></span><br><span class="line"><span class="addition">+ * Returns InvalidOid if the constraint could not be found or is of</span></span><br><span class="line"><span class="addition">+ * the wrong type.</span></span><br><span class="line"><span class="addition">+ *</span></span><br><span class="line"><span class="addition">+ * The intent of this function is to return the index &quot;owned&quot; by the</span></span><br><span class="line"><span class="addition">+ * specified constraint.  Therefore we must check contype, since some</span></span><br><span class="line"><span class="addition">+ * pg_constraint entries (e.g. for foreign-key constraints) store the</span></span><br><span class="line"><span class="addition">+ * OID of an index that is referenced but not owned by the constraint.</span></span><br><span class="line">  */</span><br><span class="line"> Oid</span><br><span class="line"> get_constraint_index(Oid conoid)</span><br><span class="line"><span class="meta">@@ -1140,7 +1145,12 @@</span> get_constraint_index(Oid conoid)</span><br><span class="line"> 		Form_pg_constraint contup = (Form_pg_constraint) GETSTRUCT(tp);</span><br><span class="line"> 		Oid			result;</span><br><span class="line"></span><br><span class="line"><span class="deletion">-		result = contup-&gt;conindid;</span></span><br><span class="line"><span class="addition">+		if (contup-&gt;contype == CONSTRAINT_UNIQUE ||</span></span><br><span class="line"><span class="addition">+			contup-&gt;contype == CONSTRAINT_PRIMARY ||</span></span><br><span class="line"><span class="addition">+			contup-&gt;contype == CONSTRAINT_EXCLUSION)</span></span><br><span class="line"><span class="addition">+			result = contup-&gt;conindid;</span></span><br><span class="line"><span class="addition">+		else</span></span><br><span class="line"><span class="addition">+			result = InvalidOid;</span></span><br><span class="line"> 		ReleaseSysCache(tp);</span><br><span class="line"> 		return result;</span><br><span class="line"> 	&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/17409-52871dda8b5741cb%40postgresql.org">https://www.postgresql.org/message-id/17409-52871dda8b5741cb%40postgresql.org</a></p>
+<div class="just-for-fun">
+笑林广记 - 自不识
+
+<p>有监生穿大衣，带圆帽，于着衣镜中自照，得意甚，指谓妻曰：“你看镜中是何人？”<br>妻曰：“臭乌龟，亏你做了监生，连自（字同）都不识。”</p>
+</div>
+
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/postgresql-custom-variables-identifier/" rel="bookmark">PostgreSQL 自定义参数的标识符问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/postgresql-buffer-usage-overflow/" rel="bookmark">PostgreSQL buffer usage 溢出</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/" title="PostgreSQL 无法更改外键引用的聚集列的数据类型">https://blog.japinli.top/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/BUG/" rel="tag"># BUG</a>
+              <a href="/tags/PG14/" rel="tag"># PG14</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/03/sunway-asm-operand-out-of-range/" rel="prev" title="申威编译器优化指令操作数越界问题">
+                  <i class="fa fa-chevron-left"></i> 申威编译器优化指令操作数越界问题
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/03/queries-in-postgresql-query-execution-stages/" rel="next" title="【译】PostgreSQL 中的查询 - 查询执行阶段">
+                  【译】PostgreSQL 中的查询 - 查询执行阶段 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

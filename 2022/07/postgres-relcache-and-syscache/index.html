@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 数据库大部分操作都依赖于系统表，因此为了加速访问，PostgreSQL 针对系统表提供了两种缓存：RelCache 和 SysCache。RelCache 和 SysCache 都是进程本地的，每个 backend 进程启动的时候都将创建自己的 RelCache 和 SysCache。本文将简要介绍一下这两类缓存。  RelCache 用于缓存表的 RelationData">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL RelCache 和 SysCache 缓存">
+<meta property="og:url" content="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 数据库大部分操作都依赖于系统表，因此为了加速访问，PostgreSQL 针对系统表提供了两种缓存：RelCache 和 SysCache。RelCache 和 SysCache 都是进程本地的，每个 backend 进程启动的时候都将创建自己的 RelCache 和 SysCache。本文将简要介绍一下这两类缓存。  RelCache 用于缓存表的 RelationData">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/relcache-flowchat.png">
+<meta property="og:image" content="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/syscache-initialized.png">
+<meta property="og:image" content="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/syscache-call-flowchat.png">
+<meta property="og:image" content="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/syscache-read-tuple.png">
+<meta property="article:published_time" content="2022-07-30T09:32:44.000Z">
+<meta property="article:modified_time" content="2022-08-03T02:20:41.676Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="源码分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/relcache-flowchat.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/","path":"2022/07/postgres-relcache-and-syscache/","title":"PostgreSQL RelCache 和 SysCache 缓存"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL RelCache 和 SysCache 缓存 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#RelCache-%E7%BC%93%E5%AD%98"><span class="nav-number">1.</span> <span class="nav-text">RelCache 缓存</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SysCache-%E7%BC%93%E5%AD%98"><span class="nav-number">2.</span> <span class="nav-text">SysCache 缓存</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL RelCache 和 SysCache 缓存
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-07-30 17:32:44" itemprop="dateCreated datePublished" datetime="2022-07-30T17:32:44+08:00">2022-07-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 数据库大部分操作都依赖于系统表，因此为了加速访问，PostgreSQL 针对系统表提供了两种缓存：RelCache 和 SysCache。RelCache 和 SysCache 都是进程本地的，每个 backend 进程启动的时候都将创建自己的 RelCache 和 SysCache。本文将简要介绍一下这两类缓存。</p>
+<ul>
+<li>RelCache 用于缓存表的 RelationData 结构（关系描述符 - <code>reldesc</code>），该结构由系统表中的元组构成。</li>
+<li>SysCache 用于缓存系统表的元组信息。</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="RelCache-缓存"><a href="#RelCache-缓存" class="headerlink" title="RelCache 缓存"></a>RelCache 缓存</h2><p>RelCache 缓存的相关实现在 <code>src/backend/utils/cache/relcache.c</code> 文件中，文件 <code>src/include/utils/relcache.h</code> 则包含了相关函数的声明。</p>
+<p>RelCache 的初始化可以分为三个阶段：</p>
+<ol>
+<li><code>RelationCacheInitialize</code> - 初始化 <code>reldesc</code> 缓存（创建一个空的哈希表缓存），此阶段由于事务子系统还没有运行，因此不能访问数据库。</li>
+<li><code>RelationCacheInitializePhase2</code> - 该阶段主要是准备在启动时需要访问的共享系统表，此阶段至少需要加载 <code>pg_database</code>、<code>pg_authid</code>、<code>pg_auth_members</code> 和 <code>pg_shseclabel</code> 系统表。理想情况下，我们也需要加载其相应的索引。该函数尝试从共享的 <code>global/pg_internal.init</code> 文件中加载 RelCache 内容，如果失败的话，那么将通过 <code>formrdesc()</code> 函数为其创建一个预定义的 <code>reldesc</code>。</li>
+<li><code>RelationCacheInitializePhase3</code> - 当 CatCache 和事务系统正常运行，并且确定了数据库，则会调用该函数，在此之后，我们便可以从数据库的系统表中读取数据。</li>
+</ol>
+<p>下图是整个 RelCache 初始化的流程。</p>
+<img src="/2022/07/postgres-relcache-and-syscache/relcache-flowchat.png" class="">
+
+<p>RelCache 初始化完成之后，我们便可以通过 <code>RelationIdGetRelation()</code> 函数获取 <code>reldesc</code>，在使用完之后，调用 <code>RelationClose()</code> 函数进行清理。</p>
+<p><code>RelationIdGetRelation()</code> 通过 OID 查找 <code>reldesc</code>，如果缓存中不存在则通过 <code>BuildRelationDesc()</code> 函数创建一个并加入到缓存，同时增加其引用计数。如下是其具体的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Relation</span></span><br><span class="line"><span class="function"><span class="title">RelationIdGetRelation</span><span class="params">(Oid relationId)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	Relation	rd;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 确保处于有效的事务块中，即 TRANS_INPROGRESS */</span></span><br><span class="line">	Assert(IsTransactionState());</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * 从 RelationIdCache 缓存中查询，RelationIdCacheLookup() 是一个宏定义，</span></span><br><span class="line"><span class="comment">	 * 其本质是执行 hash_search() 进行查找，即</span></span><br><span class="line"><span class="comment">	 * hash_search(RelationIdCache, (void *) &amp;relationId, HASH_FIND, NULL);</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	RelationIdCacheLookup(relationId, rd);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (RelationIsValid(rd))</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * 如果该 relation 已经被删除，则返回 NULL</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		<span class="keyword">if</span> (rd-&gt;rd_droppedSubid != InvalidSubTransactionId)</span><br><span class="line">		&#123;</span><br><span class="line">			Assert(!rd-&gt;is_valid);</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* 增加引用计数 */</span></span><br><span class="line">		RelationIncrementReferenceCount(rd);</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* 是否需要重新验证有效性 */</span></span><br><span class="line">		<span class="keyword">if</span> (!rd-&gt;rd_isvalid)</span><br><span class="line">		&#123;</span><br><span class="line">			<span class="comment">/*</span></span><br><span class="line"><span class="comment">			 * 索引只有有限的几种可能的模式变化，我们不想使用完整的过程，</span></span><br><span class="line"><span class="comment">			 * 因为这对重载本身所依赖的索引来说是一个令人头痛的问题。</span></span><br><span class="line"><span class="comment">			 */</span></span><br><span class="line">			<span class="keyword">if</span> (rd-&gt;rd_rel-&gt;relkind == RELKIND_INDEX ||</span><br><span class="line">				rd-&gt;rd_rel-&gt;relkind == RELKIND_PARTITIONED_INDEX)</span><br><span class="line">				RelationReloadIndexInfo(rd);</span><br><span class="line">			<span class="keyword">else</span></span><br><span class="line">				RelationClearRelation(rd, <span class="literal">true</span>);</span><br><span class="line"></span><br><span class="line">			Assert(rd-&gt;rd_isvalid ||</span><br><span class="line">					(rd-&gt;rd_isnailed &amp;&amp; !criticalRelcachesBuilt));</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> rd;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 缓存中不存在， 通过 RelationBuildDesc() 函数创建并加入到缓存 */</span></span><br><span class="line">	rd = RelationBuildDesc(relationId, <span class="literal">true</span>);</span><br><span class="line">	<span class="keyword">if</span> (RelationIsValid(rd))</span><br><span class="line">		RelationIncrementReferenceCount(rd);</span><br><span class="line">	<span class="keyword">return</span> rd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关于 RelCache 缓存的梳理暂时收住，后续找时间在整理关于 RelCache 失效、同步等流程。</p>
+<h2 id="SysCache-缓存"><a href="#SysCache-缓存" class="headerlink" title="SysCache 缓存"></a>SysCache 缓存</h2><p>SysCache 用于缓存系统表的元组信息，它的初始化相对简单，但是其使用要比 RelCache 稍微复杂一些，它们的源码主要集中在以下 4 个文件中：</p>
+<ul>
+<li><code>src/backend/utils/cache/catcache.c</code></li>
+<li><code>src/backend/utils/cache/syscache.c</code></li>
+<li><code>src/include/utils/catcache.h</code></li>
+<li><code>src/include/utils/syscache.h</code></li>
+</ul>
+<p>当然，还是从初始化开始，<code>InitCatalogCache()</code> 时 SysCache 初始化的入口，其实现如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">InitCatalogCache</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span>		cacheId;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 确保 SysCacheIdentifier 中的数量与 cacheinfo 中定义的数量相同 */</span></span><br><span class="line">	StaticAssertStmt(SysCacheSize == (<span class="keyword">int</span>) lengthof(cacheinfo),</span><br><span class="line">					 <span class="string">&quot;SysCacheSize does not match syscache.c&#x27;s array&quot;</span>);</span><br><span class="line"></span><br><span class="line">	Assert(!CacheInitialized);</span><br><span class="line"></span><br><span class="line">	SysCacheRelationOidSize = SysCacheSupportingRelOidSize = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (cacheId = <span class="number">0</span>; cacheId &lt; SysCacheSize; cacheId++)</span><br><span class="line">	&#123;</span><br><span class="line">		SysCache[cacheId] = InitCatCache(cacheId,</span><br><span class="line">										 cacheinfo[cacheId].reloid,</span><br><span class="line">										 cacheinfo[cacheId].indoid,</span><br><span class="line">										 cacheinfo[cacheId].nkeys,</span><br><span class="line">										 cacheinfo[cacheId].key,</span><br><span class="line">										 cacheinfo[cacheId].nbuckets);</span><br><span class="line">		<span class="keyword">if</span> (!PointerIsValid(SysCache[cacheId]))</span><br><span class="line">			elog(ERROR, <span class="string">&quot;could not initialize cache %u (%d)&quot;</span>,</span><br><span class="line">				 cacheinfo[cacheId].reloid, cacheId);</span><br><span class="line">		<span class="comment">/* 记录 OID，之后可以通过二分查找加速查询 */</span></span><br><span class="line">		SysCacheRelationOid[SysCacheRelationOidSize++] =</span><br><span class="line">			cacheinfo[cacheId].reloid;</span><br><span class="line">		SysCacheSupportingRelOid[SysCacheSupportingRelOidSize++] =</span><br><span class="line">			cacheinfo[cacheId].reloid;</span><br><span class="line">		SysCacheSupportingRelOid[SysCacheSupportingRelOidSize++] =</span><br><span class="line">			cacheinfo[cacheId].indoid;</span><br><span class="line">		Assert(!RelationInvalidatesSnapshotsOnly(cacheinfo[cacheId].reloid));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	Assert(SysCacheRelationOidSize &lt;= lengthof(SysCacheRelationOid));</span><br><span class="line">	Assert(SysCacheSupportingRelOidSize &lt;= lengthof(SysCacheSupportingRelOid));</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 排序并去重，为二分查找做准备 */</span></span><br><span class="line">	pg_qsort(SysCacheRelationOid, SysCacheRelationOidSize,</span><br><span class="line">			 <span class="keyword">sizeof</span>(Oid), oid_compare);</span><br><span class="line">	SysCacheRelationOidSize =</span><br><span class="line">		qunique(SysCacheRelationOid, SysCacheRelationOidSize, <span class="keyword">sizeof</span>(Oid),</span><br><span class="line">				oid_compare);</span><br><span class="line"></span><br><span class="line">	pg_qsort(SysCacheSupportingRelOid, SysCacheSupportingRelOidSize,</span><br><span class="line">			 <span class="keyword">sizeof</span>(Oid), oid_compare);</span><br><span class="line">	SysCacheSupportingRelOidSize =</span><br><span class="line">		qunique(SysCacheSupportingRelOid, SysCacheSupportingRelOidSize,</span><br><span class="line">				<span class="keyword">sizeof</span>(Oid), oid_compare);</span><br><span class="line"></span><br><span class="line">	CacheInitialized = <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其核心是 <code>InitCatCache()</code> 函数，该函数的主要任务就是分配内存，包括 <code>CacheHdr</code>、<code>CatCache</code> 和 <code>buckets</code> 的内存。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">CatCache *</span></span><br><span class="line"><span class="function"><span class="title">InitCatCache</span><span class="params">(<span class="keyword">int</span> id,</span></span></span><br><span class="line"><span class="params"><span class="function">			 Oid reloid,</span></span></span><br><span class="line"><span class="params"><span class="function">			 Oid indexoid,</span></span></span><br><span class="line"><span class="params"><span class="function">			 <span class="keyword">int</span> nkeys,</span></span></span><br><span class="line"><span class="params"><span class="function">			 <span class="keyword">const</span> <span class="keyword">int</span> *key,</span></span></span><br><span class="line"><span class="params"><span class="function">			 <span class="keyword">int</span> nbuckets)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	CatCache	*cp;</span><br><span class="line">	MemoryContext oldcxt;</span><br><span class="line">	<span class="keyword">size_t</span>	sz;</span><br><span class="line">	<span class="keyword">int</span>		i;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * nbuckets 是在这个 catcache 中使用的哈希桶的初始数量。</span></span><br><span class="line"><span class="comment">	 * 如果太满，稍后会扩大。</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * nbuckets 必须是 2 的幂。我们通过 Assert 而不是完整的运行</span></span><br><span class="line"><span class="comment">	 * 时检查来检查这一点，因为这些值将来自常量表。</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	Assert(nbuckets &gt; <span class="number">0</span> &amp;&amp; (nbuckets &amp; -nbuckets) == nbuckets);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * 如果 CacheMemoryContext 还没有创建，则先创建该内存上下文。</span></span><br><span class="line"><span class="comment">	 * 我们需要先切换到缓存上下文，这样我们的分配就不会在事务结束时消失。</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (!CacheMemoryContext)</span><br><span class="line">		CreateCacheMemoryContext();</span><br><span class="line"></span><br><span class="line">	oldcxt = MemoryContextSwitchTo(CacheMemoryContext);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 第一次运行，先初始化缓存组头 */</span></span><br><span class="line">	<span class="keyword">if</span> (CacheHdr == <span class="literal">NULL</span>)</span><br><span class="line">	&#123;</span><br><span class="line">		CacheHdr = (CatCacheHeader *) palloc(<span class="keyword">sizeof</span>(CatCacheHeader));</span><br><span class="line">		slist_init(&amp;CacheHdr-&gt;ch_caches);</span><br><span class="line">		CacheHdr-&gt;ch_ntup = <span class="number">0</span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CATCACHE_STATS</span></span><br><span class="line">		<span class="comment">/* 设置进程退出时转储统计信息的回调函数 */</span></span><br><span class="line">		on_proc_exit(CatCachePrintStats, <span class="number">0</span>);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * 分配新的 CatCache 结构，并保持缓存对齐。</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * 注意：我们将内存置为 0 来正确初始化 dlist 头。</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	sz = <span class="keyword">sizeof</span>(CatCache) + PG_CACHE_LINE_SIZE;</span><br><span class="line">	cp = (CatCache *) CACHELINEALIGN(palloc0(sz));</span><br><span class="line">	cp-&gt;cc_bucket = palloc0(nbuckets * <span class="keyword">sizeof</span>(dlist_head));</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * 为这个缓存对应的关系初始化缓存的关系信息，并初始化一些新</span></span><br><span class="line"><span class="comment">	 * 缓存的其他内部字段。但暂时不要打开关系。</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	cp-&gt;id = id;</span><br><span class="line">	cp-&gt;cc_relname = <span class="string">&quot;(not known yet)&quot;</span>;</span><br><span class="line">	cp-&gt;cc_reloid = reloid;</span><br><span class="line">	cp-&gt;cc_indexoid = indexoid;</span><br><span class="line">	cp-&gt;cc_relisshared = <span class="literal">false</span>;	<span class="comment">/* temporary */</span></span><br><span class="line">	cp-&gt;cc_tupdesc = (TupleDesc) <span class="literal">NULL</span>;</span><br><span class="line">	cp-&gt;cc_ntup = <span class="number">0</span>;</span><br><span class="line">	cp-&gt;cc_nbuckets = nbuckets;</span><br><span class="line">	cp-&gt;cc_nkeys = nkeys;</span><br><span class="line">	<span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; nkeys; ++i)</span><br><span class="line">		cp-&gt;cc_keyno[i] = key[i];</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 调试信息，暂时可以不予理会 */</span></span><br><span class="line">	InitCatCache_DEBUG2;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 头插法插入到缓存组头部 */</span></span><br><span class="line">	slist_push_head(&amp;CacheHdr-&gt;ch_caches, &amp;cp-&gt;cc_next);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 返回前切换内存上下文 */</span></span><br><span class="line">	MemoryContextSwitchTo(oldcxt);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> cp;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述过程执行完成之后，其内存布局大致如下图所示：</p>
+<img src="/2022/07/postgres-relcache-and-syscache/syscache-initialized.png" class="">
+
+<p>上面的过程仅仅是分配内存和初始化缓存结构，在第一次使用该缓存时才会查询数据库以完成缓存的初始化。</p>
+<p>接下来我们看看如何使用该缓存。PostgreSQL 提供了 <code>SearchSysCache()</code> 来查询缓存，它是对 <code>SearchCatCache()</code> 的封装，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">HeapTuple</span></span><br><span class="line"><span class="function"><span class="title">SearchSysCache</span><span class="params">(<span class="keyword">int</span> cacheId</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum key1,</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum key2,</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum key3,</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum key4)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	Assert(cacheId &gt;= <span class="number">0</span> &amp;&amp; cacheId &lt; SysCacheSize &amp;&amp;</span><br><span class="line">		   PointerIsValid(SysCache[cacheId]));</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> SearchCatCache(SysCache[cacheId], key1, key2, key3, key4);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">HeapTuple</span></span><br><span class="line"><span class="function"><span class="title">SearchCatCache</span><span class="params">(CatCache *cache,</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum v1,</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum v2,</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum v3,</span></span></span><br><span class="line"><span class="params"><span class="function">			   Datum v4)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">return</span> SearchCatCacheInternal(cache, cache-&gt;cc_nkeys, v1, v2, v3, v4);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>类似的还有 <code>SearchSysCache1()</code>、<code>SearchSysCache2()</code>、<code>SearchSysCache3()</code> 和 <code>SearchSysCache4()</code>，它们将检查键的数量是否与其相等。它们最终会调用 <code>SearchCatCacheInternal()</code> 和 <code>SearchCatCacheMiss()</code> 函数，其调用关系如下图所示：</p>
+<img src="/2022/07/postgres-relcache-and-syscache/syscache-call-flowchat.png" class="">
+
+<p>不难看出其核心就在 <code>SearchCatCacheMiss()</code> 函数中，当缓存未命中时，它将读取表元组信息并将其加入到缓存中。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> pg_noinline HeapTuple</span></span><br><span class="line"><span class="function"><span class="title">SearchCatCacheMiss</span><span class="params">(CatCache *cache,</span></span></span><br><span class="line"><span class="params"><span class="function">				   <span class="keyword">int</span> nkeys,</span></span></span><br><span class="line"><span class="params"><span class="function">				   uint32 hashValue,</span></span></span><br><span class="line"><span class="params"><span class="function">				   Index hashIndex,</span></span></span><br><span class="line"><span class="params"><span class="function">				   Datum v1,</span></span></span><br><span class="line"><span class="params"><span class="function">				   Datum v2,</span></span></span><br><span class="line"><span class="params"><span class="function">				   Datum v3,</span></span></span><br><span class="line"><span class="params"><span class="function">				   Datum v4)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	ScanKeyData	cur_skey[CATCACHE_MAXKEYS];</span><br><span class="line">	Relation	relation;</span><br><span class="line">	SysScanDesc	scandesc;</span><br><span class="line">	HeapTuple	ntp;</span><br><span class="line">	CatCTup	   *ct;</span><br><span class="line">	Datum		arguments[CATCACHE_MAXKEYS];</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 初始化局部参数数组 */</span></span><br><span class="line">	arguments[<span class="number">0</span>] = v1;</span><br><span class="line">	arguments[<span class="number">1</span>] = v2;</span><br><span class="line">	arguments[<span class="number">2</span>] = v3;</span><br><span class="line">	arguments[<span class="number">3</span>] = v4;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 需要在关系中进行查找，复制 scankey 并填充键值。*/</span></span><br><span class="line">	<span class="built_in">memcpy</span>(cur_skey, cache-&gt;cc_skey, <span class="keyword">sizeof</span>(ScanKeyData) * nkeys);</span><br><span class="line">	cur_skey[<span class="number">0</span>].sk_argument = v1;</span><br><span class="line">	cur_skey[<span class="number">1</span>].sk_argument = v2;</span><br><span class="line">	cur_skey[<span class="number">2</span>].sk_argument = v3;</span><br><span class="line">	cur_skey[<span class="number">3</span>].sk_argument = v4;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * 缓存中没有查找到 Tuple, 因此，我们需要打开表直接获取，如果找到，我们</span></span><br><span class="line"><span class="comment">	 * 会将其添加到缓存中；如果没有找到，我们将添加一个负缓存条目。</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * 负缓存条目是指 CatCTup 中没有关联的 tuple 的条目。</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	relation = table_open(cache-&gt;cc_reloid, AccessShareLock);</span><br><span class="line"></span><br><span class="line">	scandesc = systable_beginscan(relation,</span><br><span class="line">								  cache-&gt;cc_indexoid,</span><br><span class="line">								  IndexScanOK(cache, cur_skey),</span><br><span class="line">								  <span class="literal">NULL</span>,</span><br><span class="line">								  nkeys,</span><br><span class="line">								  cur_skey);</span><br><span class="line"></span><br><span class="line">	ct = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (HeapTupleIsValid(ntp = systable_getnext(scandesc)))</span><br><span class="line">	&#123;</span><br><span class="line">		ct = CatalogCacheCreateEntry(cache, ntp, arguments,</span><br><span class="line">									 hashValue, hashIndex,</span><br><span class="line">									 <span class="literal">false</span>);</span><br><span class="line">		<span class="comment">/* 立即增加引用计数 refcount = 1 */</span></span><br><span class="line">		ResourceOwnerEnlargeCatCacheRefs(CurrentResourceOwner);</span><br><span class="line">		ct-&gt;refcount++;</span><br><span class="line">		ResourceOwnerRememberCatCacheRef(CurrentResourceOwner, &amp;ct-&gt;tuple);</span><br><span class="line">		<span class="keyword">break</span>;	<span class="comment">/* 假设仅有一条记录匹配 */</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	systable_endscan(scandesc);</span><br><span class="line"></span><br><span class="line">	table_close(relation, AccessShareLock);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * 如果 tuple 没有找到，我们需要构建一个包含假元组的负缓存条目。</span></span><br><span class="line"><span class="comment">	 * 假元组具有正确的键列，但其他任何地方都为空。</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * 在 bootstrap 模式下，我们不需要构建负缓存条目，因为缓存失效机制不存在，</span></span><br><span class="line"><span class="comment">	 * 并且如果稍后创建元组则无法清除它们。（引导程序不执行更新，因此它不需</span></span><br><span class="line"><span class="comment">	 * 要缓存无效。）</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (ct == <span class="literal">NULL</span>)</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">if</span> (IsBootstrapProcessingMode())</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">		ct = CatalogCacheCreateEntry(cache, <span class="literal">NULL</span>, arguments,</span><br><span class="line">									 hashValue, hashIndex,</span><br><span class="line">									 <span class="literal">true</span>);</span><br><span class="line"></span><br><span class="line">		CACHE_elog(DEBUG2, <span class="string">&quot;SearchCatCache(%s): Contains %d/%d tuples&quot;</span>,</span><br><span class="line">				   cache-&gt;cc_relname, cache-&gt;cc_ntup, CacheHdr-&gt;ch_ntup);</span><br><span class="line">		CACHE_elog(DEBUG2, <span class="string">&quot;SearchCatCache(%s): put neg entry in bucket %d&quot;</span>,</span><br><span class="line">				   cache-&gt;cc_relname, hashIndex);</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* 我们不返回负缓存条目给调用者，因此保持引用计数为 0。 */</span></span><br><span class="line">		<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	CACHE_elog(DEBUG2, <span class="string">&quot;SearchCatCache(%s): Contains %d/%d tuples&quot;</span>,</span><br><span class="line">			   cache-&gt;cc_relname, cache-&gt;cc_ntup, CacheHdr-&gt;ch_ntup);</span><br><span class="line">	CACHE_elog(DEBUG2, <span class="string">&quot;SearchCatCache(%s): put in bucket %d&quot;</span>,</span><br><span class="line">			   cache-&gt;cc_relname, hashIndex);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CATCACHE_STATS</span></span><br><span class="line">	cache-&gt;cc_newloads++;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> &amp;ct-&gt;tuple;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>CatalogCacheCreateEntry()</code> 负责创建一个 <code>CatCTup</code> 结构并将其加入到 <code>cache-&gt;cc_bucket</code>，其中 <code>hashIndex</code> 用于索引 <code>cache-&gt;cc_bucket</code>，下面是该函数主要流程。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> CatCTup *</span></span><br><span class="line"><span class="function"><span class="title">CatalogCacheCreateEntry</span><span class="params">(CatCache *cache, HeapTuple ntp, Datum *arguments,</span></span></span><br><span class="line"><span class="params"><span class="function">						uint32 hashValue, Index hashIndex,</span></span></span><br><span class="line"><span class="params"><span class="function">						<span class="keyword">bool</span> negative)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (ntp)</span><br><span class="line">	&#123;</span><br><span class="line">		[...]</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* 创建一个正常的缓存条目 */</span></span><br><span class="line">		ct = (CatCTup *) palloc(<span class="keyword">sizeof</span>(CatCTup) +</span><br><span class="line">								MAXIMUM_ALIGNOF + dtp-&gt;t_len);</span><br><span class="line"></span><br><span class="line">		[...]</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">	&#123;</span><br><span class="line">		Assert(negative);</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* 创建一个负缓存条目 */</span></span><br><span class="line">		ct = (CatCTup *) palloc(<span class="keyword">sizeof</span>(CatCTup));</span><br><span class="line"></span><br><span class="line">		[...]</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 加入到缓存中 */</span></span><br><span class="line">	dlist_push_head(&amp;cache-&gt;cc_bucket[hashIndex], &amp;ct-&gt;cache_elem);</span><br><span class="line"></span><br><span class="line">	cache-&gt;cc_ntup++;</span><br><span class="line">	CacheHdr-&gt;ch_ntup++;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当 hash 表的填充因子大于 2 时，我们需要增大桶数量。 */</span></span><br><span class="line">	<span class="keyword">if</span> (cache-&gt;cc_ntup &gt; cache-&gt;cc_nbuckets * <span class="number">2</span>)</span><br><span class="line">		RehashCatCache(cache);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> ct;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当我们通过 <code>SearchSysCache()</code> 函数获取信息时，元组信息就会以 <code>CatCTup</code> 的形式缓存起来，其内存布局如下所示：</p>
+<img src="/2022/07/postgres-relcache-and-syscache/syscache-read-tuple.png" class="">
+
+<p>关于 SysCache 的分析暂时就到这里，这里面还有很多内容，如部分搜索（<code>CatCTup</code> 中 <code>struct catclist *c_list</code> 的处理，即 N 个键中前 K 个键的缓存处理）、缓存同步、失效等。</p>
+<div class="just-for-fun">
+笑林广记 - 哭麟
+
+<p>孔子见死麟，哭之不置。<br>弟子谋所以慰之者，乃编钱挂牛体，告曰：“麟已活矣。”孔子观之曰：“这明明是一只村牛，不过多得几个钱耳。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/" rel="bookmark">PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/09/postgresql-database-size-monitor/" rel="bookmark">PostgreSQL 数据库大小监控</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/" title="PostgreSQL RelCache 和 SysCache 缓存">https://blog.japinli.top/2022/07/postgres-relcache-and-syscache/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="tag"># 源码分析</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/07/postgresql-dynamic-libraries-loading-process/" rel="prev" title="PostgreSQL 动态库加载过程">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 动态库加载过程
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/08/postgresql-parameters-for-database-and-role/" rel="next" title="PostgreSQL 修改用户或数据库参数">
+                  PostgreSQL 修改用户或数据库参数 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

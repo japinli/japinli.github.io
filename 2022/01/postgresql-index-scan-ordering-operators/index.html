@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近看到一个问题，说是在 ExecIndexBuildScanKeys() 函数中的 isorderby 参数在有 ORDER BY 字句时，IndexScan 中的 indexorderby 也为空。例如下面两个查询： 12SELECT col FROM table_name ORDER BY index_key op const LIMIT 5;SELECT col FROM table_na">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 索引扫描排序运算符">
+<meta property="og:url" content="https://blog.japinli.top/2022/01/postgresql-index-scan-ordering-operators/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近看到一个问题，说是在 ExecIndexBuildScanKeys() 函数中的 isorderby 参数在有 ORDER BY 字句时，IndexScan 中的 indexorderby 也为空。例如下面两个查询： 12SELECT col FROM table_name ORDER BY index_key op const LIMIT 5;SELECT col FROM table_na">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-01-23T06:15:10.000Z">
+<meta property="article:modified_time" content="2022-04-24T01:04:18.706Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/01/postgresql-index-scan-ordering-operators/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/01/postgresql-index-scan-ordering-operators/","path":"2022/01/postgresql-index-scan-ordering-operators/","title":"PostgreSQL 索引扫描排序运算符"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 索引扫描排序运算符 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">1.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">2.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-index-scan-ordering-operators/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 索引扫描排序运算符
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-01-23 14:15:10" itemprop="dateCreated datePublished" datetime="2022-01-23T14:15:10+08:00">2022-01-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p><a target="_blank" rel="noopener" href="https://pgfans.cn/q/649">最近看到一个问题</a>，说是在 <code>ExecIndexBuildScanKeys()</code> 函数中的 <code>isorderby</code> 参数在有 <code>ORDER BY</code> 字句时，<code>IndexScan</code> 中的 <code>indexorderby</code> 也为空。例如下面两个查询：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> col <span class="keyword">FROM</span> table_name <span class="keyword">ORDER</span> <span class="keyword">BY</span> index_key op const LIMIT <span class="number">5</span>;</span><br><span class="line"><span class="keyword">SELECT</span> col <span class="keyword">FROM</span> table_name <span class="keyword">WHERE</span> index_key op const;</span><br></pre></td></tr></table></figure>
+
+<p>这两个查询在执行 <code>ExecIndexBuildScanKeys()</code> 时 <code>IndexScan</code> 结构中的 <code>indexorderby</code> 均为空。然而，<code>IndexScan-&gt;indexorderby</code> 的注释为 <code>list of index ORDER BY exprs</code>，即 <code>ORDER BY</code> 语句后面的索引表达式，第一个 SQL 语句明显有 <code>ORDER BY</code> 字句，那么为什么此时的 <code>indexorderby</code> 为空呢？</p>
+<span id="more"></span>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>我们首先来看看 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/master/src/include/nodes/plannodes.h#L367"><code>IndexScan</code></a> 结构体的定义（代码比较长，仅截取部分内容）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* ----------------</span></span><br><span class="line"><span class="comment"> *      index scan node</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * [...]</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * indexorderbyorig is similarly the original form of any ORDER BY expressions</span></span><br><span class="line"><span class="comment"> * that are being implemented by the index, while indexorderby is modified to</span></span><br><span class="line"><span class="comment"> * have index column Vars on the left-hand side.  Here, multiple expressions</span></span><br><span class="line"><span class="comment"> * must appear in exactly the ORDER BY order, and this is not necessarily the</span></span><br><span class="line"><span class="comment"> * index column order.  Only the expressions are provided, not the auxiliary</span></span><br><span class="line"><span class="comment"> * sort-order information from the ORDER BY SortGroupClauses; it&#x27;s assumed</span></span><br><span class="line"><span class="comment"> * that the sort ordering is fully determinable from the top-level operators.</span></span><br><span class="line"><span class="comment"> * indexorderbyorig is used at runtime to recheck the ordering, if the index</span></span><br><span class="line"><span class="comment"> * cannot calculate an accurate ordering.  It is also needed for EXPLAIN.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * [...]</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * ----------------</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">IndexScan</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    Scan        scan;</span><br><span class="line">    Oid         indexid;        <span class="comment">/* OID of index to scan */</span></span><br><span class="line">    List       *indexqual;      <span class="comment">/* list of index quals (usually OpExprs) */</span></span><br><span class="line">    List       *indexqualorig;  <span class="comment">/* the same in original form */</span></span><br><span class="line">    List       *indexorderby;   <span class="comment">/* list of index ORDER BY exprs */</span></span><br><span class="line">    List       *indexorderbyorig;   <span class="comment">/* the same in original form */</span></span><br><span class="line">    List       *indexorderbyops;    <span class="comment">/* OIDs of sort ops for ORDER BY exprs */</span></span><br><span class="line">    ScanDirection indexorderdir;    <span class="comment">/* forward or backward or don&#x27;t care */</span></span><br><span class="line">&#125; IndexScan;</span><br></pre></td></tr></table></figure>
+
+<p>从上面来看好像没有什么问题，<code>ORDER BY</code> 字句中的表达式包含索引时，那么 <code>indexorderby</code> 就不应该为空。那么这个是不是一个 bug 呢？我们接着分析。既然这个地方 <code>indexorderby</code> 为空，那么我们来看看何时创建的 <code>IndexScan</code> 结构，针对 <code>indexorderby</code> 又进行了什么处理。</p>
+<p>通过调试，我发现在 <code>create_indexscan_plan()</code> 函数中有处理，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> Scan *</span></span><br><span class="line"><span class="function"><span class="title">create_indexscan_plan</span><span class="params">(PlannerInfo *root,</span></span></span><br><span class="line"><span class="params"><span class="function">                      IndexPath *best_path,</span></span></span><br><span class="line"><span class="params"><span class="function">                      List *tlist,</span></span></span><br><span class="line"><span class="params"><span class="function">                      List *scan_clauses,</span></span></span><br><span class="line"><span class="params"><span class="function">                      <span class="keyword">bool</span> indexonly)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Extract the index qual expressions (stripped of RestrictInfos) from the</span></span><br><span class="line"><span class="comment">     * IndexClauses list, and prepare a copy with index Vars substituted for</span></span><br><span class="line"><span class="comment">     * table Vars.  (This step also does replace_nestloop_params on the</span></span><br><span class="line"><span class="comment">     * fixed_indexquals.)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    fix_indexqual_references(root, best_path,</span><br><span class="line">                             &amp;stripped_indexquals,</span><br><span class="line">                             &amp;fixed_indexquals);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Likewise fix up index attr references in the ORDER BY expressions.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    fixed_indexorderbys = fix_indexorderby_references(root, best_path);</span><br><span class="line"></span><br><span class="line">    [...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>函数 <code>fix_indexorderby_references()</code> 定义如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line"> * fix_indexorderby_references</span><br><span class="line"> *    Adjust indexorderby clauses to the form the executor&#x27;s index</span><br><span class="line"> *    machinery needs.</span><br><span class="line"> *</span><br><span class="line"> * This is a simplified version of fix_indexqual_references.  The input is</span><br><span class="line"> * bare clauses and a separate indexcol list, instead of IndexClauses.</span><br><span class="line"> */</span><br><span class="line">static List *</span><br><span class="line">fix_indexorderby_references(PlannerInfo *root, IndexPath *index_path)</span><br><span class="line">&#123;</span><br><span class="line">    IndexOptInfo *index = index_path-&gt;indexinfo;</span><br><span class="line">    List       *fixed_indexorderbys;</span><br><span class="line">    ListCell   *lcc,</span><br><span class="line">               *lci;</span><br><span class="line"></span><br><span class="line">    fixed_indexorderbys = NIL;</span><br><span class="line"></span><br><span class="line">    forboth(lcc, index_path-&gt;indexorderbys, lci, index_path-&gt;indexorderbycols)</span><br><span class="line">    &#123;</span><br><span class="line">        Node       *clause = (Node *) lfirst(lcc);</span><br><span class="line">        int         indexcol = lfirst_int(lci);</span><br><span class="line"></span><br><span class="line">        clause = fix_indexqual_clause(root, index, indexcol, clause, NIL);</span><br><span class="line">        fixed_indexorderbys = lappend(fixed_indexorderbys, clause);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return fixed_indexorderbys;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然而，这里的 <code>index_path-&gt;indexorderbys</code> 和 <code>index_path-&gt;indexorderbycols</code> 均为空，我们接着分析 <code>index_path</code>。<code>IndexPath</code> 定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * [...]</span></span><br><span class="line"><span class="comment"> * &#x27;indexorderbys&#x27;, if not NIL, is a list of ORDER BY expressions that have</span></span><br><span class="line"><span class="comment"> * been found to be usable as ordering operators for an amcanorderbyop index.</span></span><br><span class="line"><span class="comment"> * The list must match the path&#x27;s pathkeys, ie, one expression per pathkey</span></span><br><span class="line"><span class="comment"> * in the same order.  These are not RestrictInfos, just bare expressions,</span></span><br><span class="line"><span class="comment"> * since they generally won&#x27;t yield booleans.  It&#x27;s guaranteed that each</span></span><br><span class="line"><span class="comment"> * expression has the index key on the left side of the operator.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &#x27;indexorderbycols&#x27; is an integer list of index column numbers (zero-based)</span></span><br><span class="line"><span class="comment"> * of the same length as &#x27;indexorderbys&#x27;, showing which index column each</span></span><br><span class="line"><span class="comment"> * ORDER BY expression is meant to be used with.  (There is no restriction</span></span><br><span class="line"><span class="comment"> * on which index column each ORDER BY can be used with.)</span></span><br><span class="line"><span class="comment"> * [...]</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">IndexPath</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    Path        path;</span><br><span class="line">    IndexOptInfo *indexinfo;</span><br><span class="line">    List       *indexclauses;</span><br><span class="line">    List       *indexorderbys;</span><br><span class="line">    List       *indexorderbycols;</span><br><span class="line">    ScanDirection indexscandir;</span><br><span class="line">    Cost        indextotalcost;</span><br><span class="line">    Selectivity indexselectivity;</span><br><span class="line">&#125; IndexPath;</span><br></pre></td></tr></table></figure>
+
+<p>从上面我们可以看到一个关键的信息 <code>ordering operators</code>，在官网上搜索 <code>ordering operators</code> 关键字，我们可以找到 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/index-scanning.html">Index Scanning</a> 和 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/xindex.html">Interfacing Extensions to Indexes</a> 里面有相关的描述。</p>
+<blockquote>
+<p>Some access methods return index entries in a well-defined order, others do not. There are actually two different ways that an access method can support sorted output:</p>
+<ul>
+<li><p>Access methods that always return entries in the natural ordering of their data (such as btree) should set amcanorder to true. Currently, such access methods must use btree-compatible strategy numbers for their equality and ordering operators.</p>
+</li>
+<li><p>Access methods that support ordering operators should set amcanorderbyop to true. This indicates that the index is capable of returning entries in an order satisfying ORDER BY index_key operator constant. Scan modifiers of that form can be passed to amrescan as described previously.</p>
+</li>
+</ul>
+</blockquote>
+<p>一些访问方法以明确定义的顺序返回索引条目，而另一些则没有。实际上，访问方法可以支持排序输出有两种不同的方式：</p>
+<ul>
+<li>始终以数据的自然顺序返回条目的访问方法（例如 btree）应将 <code>amcanorder</code> 设置为 <code>true</code>。目前，此类访问方法必须使用与 btree 兼容的策略编号作为其相等和排序运算符</li>
+<li>支持排序运算符的访问方法应将 <code>amcanorderbyop</code> 设置为 <code>true</code>。这表明索引能够以满足 <code>ORDER BY index_key</code> 运算符常量的顺序返回条目。</li>
+</ul>
+<blockquote>
+<p>Some index access methods (currently, only GiST and SP-GiST) support the concept of ordering operators. What we have been discussing so far are search operators. A search operator is one for which the index can be searched to find all rows satisfying <code>WHERE indexed_column operator constant</code>. Note that nothing is promised about the order in which the matching rows will be returned. In contrast, an ordering operator does not restrict the set of rows that can be returned, but instead determines their order. An ordering operator is one for which the index can be scanned to return rows in the order represented by <code>ORDER BY indexed_column operator constant</code>. The reason for defining ordering operators that way is that it supports nearest-neighbor searches, if the operator is one that measures distance. For example, a query like</p>
+<pre><code>SELECT * FROM places ORDER BY location &lt;-&gt; point &#39;(101,456)&#39; LIMIT 10;
+</code></pre>
+<p>finds the ten places closest to a given target point. A GiST index on the location column can do this efficiently because &lt;-&gt; is an ordering operator.</p>
+<p>While search operators have to return Boolean results, ordering operators usually return some other type, such as float or numeric for distances. This type is normally not the same as the data type being indexed. To avoid hard-wiring assumptions about the behavior of different data types, the definition of an ordering operator is required to name a B-tree operator family that specifies the sort ordering of the result data type. As was stated in the previous section, B-tree operator families define PostgreSQL’s notion of ordering, so this is a natural representation. Since the point <code>&lt;-&gt;</code> operator returns float8, it could be specified in an operator class creation command like this:</p>
+<pre><code>OPERATOR 15    &lt;-&gt; (point, point) FOR ORDER BY float_ops
+</code></pre>
+<p>where <code>float_ops</code> is the built-in operator family that includes operations on float8. This declaration states that the index is able to return rows in order of increasing values of the <code>&lt;-&gt;</code> operator.</p>
+</blockquote>
+<p>一些索引访问方法（目前只有 GiST 和 SP-GiST）支持排序运算符的概念。搜索运算符是一种可以搜索索引以找到满足 <code>WHERE indexed_column operator constant</code> 的所有行的运算符。对于返回的记录其顺序可能是随机的。相反，排序运算符不限制可以返回的记录，而是确定它们的顺序。排序运算符是一种可以扫描其索引以按 <code>ORDER BY indexed_column operator constant</code> 表示的顺序返回行的运算符。以这种方式定义排序运算符的原因是，如果运算符是测量距离的运算符，它可以支持最近邻搜索。例如：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> places <span class="keyword">ORDER</span> <span class="keyword">BY</span> location <span class="operator">&lt;</span><span class="operator">-</span><span class="operator">&gt;</span> point <span class="string">&#x27;(101,456)&#x27;</span> LIMIT <span class="number">10</span>;</span><br></pre></td></tr></table></figure>
+
+<p>找到最接近给定目标点的十个地点。<code>location</code> 列上的 GiST 索引可以有效地做到这一点，因为 <code>&lt;-&gt;</code> 是一个排序运算符。</p>
+<p>搜索运算符必须返回 <code>boolean</code> 类型的值，排序运算符通常返回其它类型，如代表距离的 <code>float</code> 或 <code>numeric</code> 类型。这种类型通常与被索引的数据类型不同。</p>
+<p>分析到这里我们大致可以知道为什么之前的 <code>ORDER BY index_key op constant</code> 这里在 <code>IndexScan</code> 中的 <code>indexorderby</code> 为空了，因为之前的示例中的索引上面的操作并不支持排序运算符，因此为空。我们可以通过下面的示例来进行验证。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl01(id <span class="type">int</span> <span class="keyword">primary</span> key, location point);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl01 <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;(40, 50)&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl01 <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;(30, 20)&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl01 <span class="keyword">VALUES</span> (<span class="number">3</span>, <span class="string">&#x27;(10, 24)&#x27;</span>);</span><br><span class="line"><span class="keyword">CREATE</span> INDEX <span class="keyword">ON</span> tbl01 <span class="keyword">USING</span> gist(location);</span><br></pre></td></tr></table></figure>
+
+<p>基于上面的示例，当我们执行 <code>SELECT * FROM tbl01 ORDER BY location &lt;-&gt; point &#39;(0, 0)&#39;</code> 查询时，<code>IndexScan</code> 中的 <code>indexorderby</code> 将不为空。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>按照文档来说，PostgreSQL 索引有查找运算符（Search Operator）和排序运算符（Ordering Operator）。我们通常使用到的是查找运算符，排序运算符接触的比较少（至少对于我来说是这样的）。</p>
+<ul>
+<li>查找运算符：用于查询符合条件的记录，返回记录的顺序是随机的，即有多个记录的值等于查找键，这些记录在第一次可能以 <code>a, b, c</code> 的顺序返回，第二次则以 <code>c, a, b</code> 的顺序返回。查找运算符的返回值是 <code>boolean</code> 类型。</li>
+<li>排序运算符：用于对记录进行排序，返回记录的顺序是确定的，多次执行都是一样的。排序运算符的返回值通常是其它类型，如代表距离的 <code>float</code> 或 <code>numeric</code> 类型。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/index-scanning.html">https://www.postgresql.org/docs/current/index-scanning.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/xindex.html">https://www.postgresql.org/docs/current/xindex.html</a><br>[3] 《PostgreSQL 修炼之道 - 从小工到专家》</p>
+<div class="just-for-fun">
+笑林广记 - 考监
+
+<p>一监生过国学门，闻祭酒方盛怒两生而治之，问门上人者，然则打欤？罚欤？镦锁欤？<br>答曰：“出题考文。”<br>生即咈然，曰：“咦，罪不至此。”</p>
+</div>
+
+
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/01/postgresql-index-scan-ordering-operators/" title="PostgreSQL 索引扫描排序运算符">https://blog.japinli.top/2022/01/postgresql-index-scan-ordering-operators/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/01/postgresql-basebackup-target/" rel="prev" title="PostgreSQL 15 特性 - 基础备份存储位置">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 15 特性 - 基础备份存储位置
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/01/convert-openssh-private-key-to-rsa-private-key/" rel="next" title="OpenSSH 私钥转 RSA 私钥">
+                  OpenSSH 私钥转 RSA 私钥 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

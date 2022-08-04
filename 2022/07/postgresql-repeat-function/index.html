@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 的 repeat() 函数用于重复生成给定的字符串。例如： 1repeat(&amp;#x27;abc&amp;#x27;, 3) -&gt; &amp;#x27;abcabcabc&amp;#x27;  最近在使用这个方法来生成 1GB 的数据时，遇到了一点问题。如下所示： 12postgres&#x3D;# CREATE TABLE myrepeat AS SELECT repeat(&amp;#x27;a&amp;#x27;,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 的 repeat 函数">
+<meta property="og:url" content="https://blog.japinli.top/2022/07/postgresql-repeat-function/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 的 repeat() 函数用于重复生成给定的字符串。例如： 1repeat(&amp;#x27;abc&amp;#x27;, 3) -&gt; &amp;#x27;abcabcabc&amp;#x27;  最近在使用这个方法来生成 1GB 的数据时，遇到了一点问题。如下所示： 12postgres&#x3D;# CREATE TABLE myrepeat AS SELECT repeat(&amp;#x27;a&amp;#x27;,">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-07-15T13:44:38.000Z">
+<meta property="article:modified_time" content="2022-08-01T01:51:03.652Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/07/postgresql-repeat-function/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/07/postgresql-repeat-function/","path":"2022/07/postgresql-repeat-function/","title":"PostgreSQL 的 repeat 函数"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 的 repeat 函数 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">1.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="nav-number">2.</span> <span class="nav-text">解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/07/postgresql-repeat-function/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 的 repeat 函数
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-07-15 21:44:38" itemprop="dateCreated datePublished" datetime="2022-07-15T21:44:38+08:00">2022-07-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>10k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 的 <code>repeat()</code> 函数用于重复生成给定的字符串。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">repeat(&#x27;abc&#x27;, 3) -&gt; &#x27;abcabcabc&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>最近在使用这个方法来生成 1GB 的数据时，遇到了一点问题。如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> myrepeat <span class="keyword">AS</span> <span class="keyword">SELECT</span> repeat(<span class="string">&#x27;a&#x27;</span>, <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span>);</span><br><span class="line">ERROR:  invalid memory alloc request size <span class="number">1073741828</span></span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>通过查找 <code>invalid memory alloc request size</code> 字符串，我发现这是和 PostgreSQL 自带的内存管理模块有关。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> grep <span class="string">&#x27;invalid memory alloc request size&#x27;</span> -rn src/</span></span><br><span class="line">src/backend/utils/mmgr/mcxt.c:871:              elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:914:              elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:952:              elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:988:              elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:1078:             elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:1109:             elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:1143:             elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:1194:             elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:1232:             elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br><span class="line">src/backend/utils/mmgr/mcxt.c:1264:             elog(ERROR, &quot;invalid memory alloc request size %zu&quot;, size);</span><br></pre></td></tr></table></figure>
+
+<p>与 <code>invalid memory alloc request size</code> 有关的判断只有两个 <code>AllocHugeSizeIsValid()</code> 和 <code>AllocSizeIsValid()</code>，它们都是宏定义，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * MaxAllocSize, MaxAllocHugeSize</span></span><br><span class="line"><span class="comment"> *      Quasi-arbitrary limits on size of allocations.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Note:</span></span><br><span class="line"><span class="comment"> *      There is no guarantee that smaller allocations will succeed, but</span></span><br><span class="line"><span class="comment"> *      larger requests will be summarily denied.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * palloc() enforces MaxAllocSize, chosen to correspond to the limiting size</span></span><br><span class="line"><span class="comment"> * of varlena objects under TOAST.  See VARSIZE_4B() and related macros in</span></span><br><span class="line"><span class="comment"> * postgres.h.  Many datatypes assume that any allocatable size can be</span></span><br><span class="line"><span class="comment"> * represented in a varlena header.  This limit also permits a caller to use</span></span><br><span class="line"><span class="comment"> * an &quot;int&quot; variable for an index into or length of an allocation.  Callers</span></span><br><span class="line"><span class="comment"> * careful to avoid these hazards can access the higher limit with</span></span><br><span class="line"><span class="comment"> * MemoryContextAllocHuge().  Both limits permit code to assume that it may</span></span><br><span class="line"><span class="comment"> * compute twice an allocation&#x27;s size without overflow.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxAllocSize    ((Size) 0x3fffffff) <span class="comment">/* 1 gigabyte - 1 */</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AllocSizeIsValid(size)  ((Size) (size) &lt;= MaxAllocSize)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MaxAllocHugeSize    (SIZE_MAX / 2)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AllocHugeSizeIsValid(size)  ((Size) (size) &lt;= MaxAllocHugeSize)</span></span><br></pre></td></tr></table></figure>
+
+<p>通过调试我发现 <code>repeat()</code> 函数会调用 <code>palloc()</code> 进行内存分配，这也就意味着它最大可以分配到 <code>1GB - 1</code> 的内存大小。</p>
+<p>然而，我们的 <code>repeat(&#39;a&#39;, 1024 * 1024 * 1024)</code> 实际上却需要 <code>1073741828 = 1024 * 1024 * 1024 + 4</code> 的内存大小，这是为什么呢？我们来看一下 <code>repeat()</code> 函数的实现。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">repeat</span><span class="params">(PG_FUNCTION_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    text       *<span class="built_in">string</span> = PG_GETARG_TEXT_PP(<span class="number">0</span>);</span><br><span class="line">    int32       count = PG_GETARG_INT32(<span class="number">1</span>);</span><br><span class="line">    text       *result;</span><br><span class="line">    <span class="keyword">int</span>         slen,</span><br><span class="line">                tlen;</span><br><span class="line">    <span class="keyword">int</span>         i;</span><br><span class="line">    <span class="keyword">char</span>       *cp,</span><br><span class="line">               *sp;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (count &lt; <span class="number">0</span>)</span><br><span class="line">        count = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    slen = VARSIZE_ANY_EXHDR(<span class="built_in">string</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (unlikely(pg_mul_s32_overflow(count, slen, &amp;tlen)) ||</span><br><span class="line">        unlikely(pg_add_s32_overflow(tlen, VARHDRSZ, &amp;tlen)))</span><br><span class="line">        ereport(ERROR,</span><br><span class="line">                (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),</span><br><span class="line">                 errmsg(<span class="string">&quot;requested length too large&quot;</span>)));</span><br><span class="line"></span><br><span class="line">    result = (text *) palloc(tlen);</span><br><span class="line"></span><br><span class="line">    SET_VARSIZE(result, tlen);</span><br><span class="line">    cp = VARDATA(result);</span><br><span class="line">    sp = VARDATA_ANY(<span class="built_in">string</span>);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">memcpy</span>(cp, sp, slen);</span><br><span class="line">        cp += slen;</span><br><span class="line">        CHECK_FOR_INTERRUPTS();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    PG_RETURN_TEXT_P(result);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>需要注意的是，在调用 <code>palloc()</code> 之前 <code>repeat()</code> 函数通过 <code>pg_mul_s32_overflow()</code> 和 <code>pg_add_s32_overflow()</code> 函数来计算出我们需要分配的内存大小。当执行 <code>pg_mul_s32_overflow()</code> 之后，一切都是正常的，我们需要分配 <code>1GB</code> 的内存，但是由于 PostgreSQL 内部对于 <code>text</code> 类型的处理需要额外的 <code>4</code> 个字节来存储数据的长度，因此它调用 <code>pg_add_s32_overflow()</code> 来计算实际需要分配的内存大小，<code>VARHDRSZ</code> 的定义如下所示，这也正好解释了为什么会多出 4 字节。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> VARHDRSZ            ((int32) sizeof(int32))</span></span><br></pre></td></tr></table></figure>
+
+<p>我们尝试使用减小所需的内存大小。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> myrepeat <span class="keyword">AS</span> <span class="keyword">SELECT</span> repeat(<span class="string">&#x27;a&#x27;</span>, <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">-</span> <span class="number">5</span>);</span><br><span class="line">ERROR:  invalid memory alloc request size <span class="number">1073741871</span></span><br></pre></td></tr></table></figure>
+
+<p>通过前面的分析，我们知道 <code>repeat(&#39;a&#39;, 1024 * 1024 * 1024 - 5)</code> 的大小为 <code>1073741823</code>，那 <code>1073741871 - 1073741823 = 48</code> 是怎么来的呢？通过调试，其堆栈如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">#0  palloc0 (size=1073741871) at /mnt/workspace/postgresql/build/../src/backend/utils/mmgr/mcxt.c:1103</span><br><span class="line">#1  0x0000561925199faf in heap_form_tuple (tupleDescriptor=0x561927cb4310, values=0x561927cb4470, isnull=0x561927cb4478)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/access/common/heaptuple.c:1069</span><br><span class="line">#2  0x00005619254879aa in tts_virtual_copy_heap_tuple (slot=0x561927cb4428) at /mnt/workspace/postgresql/build/../src/backend/executor/execTuples.c:280</span><br><span class="line">#3  0x000056192548a40c in ExecFetchSlotHeapTuple (slot=0x561927cb4428, materialize=true, shouldFree=0x7ffc9cc5197f)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/executor/execTuples.c:1660</span><br><span class="line">#4  0x000056192520e0c9 in heapam_tuple_insert (relation=0x7fdacaa9d3e0, slot=0x561927cb4428, cid=5, options=2, bistate=0x561927cb83f0)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/access/heap/heapam_handler.c:245</span><br><span class="line">#5  0x00005619253b2edf in table_tuple_insert (rel=0x7fdacaa9d3e0, slot=0x561927cb4428, cid=5, options=2, bistate=0x561927cb83f0)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/include/access/tableam.h:1376</span><br><span class="line">#6  0x00005619253b3d73 in intorel_receive (slot=0x561927cb4428, self=0x561927c82430) at /mnt/workspace/postgresql/build/../src/backend/commands/createas.c:586</span><br><span class="line">#7  0x0000561925478d86 in ExecutePlan (estate=0x561927cb3ed0, planstate=0x561927cb4108, use_parallel_mode=false, operation=CMD_SELECT, sendTuples=true, numberTuples=0,</span><br><span class="line">    direction=ForwardScanDirection, dest=0x561927c82430, execute_once=true) at /mnt/workspace/postgresql/build/../src/backend/executor/execMain.c:1667</span><br><span class="line">#8  0x0000561925476735 in standard_ExecutorRun (queryDesc=0x561927cab990, direction=ForwardScanDirection, count=0, execute_once=true)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/executor/execMain.c:363</span><br><span class="line">#9  0x000056192547654b in ExecutorRun (queryDesc=0x561927cab990, direction=ForwardScanDirection, count=0, execute_once=true)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/executor/execMain.c:307</span><br><span class="line">#10 0x00005619253b3711 in ExecCreateTableAs (pstate=0x561927c35b00, stmt=0x561927b5aa70, params=0x0, queryEnv=0x0, qc=0x7ffc9cc52370)</span><br></pre></td></tr></table></figure>
+
+<p>关键的核心就在 <code>heap_form_tuple()</code> 函数。其中关于内存分配的代码如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">HeapTuple</span></span><br><span class="line"><span class="function"><span class="title">heap_form_tuple</span><span class="params">(TupleDesc tupleDescriptor,</span></span></span><br><span class="line"><span class="params"><span class="function">                Datum *values,</span></span></span><br><span class="line"><span class="params"><span class="function">                <span class="keyword">bool</span> *isnull)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Determine total space needed</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    len = offsetof(HeapTupleHeaderData, t_bits);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (hasnull)</span><br><span class="line">        len += BITMAPLEN(numberOfAttributes);</span><br><span class="line"></span><br><span class="line">    hoff = len = MAXALIGN(len); <span class="comment">/* align user data safely */</span></span><br><span class="line"></span><br><span class="line">    data_len = heap_compute_data_size(tupleDescriptor, values, isnull);</span><br><span class="line"></span><br><span class="line">    len += data_len;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Allocate and zero the space needed.  Note that the tuple body and</span></span><br><span class="line"><span class="comment">     * HeapTupleData management structure are allocated in one chunk.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    tuple = (HeapTuple) palloc0(HEAPTUPLESIZE + len);</span><br><span class="line"></span><br><span class="line">    [...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先，我们需要一个 <code>HeapTupleHeaderData</code> 结构，随后是 <code>NULL</code> 值的 bitmap（如果有的话），接着是数据，最后还需要包含一个 <code>HEAPTUPLESIZE</code> 大小。其中 <code>HeapTupleHeaderData</code> 和 <code>HEAPTUPLESIZE</code> 大小是固定的，均为 <code>24</code>，在这里没有 <code>NULL</code> bitmap，因此其长度为 <code>0</code>，在加上数据长度 <code>1073741823</code>，所以，最终我们需要 <code>1073741823 + 24 + 24 = 1073741871</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> myrepeat <span class="keyword">AS</span> <span class="keyword">SELECT</span> repeat(<span class="string">&#x27;a&#x27;</span>, <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">-</span> <span class="number">5</span> <span class="operator">-</span> <span class="number">48</span>);</span><br><span class="line"><span class="keyword">SELECT</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+<p>此外，如果我们直接使用 <code>SELECT</code> 的话，会报如下错误：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> repeat(<span class="string">&#x27;a&#x27;</span>, <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">-</span> <span class="number">5</span>);</span><br><span class="line">ERROR:  <span class="keyword">out</span> <span class="keyword">of</span> memory</span><br><span class="line">DETAIL:  Cannot enlarge string buffer containing <span class="number">6</span> bytes <span class="keyword">by</span> <span class="number">1073741819</span> more bytes.</span><br></pre></td></tr></table></figure>
+<p>通过上面的错误提示，可以推测是 <code>enlargeStringInfo()</code> 函数报的错，查找源码发现确实如此。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ grep <span class="string">&#x27;Cannot enlarge string buffer containing&#x27;</span> -rn src/ --exclude <span class="string">&quot;*.po&quot;</span></span><br><span class="line">src/common/stringinfo.c:306:                             errdetail(<span class="string">&quot;Cannot enlarge string buffer containing %d bytes by %d more bytes.&quot;</span>,</span><br><span class="line">src/common/stringinfo.c:310:                            _(<span class="string">&quot;out of memory\n\nCannot enlarge string buffer containing %d bytes by %d more bytes.\n&quot;</span>),</span><br></pre></td></tr></table></figure>
+
+<p>通过断点调试可以看到其堆栈信息如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#0  enlargeStringInfo (str=0x561927cacf70, needed=1073741819) at /mnt/workspace/postgresql/build/../src/common/stringinfo.c:291</span><br><span class="line">#1  0x000056192591e042 in appendBinaryStringInfoNT (str=0x561927cacf70, data=0x7fda8aa49050 &#x27;a&#x27; &lt;repeats 200 times&gt;..., datalen=1073741819)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/common/stringinfo.c:258</span><br><span class="line">#2  0x00005619254fb323 in pq_sendcountedtext (buf=0x561927cacf70, str=0x7fda8aa49050 &#x27;a&#x27; &lt;repeats 200 times&gt;..., slen=1073741819, countincludesself=false)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/libpq/pqformat.c:159</span><br><span class="line">#3  0x000056192519d6af in printtup (slot=0x561927c7b2c8, self=0x561927cacf20) at /mnt/workspace/postgresql/build/../src/backend/access/common/printtup.c:358</span><br></pre></td></tr></table></figure>
+
+<p>从 <code>printtup()</code> 函数可以看到服务器是如何将数据传输到客户端的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">printtup</span><span class="params">(TupleTableSlot *slot, DestReceiver *self)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Prepare a DataRow message (note buffer is in per-row context)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    pq_beginmessage_reuse(buf, <span class="string">&#x27;D&#x27;</span>);</span><br><span class="line"></span><br><span class="line">    pq_sendint16(buf, natts);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * send the attributes of this tuple</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; natts; ++i)</span><br><span class="line">    &#123;</span><br><span class="line">        PrinttupAttrInfo *thisState = myState-&gt;myinfo + i;</span><br><span class="line">        Datum       attr = slot-&gt;tts_values[i];</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (slot-&gt;tts_isnull[i])</span><br><span class="line">        &#123;</span><br><span class="line">            pq_sendint32(buf, <span class="number">-1</span>);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Here we catch undefined bytes in datums that are returned to the</span></span><br><span class="line"><span class="comment">         * client without hitting disk; see comments at the related check in</span></span><br><span class="line"><span class="comment">         * PageAddItem().  This test is most useful for uncompressed,</span></span><br><span class="line"><span class="comment">         * non-external datums, but we&#x27;re quite likely to see such here when</span></span><br><span class="line"><span class="comment">         * testing new C functions.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">if</span> (thisState-&gt;typisvarlena)</span><br><span class="line">            VALGRIND_CHECK_MEM_IS_DEFINED(DatumGetPointer(attr),</span><br><span class="line">                                          VARSIZE_ANY(attr));</span><br><span class="line">        <span class="keyword">if</span> (thisState-&gt;format == <span class="number">0</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Text output */</span></span><br><span class="line">            <span class="keyword">char</span>       *outputstr;</span><br><span class="line"></span><br><span class="line">            outputstr = OutputFunctionCall(&amp;thisState-&gt;finfo, attr);</span><br><span class="line">            pq_sendcountedtext(buf, outputstr, <span class="built_in">strlen</span>(outputstr), <span class="literal">false</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Binary output */</span></span><br><span class="line">            bytea      *outputbytes;</span><br><span class="line"></span><br><span class="line">            outputbytes = SendFunctionCall(&amp;thisState-&gt;finfo, attr);</span><br><span class="line">            pq_sendint32(buf, VARSIZE(outputbytes) - VARHDRSZ);</span><br><span class="line">            pq_sendbytes(buf, VARDATA(outputbytes),</span><br><span class="line">                         VARSIZE(outputbytes) - VARHDRSZ);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    pq_endmessage_reuse(buf);</span><br><span class="line"></span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先，它包含一个 <code>16</code> 位的属性列数量。然后是每个属性列值的长度和值。属性列数量的长度为 <code>2</code>，属性列值的长度为 <code>32</code> 位整型，长度为 <code>4</code>，因此总长度为 <code>6</code>，最后附加上字符串长度 <code>1073741823</code>。然而，<code>enlargeStringInfo()</code> 最大能分配 <code>1073741823</code> 的内存空间，然而在当前的 <code>StringInfoData</code> 中已经包含了 <code>6</code> 个字节，但是我们还需要 <code>1024 * 1024 * 1024 - 5 = 1073741819</code> 个字节，<code>1073741819 + 6 = 1073741825</code> 超出了 <code>1073741823</code> 的限制。如果我们执行下面的查询，那么便可以获取到数据。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> repeat(<span class="string">&#x27;a&#x27;</span>, <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">-</span> <span class="number">5</span> <span class="operator">-</span> <span class="number">3</span>);</span><br></pre></td></tr></table></figure>
+
+<p>注意，这里减去 <code>3</code> 是因为 <code>enlargeStringInfo()</code> 函数里面的 <code>needed</code> 不包含末尾的 <code>null</code> 字符。嗷嗷嗷！世界一下子就清静了！</p>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>当然就是避免使用这么大的字段咯！实际中估计也很少用到吧！:)</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/functions-string.html">https://www.postgresql.org/docs/current/functions-string.html</a><br>[2] <a target="_blank" rel="noopener" href="https://postgr.es/m/ME3P282MB16676ED32167189CB0462173B6D69@ME3P282MB1667.AUSP282.PROD.OUTLOOK.COM">https://postgr.es/m/ME3P282MB16676ED32167189CB0462173B6D69@ME3P282MB1667.AUSP282.PROD.OUTLOOK.COM</a></p>
+<div class="just-for-fun">
+笑林广记 - 仿制字
+
+<p>一生见有投制生帖者，深叹制字新奇，偶致一远札，遂效之。<br>仆致书回，生问见书有何话说，仆曰：“当面启看，便问老相公无恙，又问老安人好否。予曰：‘俱安。’乃沉吟半晌，带笑而入，才发回书。”<br>生大喜曰：“人不可不学，只一字用着得当，便一家俱问到，添下许多殷勤。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/07/postgresql-repeat-function/" title="PostgreSQL 的 repeat 函数">https://blog.japinli.top/2022/07/postgresql-repeat-function/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/04/queries-in-postgresql-sequential-scan/" rel="prev" title="【译】PostgreSQL 中的查询 - 顺序扫描">
+                  <i class="fa fa-chevron-left"></i> 【译】PostgreSQL 中的查询 - 顺序扫描
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/07/memory-leak-in-psql-describe/" rel="next" title="Psql 内存泄漏">
+                  Psql 内存泄漏 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">633k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:36</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
