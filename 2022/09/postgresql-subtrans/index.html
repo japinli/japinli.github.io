@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="本文简要记录一下 PostgreSQL 中有关子事务相关的处理，PostgreSQL 中子事务（pg_subtrans）的管理与事务管理（pg_xact）类似，它存储了每个事务的父事务 ID。它是实现嵌套事务的基本组成部分。主事务（即顶层事务）的父事务 ID 为 InvalidTransactionId，每个子事务都有其直接的父事务 ID。因此，我们可以通过子事务遍历很容易找到父事务 ID，反之则">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 子事务日志管理器">
+<meta property="og:url" content="https://blog.japinli.top/2022/09/postgresql-subtrans/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="本文简要记录一下 PostgreSQL 中有关子事务相关的处理，PostgreSQL 中子事务（pg_subtrans）的管理与事务管理（pg_xact）类似，它存储了每个事务的父事务 ID。它是实现嵌套事务的基本组成部分。主事务（即顶层事务）的父事务 ID 为 InvalidTransactionId，每个子事务都有其直接的父事务 ID。因此，我们可以通过子事务遍历很容易找到父事务 ID，反之则">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-layout.png">
+<meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-savepoint1.png">
+<meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-savepoint2.png">
+<meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-savepoint3.png">
+<meta property="article:published_time" content="2022-09-14T13:16:18.000Z">
+<meta property="article:modified_time" content="2022-09-14T14:04:23.904Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-layout.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2022/09/postgresql-subtrans/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2022/09/postgresql-subtrans/","path":"2022/09/postgresql-subtrans/","title":"PostgreSQL 子事务日志管理器"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 子事务日志管理器 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">7</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">129</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E9%9D%A2%E5%B8%83%E5%B1%80"><span class="nav-number">1.</span> <span class="nav-text">页面布局</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E9%80%BB%E8%BE%91"><span class="nav-number">2.</span> <span class="nav-text">代码逻辑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">129</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">49</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/09/postgresql-subtrans/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 子事务日志管理器
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-09-14 21:16:18" itemprop="dateCreated datePublished" datetime="2022-09-14T21:16:18+08:00">2022-09-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Database/" itemprop="url" rel="index"><span itemprop="name">Database</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>本文简要记录一下 PostgreSQL 中有关子事务相关的处理，PostgreSQL 中子事务（<code>pg_subtrans</code>）的管理与事务管理（<code>pg_xact</code>）类似，它存储了每个事务的父事务 ID。它是实现嵌套事务的基本组成部分。主事务（即顶层事务）的父事务 ID 为 <code>InvalidTransactionId</code>，每个子事务都有其直接的父事务 ID。因此，我们可以通过子事务遍历很容易找到父事务 ID，反之则不然。</p>
+<p><code>pg_subtrans</code> 只记录当前已打开的事务，因此无需为崩溃或重启持久化数据。在重启时，PostgreSQL 会将当前获取的页面清零。</p>
+<span id="more"></span>
+
+<h2 id="页面布局"><a href="#页面布局" class="headerlink" title="页面布局"></a>页面布局</h2><p>PostgreSQL 将 <code>pg_subtrans</code> 目录下的文件视为一个 hash 表，可以通过事务的 ID 快速获取其直接的父事务 ID，通过这种方式一直往上遍历可以获取到主事务 ID。</p>
+<p>PostgreSQL 将子事务信息按页面进行分块，并且 32 个页面组成一个段文件（即磁盘文件）。由于事务 ID 是 32 位无符号数，因此每个页面可以存储 <code>BLKSZ / sizeof(TransactionId)</code> 个事务的信息。如下图所示，我们采用 8K 的页面，则每个页面可以存储 <code>8192 / 4 = 2048</code> 个事务的信息。例如当前事务 ID 为 741，则我们可以通过 <code>741 * 4 = 0x00000b94</code> 得到其父事务 ID 为 <code>0x000002e4 = 740</code>，同样地，我们可以得到 740 的父事务 ID 为 739，而 739 的父事务 ID 为 0，即 739 是一个主事务，其关系为 <code>741 -&gt; 740 -&gt; 739</code>。</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-layout.png" class="">
+
+<p>上面的计算中我们忽略了页面编号的计算，<a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L51">子事务管理器提供了 <code>TransactionIdToPage</code> 和 <code>TransactionIdToEntry</code> 宏来帮助计算页面号和页面偏移量</a>，其定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* We need four bytes per xact. */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SUBTRANS_XACTS_PER_PAGE (BLCKSZ / sizeof(TransactionId))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToPage(xid) ((xid) / (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToEntry(xid) ((xid) % (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="代码逻辑"><a href="#代码逻辑" class="headerlink" title="代码逻辑"></a>代码逻辑</h2><p>PostgreSQL 使用子事务来实现 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 功能，内部则使用<a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L183"><code>TransactionStateData</code></a> 结构来描述事务的状态。下面将结合实际情况分析一下子事务的工作原理。首先，使用下面的命令创建示例表。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(id <span class="type">int</span>, info text);</span><br></pre></td></tr></table></figure>
+
+<p>当我们使用 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 开启事务时，它将调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L3665"><code>BeginTransactionBlock()</code></a> 函数将 <code>TransactionState-&gt;blockState</code> 设置为 <code>TBLOCK_BEGIN</code> 用以表明我们正式进入一个事务块，当执行完 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 时，<a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/tcop/postgres.c#L2714"><code>finish_xact_command()</code></a> 函数将调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数切换 <code>TransactionState-&gt;blockState</code> 状态为 <code>TBLOCK_INPROCESS</code> 以表明我们事务块正在运行中。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; BeginTransactionBlock  (TBLOCK_STARTED =&gt; TBLOCK_BEGIN)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand  (TBLOCK_START =&gt; TBLOCK_INPROCESS)</span><br></pre></td></tr></table></figure>
+
+<p>现在我们在执行下面的语句插入一条记录。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;A&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>由于这是当前事务中的第一次修改，因此，<a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5//src/backend/access/heap/heapam.c#L2069"><code>heap_insert()</code></a> 函数将调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L431"><code>GetCurrentTransactionId()</code></a> 来获取一个事务 ID，如果当前事务已经分配了事务 ID，则直接返回，否则调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L560"><code>AssignTransactionId()</code></a> 分配一个新的事务 ID（需要在 <code>XidGenLock</code> 获得 <code>LW_EXCLUSIVE</code> 锁），并保存到 <code>TransactionState-&gt;fullTransactionId</code> 中。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我们通过 <code>SAVEPOINT s1</code> 创建一个子事务（保存点），函数 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 将t通过 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L5142"><code>PushTransactoin()</code></a> 函数新建一个子事务状态对象，并将当前的事务对象压栈，随后，将新建的子事务对象设置为当前事务对象。当执行完 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 函数之后，其事务状态信息如下图所示：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint1.png" class="">
+
+<p><strong>注意：</strong> PostgreSQL 一个事务最大支持 <code>2^32 - 1</code> 个子事务。</p>
+<p>紧接着，<code>SAVEPOINT s1</code> 语句完成需要调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数提交，由于当前需要开启子事务，因此 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4799"><code>StartSubTransaction()</code></a> 函数进入到子事务状态。最后，事务状态信息如下图所示：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint2.png" class="">
+
+<p><a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 语句的执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; DefineSavepoint</span><br><span class="line">  |                                    +-&gt; PushTransaction</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; StartSubtransaction</span><br></pre></td></tr></table></figure>
+
+<p>现在，我们下面的语句在子事务中插入一条记录新的记录。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;B&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>其整体的执行流程与主事务的大致相同，不同在于获取事务 ID 之后的处理方式。当前事务状态的父事务不为空，因此，该事务为子事务，在调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/varsup.c#L37"><code>GetNewTransactionId()</code></a> 获得事务 ID 之后，它将调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数在 <code>pg_subtrans</code> 中记录父事务的事务 ID。当执行完插入后，事务状态信息如下图所示（更新了子事务状态的 <code>FullTransactionId</code> 字段）：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint3.png" class="">
+
+<p>其执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  |                                                     +-&gt; SubTransSetParent  (update pg_subtrans information)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数为每个子事务记录其直接父事务的事务 ID，其代码如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Record the parent of a subtransaction in the subtrans log.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">SubTransSetParent</span><span class="params">(TransactionId xid, TransactionId parent)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span>			pageno = TransactionIdToPage(xid);</span><br><span class="line">	<span class="keyword">int</span>			entryno = TransactionIdToEntry(xid);</span><br><span class="line">	<span class="keyword">int</span>			slotno;</span><br><span class="line">	TransactionId *ptr;</span><br><span class="line"></span><br><span class="line">	Assert(TransactionIdIsValid(parent));</span><br><span class="line">	Assert(TransactionIdFollows(xid, parent));</span><br><span class="line"></span><br><span class="line">	LWLockAcquire(SubtransSLRULock, LW_EXCLUSIVE);</span><br><span class="line"></span><br><span class="line">	slotno = SimpleLruReadPage(SubTransCtl, pageno, <span class="literal">true</span>, xid);</span><br><span class="line">	ptr = (TransactionId *) SubTransCtl-&gt;shared-&gt;page_buffer[slotno];</span><br><span class="line">	ptr += entryno;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * It&#x27;s possible we&#x27;ll try to set the parent xid multiple times but we</span></span><br><span class="line"><span class="comment">	 * shouldn&#x27;t ever be changing the xid from one valid xid to another valid</span></span><br><span class="line"><span class="comment">	 * xid, which would corrupt the data structure.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (*ptr != parent)</span><br><span class="line">	&#123;</span><br><span class="line">		Assert(*ptr == InvalidTransactionId);</span><br><span class="line">		*ptr = parent;</span><br><span class="line">		SubTransCtl-&gt;shared-&gt;page_dirty[slotno] = <span class="literal">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	LWLockRelease(SubtransSLRULock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>它根据子事务的 ID 获取到对应的页面编号和页内偏移，随后读取相应的页面并将父事务 ID 写入，此时的信息仅在共享内存中，通过 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-checkpoint.html"><code>CHECKPOINT</code></a> 可以将其刷盘。</p>
+<p>最后，我们来看看事务的提交过程，当我们执行 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-commit.html"><code>COMMIT</code></a> 时，其执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommitSubTransaction</span><br><span class="line">                    +-&gt; PopTransaction</span><br><span class="line">              +-&gt; CommitTransaction</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将循环执行 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4842"><code>CommitSubTransaction()</code></a> 函数来提交子事务；随后，如果是需要提交主事务，则调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CommitTransaction()</code></a> 函数进行提交（这里面涉及到了 WAL 日志以及 CLOG 相关的更新，感兴趣的朋友可以去看看）主事务。</p>
+<p>如果我们执行 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CHECKPOINT</code></a>，那么我们在 <code>$PGDATA/pg_subtrans</code> 目录下可以看到上述子事务的相关信息。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ hexdump -C 0000</span><br><span class="line">00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">*</span><br><span class="line">00000b80  00 00 00 00 00 00 00 00  d7 02 00 00 00 00 00 00  |................|</span><br><span class="line">00000b90  e3 02 00 00 e4 02 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">00000ba0  00 00 00 00 00 00 00 00  e9 02 00 00 00 00 00 00  |................|</span><br><span class="line">00000bb0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">00000bc0  00 00 00 00 00 00 00 00  ee 02 00 00 00 00 00 00  |................|</span><br><span class="line">00000bd0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">*</span><br><span class="line">00002000</span><br></pre></td></tr></table></figure>
+
+<p><code>0x00000bc8</code> 对应的事务 ID 为 <code>int(0xbc8) / 4 = 754</code>，而他的父事务 ID 为 <code>0x02ee = 750</code>，750 事务在 0 号页面的 <code>hex(750 * 4) = 0xbb8</code>，全为 0，因此，事务 750 是主事务，这与上面的实际情况一致。</p>
+<p>到此，关于 PostgreSQL 的子事务基本上就了解的差不多了，这部分内容其实相对还是比较简单的，<code>pg_xact</code> 的内容就要比 <code>pg_subtrans</code> 稍微复杂一些。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-begin.html">https://www.postgresql.org/docs/14/sql-begin.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-checkpoint.html">https://www.postgresql.org/docs/14/sql-checkpoint.html</a><br>[3] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-commit.html">https://www.postgresql.org/docs/14/sql-commit.html</a><br>[4] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-savepoint.html">https://www.postgresql.org/docs/14/sql-savepoint.html</a><br>[5] <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/tree/REL_14_5">https://github.com/postgres/postgres/tree/REL_14_5</a></p>
+<div class="just-for-fun">
+笑林广记 -
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2022/09/postgresql-subtrans/" title="PostgreSQL 子事务日志管理器">https://blog.japinli.top/2022/09/postgresql-subtrans/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/08/postgresql-text-search-dictionary-crashed/" rel="prev" title="PostgreSQL 文本搜索字典导致奔溃">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 文本搜索字典导致奔溃
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">644k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:46</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>

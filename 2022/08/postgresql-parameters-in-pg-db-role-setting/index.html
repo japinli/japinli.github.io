@@ -20,16 +20,16 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
-<meta name="description" content="在上一篇文章中介绍了如何修改用户或数据库级别的参数，已经它们的存储位置（pg_db_role_setting 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。">
+<meta name="description" content="在上一篇文章中介绍了如何修改用户或数据库级别的参数，以及它们的存储位置（pg_db_role_setting 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="PostgreSQL pg_db_role_setting 参数修改">
 <meta property="og:url" content="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/index.html">
 <meta property="og:site_name" content="Japin">
-<meta property="og:description" content="在上一篇文章中介绍了如何修改用户或数据库级别的参数，已经它们的存储位置（pg_db_role_setting 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。">
+<meta property="og:description" content="在上一篇文章中介绍了如何修改用户或数据库级别的参数，以及它们的存储位置（pg_db_role_setting 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blog.japinli.top/2022/08/postgresql-parameters-in-pg-db-role-setting/graceful.png">
 <meta property="article:published_time" content="2022-08-03T14:48:10.000Z">
-<meta property="article:modified_time" content="2022-08-04T16:00:45.173Z">
+<meta property="article:modified_time" content="2022-09-07T14:59:05.729Z">
 <meta property="article:author" content="Japin Li">
 <meta property="article:tag" content="PostgreSQL">
 <meta name="twitter:card" content="summary">
@@ -91,8 +91,8 @@
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
         <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
-        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">127</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">7</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">129</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -169,13 +169,13 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">129</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">7</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
@@ -293,7 +293,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <p>在<a href="/2022/08/postgresql-parameters-for-database-and-role/" title="上一篇">上一篇</a>文章中介绍了如何修改用户或数据库级别的参数，已经它们的存储位置（<code>pg_db_role_setting</code> 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。</p>
+        <p>在<a href="/2022/08/postgresql-parameters-for-database-and-role/" title="上一篇">上一篇</a>文章中介绍了如何修改用户或数据库级别的参数，以及它们的存储位置（<code>pg_db_role_setting</code> 系统表），本文简要说明一下关于这里的参数配置不当，从而导致无法连接数据库的问题。</p>
 <span id="more"></span>
 
 <h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>我尝试通过 <code>ALTER ROLE all SET local_preload_libraries TO fdafd;</code> 修改配置，退出之后，我尝试重新登录时遇到如下问题（这里仅供测试，不要在生成环境这样操作，修改用户或数据库参数时，请确保参数的合法性）。</p>
@@ -324,7 +324,7 @@
 <img src="/2022/08/postgresql-parameters-in-pg-db-role-setting/graceful.png" class="">
 
 <p>下面是关于 <code>PGOPTIONS</code> 和 <code>pg_db_role_setting</code> 的处理流程，可以看得到 <code>PGOPTIONS</code> 的处理先于 <code>pg_db_role_setting</code>，这里后面的配置并不会覆盖前面的配置，因此程序在启动时采用了 <code>PGOPTIONS</code> 中的 <code>local_preload_libraries</code> 配置，我们也可以通过调试，在后续的 <code>process_session_preload_libraries()</code> 函数中看到 <code>local_preload_libraries</code> 的值为空（即 <code>PGOPTIONS</code> 中给出的值。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">InitPostgres</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *in_dbname, Oid dboid,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">const</span> <span class="keyword">char</span> *username, Oid useroid,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">bool</span> load_session_libraries,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">bool</span> override_allow_connections,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">char</span> *out_dbname)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Now process any command-line switches and any additional GUC variable</span></span><br><span class="line"><span class="comment">     * settings passed in the startup packet.   We couldn&#x27;t do this before</span></span><br><span class="line"><span class="comment">     * because we didn&#x27;t know if client is a superuser.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (MyProcPort != <span class="literal">NULL</span>)</span><br><span class="line">        process_startup_options(MyProcPort, am_superuser);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Process pg_db_role_setting options */</span></span><br><span class="line">    process_settings(MyDatabaseId, GetSessionUserId());</span><br><span class="line"></span><br><span class="line">    [....]</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">     * If this is an interactive session, load any libraries that should be</span></span><br><span class="line"><span class="comment">     * preloaded at backend start.  Since those are determined by GUCs, this</span></span><br><span class="line"><span class="comment">     * can&#x27;t happen until GUC settings are complete, but we want it to happen</span></span><br><span class="line"><span class="comment">     * during the initial transaction in case anything that requires database</span></span><br><span class="line"><span class="comment">     * access needs to be done.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (load_session_libraries)</span><br><span class="line">        process_session_preload_libraries();</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">InitPostgres</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *in_dbname, Oid dboid,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">const</span> <span class="keyword">char</span> *username, Oid useroid,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">bool</span> load_session_libraries,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">bool</span> override_allow_connections,</span></span></span><br><span class="line"><span class="params"><span class="function">             <span class="keyword">char</span> *out_dbname)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Now process any command-line switches and any additional GUC variable</span></span><br><span class="line"><span class="comment">     * settings passed in the startup packet.   We couldn&#x27;t do this before</span></span><br><span class="line"><span class="comment">     * because we didn&#x27;t know if client is a superuser.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (MyProcPort != <span class="literal">NULL</span>)</span><br><span class="line">        process_startup_options(MyProcPort, am_superuser);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Process pg_db_role_setting options */</span></span><br><span class="line">    process_settings(MyDatabaseId, GetSessionUserId());</span><br><span class="line"></span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">     * If this is an interactive session, load any libraries that should be</span></span><br><span class="line"><span class="comment">     * preloaded at backend start.  Since those are determined by GUCs, this</span></span><br><span class="line"><span class="comment">     * can&#x27;t happen until GUC settings are complete, but we want it to happen</span></span><br><span class="line"><span class="comment">     * during the initial transaction in case anything that requires database</span></span><br><span class="line"><span class="comment">     * access needs to be done.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (load_session_libraries)</span><br><span class="line">        process_session_preload_libraries();</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/app-postgres.html">https://www.postgresql.org/docs/current/app-postgres.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/MEYP282MB166955E4B68992FC86C4DC48B69A9%40MEYP282MB1669.AUSP282.PROD.OUTLOOK.COM">https://www.postgresql.org/message-id/MEYP282MB166955E4B68992FC86C4DC48B69A9%40MEYP282MB1669.AUSP282.PROD.OUTLOOK.COM</a></p>
@@ -391,6 +391,9 @@
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/2022/08/postgresql-text-search-dictionary-crashed/" rel="next" title="PostgreSQL 文本搜索字典导致奔溃">
+                  PostgreSQL 文本搜索字典导致奔溃 <i class="fa fa-chevron-right"></i>
+                </a>
             </div>
           </div>
     </footer>
@@ -423,13 +426,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">633k</span>
+    <span title="站点总字数">644k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:36</span>
+    <span title="站点阅读时长">9:46</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
