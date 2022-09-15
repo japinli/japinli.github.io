@@ -31,8 +31,9 @@
 <meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-savepoint1.png">
 <meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-savepoint2.png">
 <meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-savepoint3.png">
+<meta property="og:image" content="https://blog.japinli.top/2022/09/postgresql-subtrans/subtrans-page-dump.png">
 <meta property="article:published_time" content="2022-09-14T13:16:18.000Z">
-<meta property="article:modified_time" content="2022-09-14T14:04:23.904Z">
+<meta property="article:modified_time" content="2022-09-15T06:52:27.564Z">
 <meta property="article:author" content="Japin Li">
 <meta property="article:tag" content="PostgreSQL">
 <meta name="twitter:card" content="summary">
@@ -278,7 +279,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>5.9k</span>
+      <span>5.5k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -347,13 +348,29 @@
 
 <p><a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将循环执行 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4842"><code>CommitSubTransaction()</code></a> 函数来提交子事务；随后，如果是需要提交主事务，则调用 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CommitTransaction()</code></a> 函数进行提交（这里面涉及到了 WAL 日志以及 CLOG 相关的更新，感兴趣的朋友可以去看看）主事务。</p>
 <p>如果我们执行 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CHECKPOINT</code></a>，那么我们在 <code>$PGDATA/pg_subtrans</code> 目录下可以看到上述子事务的相关信息。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ hexdump -C 0000</span><br><span class="line">00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">*</span><br><span class="line">00000b80  00 00 00 00 00 00 00 00  d7 02 00 00 00 00 00 00  |................|</span><br><span class="line">00000b90  e3 02 00 00 e4 02 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">00000ba0  00 00 00 00 00 00 00 00  e9 02 00 00 00 00 00 00  |................|</span><br><span class="line">00000bb0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">00000bc0  00 00 00 00 00 00 00 00  ee 02 00 00 00 00 00 00  |................|</span><br><span class="line">00000bd0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">*</span><br><span class="line">00002000</span><br></pre></td></tr></table></figure>
+<!--
+$ hexdump -C 0000
+00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00000b80  00 00 00 00 00 00 00 00  d7 02 00 00 00 00 00 00  |................|
+00000b90  e3 02 00 00 e4 02 00 00  00 00 00 00 00 00 00 00  |................|
+00000ba0  00 00 00 00 00 00 00 00  e9 02 00 00 00 00 00 00  |................|
+00000bb0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+00000bc0  00 00 00 00 00 00 00 00  ee 02 00 00 00 00 00 00  |................|
+00000bd0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00002000
+-->
+
+<img src="/2022/09/postgresql-subtrans/subtrans-page-dump.png" class="">
 
 <p><code>0x00000bc8</code> 对应的事务 ID 为 <code>int(0xbc8) / 4 = 754</code>，而他的父事务 ID 为 <code>0x02ee = 750</code>，750 事务在 0 号页面的 <code>hex(750 * 4) = 0xbb8</code>，全为 0，因此，事务 750 是主事务，这与上面的实际情况一致。</p>
 <p>到此，关于 PostgreSQL 的子事务基本上就了解的差不多了，这部分内容其实相对还是比较简单的，<code>pg_xact</code> 的内容就要比 <code>pg_subtrans</code> 稍微复杂一些。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-begin.html">https://www.postgresql.org/docs/14/sql-begin.html</a><br>[2] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-checkpoint.html">https://www.postgresql.org/docs/14/sql-checkpoint.html</a><br>[3] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-commit.html">https://www.postgresql.org/docs/14/sql-commit.html</a><br>[4] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-savepoint.html">https://www.postgresql.org/docs/14/sql-savepoint.html</a><br>[5] <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/tree/REL_14_5">https://github.com/postgres/postgres/tree/REL_14_5</a></p>
 <div class="just-for-fun">
-笑林广记 -
+笑林广记 - 薑字塔
+
+<p>一富翁问“薑”字如何写，对以草字头，次一字，次田字，又一字，又田字，又一字。<br>其人写草壹田壹田壹，写讫玩之，骂曰：“天杀的，如何诳我，分明作耍我造成一座塔了。”</p>
 </div>
 
     </div>
