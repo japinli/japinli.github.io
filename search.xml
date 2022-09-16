@@ -914,32 +914,6 @@
       </tags>
   </entry>
   <entry>
-    <title>MacOS 上创建 U 盘启动器</title>
-    <url>/2020/07/create-u-bootloader-on-macos/</url>
-    <content><![CDATA[<p>本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。</p>
-<span id="more"></span>
-
-<p>我们在官网现在的镜像大都是以 iso 结尾的文件，例如，本文中使用的 ubuntu-16.04-server-amd64.iso 镜像，在 Linux 平台，我们可以直接使用 dd 将这个镜像写到 U 盘上即可作为启动盘，但是在 MacOS 平台上，则需要将 iso 文件转换为 dmg 格式。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> hdiutil convert -format UDRW ubuntu-16.04-server-amd64.iso -o ubuntu-16.04-server-amd64.img</span></span><br><span class="line">Reading Master Boot Record (MBR : 0)…</span><br><span class="line">Reading Ubuntu-Server 18.04.4 LTS arm64  (Apple_ISO : 1)…</span><br><span class="line">Reading  (Type CD : 2)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Reading  (Type EF : 3)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Elapsed Time:  2.094s</span><br><span class="line">Speed: 454.9Mbytes/sec</span><br><span class="line">Savings: 0.0%</span><br><span class="line">created: /Users/japin/Downloads/ubuntu-18.04.4-server-arm64.img.dmg</span><br></pre></td></tr></table></figure>
-
-<p>从上面的命令我们可以看到，文件将自动加上 dmg 后缀。上面的命令将 ubuntu-16.04-server-amd64.iso 镜像转换为 UDRW 格式并存储到 ubuntu-16.04-server-amd64.img.dmg 文件中。</p>
-<p>接下来我们通过 diskutil 命令查看当前 U 盘的位置。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil list</span></span><br><span class="line">/dev/disk0 (internal, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      GUID_partition_scheme                        *251.0 GB   disk0</span><br><span class="line">   1:                        EFI EFI                     314.6 MB   disk0s1</span><br><span class="line">   2:                 Apple_APFS Container disk1         250.7 GB   disk0s2</span><br><span class="line"></span><br><span class="line">/dev/disk1 (synthesized):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      APFS Container Scheme -                      +250.7 GB   disk1</span><br><span class="line">                                 Physical Store disk0s2</span><br><span class="line">   1:                APFS Volume Macintosh HD            11.1 GB    disk1s1</span><br><span class="line">   2:                APFS Volume Macintosh HD - Data     76.8 GB    disk1s2</span><br><span class="line">   3:                APFS Volume Preboot                 81.3 MB    disk1s3</span><br><span class="line">   4:                APFS Volume Recovery                528.1 MB   disk1s4</span><br><span class="line">   5:                APFS Volume VM                      3.2 GB     disk1s5</span><br><span class="line"></span><br><span class="line">/dev/disk2 (external, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:     Apple_partition_scheme                        *8.1 GB     disk2</span><br><span class="line">   1:        Apple_partition_map                         4.1 KB     disk2s1</span><br><span class="line">   2:                  Apple_HFS                         2.5 MB     disk2s2</span><br></pre></td></tr></table></figure>
-
-<p>可以看到，我们的 U 盘对应的是 <code>/dev/disk2</code>，使用下面的命令卸载 U 盘。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil unmountDisk /dev/disk2</span></span><br><span class="line">Unmount of all volumes on disk2 was successful</span><br></pre></td></tr></table></figure>
-
-<p>最后，使用 dd 命令将其写入到 U 盘中，这里需要注意我们的 U 盘设备名应使用 <code>/dev/rdisk2</code>，即在 <code>/dev/disk2</code> 的磁盘名前面加上 <code>r</code> 字母。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo dd <span class="keyword">if</span>=ubuntu-18.04.4-server-arm64.img.dmg of=/dev/rdisk2 bs=1m</span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>MacOS</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 数据库跨库查询</title>
     <url>/2019/05/cross-database-querying-in-postgresql/</url>
     <content><![CDATA[<p>PostgreSQL 数据库默认情况下是不支持跨数据库访问的。如果我们想要执行跨数据库的查询，我们需要借助 dblink 来实现，dblink 是 PostgreSQL 的一个模块，支持从数据库会话中连接到其他数据库。</p>
@@ -1088,6 +1062,32 @@
       </tags>
   </entry>
   <entry>
+    <title>MacOS 上创建 U 盘启动器</title>
+    <url>/2020/07/create-u-bootloader-on-macos/</url>
+    <content><![CDATA[<p>本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。</p>
+<span id="more"></span>
+
+<p>我们在官网现在的镜像大都是以 iso 结尾的文件，例如，本文中使用的 ubuntu-16.04-server-amd64.iso 镜像，在 Linux 平台，我们可以直接使用 dd 将这个镜像写到 U 盘上即可作为启动盘，但是在 MacOS 平台上，则需要将 iso 文件转换为 dmg 格式。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> hdiutil convert -format UDRW ubuntu-16.04-server-amd64.iso -o ubuntu-16.04-server-amd64.img</span></span><br><span class="line">Reading Master Boot Record (MBR : 0)…</span><br><span class="line">Reading Ubuntu-Server 18.04.4 LTS arm64  (Apple_ISO : 1)…</span><br><span class="line">Reading  (Type CD : 2)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Reading  (Type EF : 3)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Elapsed Time:  2.094s</span><br><span class="line">Speed: 454.9Mbytes/sec</span><br><span class="line">Savings: 0.0%</span><br><span class="line">created: /Users/japin/Downloads/ubuntu-18.04.4-server-arm64.img.dmg</span><br></pre></td></tr></table></figure>
+
+<p>从上面的命令我们可以看到，文件将自动加上 dmg 后缀。上面的命令将 ubuntu-16.04-server-amd64.iso 镜像转换为 UDRW 格式并存储到 ubuntu-16.04-server-amd64.img.dmg 文件中。</p>
+<p>接下来我们通过 diskutil 命令查看当前 U 盘的位置。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil list</span></span><br><span class="line">/dev/disk0 (internal, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      GUID_partition_scheme                        *251.0 GB   disk0</span><br><span class="line">   1:                        EFI EFI                     314.6 MB   disk0s1</span><br><span class="line">   2:                 Apple_APFS Container disk1         250.7 GB   disk0s2</span><br><span class="line"></span><br><span class="line">/dev/disk1 (synthesized):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      APFS Container Scheme -                      +250.7 GB   disk1</span><br><span class="line">                                 Physical Store disk0s2</span><br><span class="line">   1:                APFS Volume Macintosh HD            11.1 GB    disk1s1</span><br><span class="line">   2:                APFS Volume Macintosh HD - Data     76.8 GB    disk1s2</span><br><span class="line">   3:                APFS Volume Preboot                 81.3 MB    disk1s3</span><br><span class="line">   4:                APFS Volume Recovery                528.1 MB   disk1s4</span><br><span class="line">   5:                APFS Volume VM                      3.2 GB     disk1s5</span><br><span class="line"></span><br><span class="line">/dev/disk2 (external, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:     Apple_partition_scheme                        *8.1 GB     disk2</span><br><span class="line">   1:        Apple_partition_map                         4.1 KB     disk2s1</span><br><span class="line">   2:                  Apple_HFS                         2.5 MB     disk2s2</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，我们的 U 盘对应的是 <code>/dev/disk2</code>，使用下面的命令卸载 U 盘。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil unmountDisk /dev/disk2</span></span><br><span class="line">Unmount of all volumes on disk2 was successful</span><br></pre></td></tr></table></figure>
+
+<p>最后，使用 dd 命令将其写入到 U 盘中，这里需要注意我们的 U 盘设备名应使用 <code>/dev/rdisk2</code>，即在 <code>/dev/disk2</code> 的磁盘名前面加上 <code>r</code> 字母。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo dd <span class="keyword">if</span>=ubuntu-18.04.4-server-arm64.img.dmg of=/dev/rdisk2 bs=1m</span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>MacOS</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>LaTeX 自定义封面</title>
     <url>/2019/04/customize-latex-title-page/</url>
     <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
@@ -1133,6 +1133,63 @@
       </categories>
       <tags>
         <tag>Go</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Emacs 编辑二进制文件</title>
+    <url>/2018/10/editing-binary-files-in-emacs/</url>
+    <content><![CDATA[<p>二进制文件是以二进制格式存储的文件，它是计算机可读的，人类不直接阅读二进制文件。所有的可执行程序都以二进制文件存储。那我们该如何编辑二进制文件呢？在我使用的 Emacs 编辑器中提供了一个 hexl-mode 的主模式来编辑二进制文件。本文记录了 Emacs 中编辑二进制文件的基本操作。</p>
+<img src="/2018/10/editing-binary-files-in-emacs/Editing_Binary_File.png" class="" title="Editing Binary File">
+
+<span id="more"></span>
+
+<h3 id="打开"><a href="#打开" class="headerlink" title="打开"></a>打开</h3><p>我们可以使用 <code>M-x hexl-find-file</code> 取代 <code>C-x C-f</code> 命令来编辑二进制文件，该命令将文件内容转换为十六进制，并允许用户进行编辑。当用户保存文件时，它将会自动转换为二进制格式。</p>
+<p>当然，我们也可以使用 `M-x hexl-mode** 来将现有的缓冲区转换为十六进制，这在以普通方式打开二进制文件时非常有用。</p>
+<h3 id="编辑"><a href="#编辑" class="headerlink" title="编辑"></a>编辑</h3><p>普通文本字符在 hexl-mode 下被覆盖。这是为了降低意外破坏文件中数据对齐的风险。针对二进制文件，hexl-mode 有特殊的插入命令。以下是 hexl-mode 的命令列表：</p>
+<ul>
+<li><strong>C-M-d</strong> 插入一个包含十进制代码的字节。</li>
+<li><strong>C-M-o</strong> 插入一个包含八进制代码的字节。</li>
+<li><strong>C-M-x</strong> 插入一个包含十六进制代码的字节。</li>
+<li><strong>C-M-[</strong> 移动到 1k 字节页面的开头。</li>
+<li><strong>C-M-]</strong> 移动到 1k 字节页面的结尾。</li>
+<li><strong>M-g</strong> 移至以十六进制指定的地址。</li>
+<li><strong>M-j</strong> 移至以十进制指定的地址。</li>
+<li><strong>C-c C-c</strong> 退出 hexl-mode，返回调用 hexl-mode 之前返回此缓冲区的主模式。</li>
+</ul>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://www.webopedia.com/TERM/B/binary_file.html">https://www.webopedia.com/TERM/B/binary_file.html</a><br>[2] <a href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html">https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Emacs</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Emacs ERC SASL 配置</title>
+    <url>/2022/09/emcas-erc-sasl/</url>
+    <content><![CDATA[<p>最近在使用 IRC 的时候发现 Emacs 的 ERC 不能登录 IRC 了，提示如下错误信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Opening connection..                                                    [13:47]</span><br><span class="line">-zinc.libera.chat- *** Checking Ident</span><br><span class="line">-zinc.libera.chat- *** Looking up your hostname...</span><br><span class="line">-zinc.libera.chat- *** No Ident response</span><br><span class="line">-zinc.libera.chat- *** Couldn&#x27;t look up your hostname</span><br><span class="line">-zinc.libera.chat- *** Notice -- SASL authentication to a NickServ account</span><br><span class="line">                 with a verified email address is required to connect from</span><br><span class="line">                 your current network. Please see</span><br><span class="line">                 https://libera.chat/guides/sasl for configuration assistance.</span><br><span class="line">==&gt; ERROR from irc.libera.chat: Closing Link: 117.139.163.129 (SASL</span><br><span class="line">    authentication to a NickServ account with a verified email address is</span><br><span class="line">    required to connect from your current network. Please see</span><br><span class="line">    https://libera.chat/guides/sasl for configuration assistance.)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Connection failed!  Not re-establishing connection.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">*** ERC terminated: connection broken by remote peer</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>这是由于 <a href="https://libera.chat/">Libera.Chat</a> 要求对某些 IP 范围使用 SASL。在采用了官网给出的<a href="https://libera.chat/guides/emacs-erc">解决方案</a>之后，发现还是不行，启动 Emacs 的时候将遇到如下错误：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Warning (initialization): An error occurred while loading ‘/Users/japin/.emacs.d/init.el’:</span><br><span class="line"></span><br><span class="line">Symbol&#x27;s function definition is void: define-erc-response-handler</span><br><span class="line"></span><br><span class="line">To ensure normal operation, you should investigate and remove the</span><br><span class="line">cause of the error in your initialization file.  Start Emacs with</span><br><span class="line">the ‘--debug-init’ option to view a complete error backtrace. Disable showing Disable logging</span><br></pre></td></tr></table></figure>
+
+<p>我尝试在 <a href="https://github.com/search?q=erc-sasl&ref=opensearch">Github 上搜索 <code>erc-sasl</code></a>，找到两个与之相关的项目，我选择了 <a href="https://github.com/kimjetwav/erc-sasl">kimjetwav</a> 的实现（仅仅是因为它在最近更新过），经过测试发现可以正常使用。</p>
+<p>通过查看其源码，我发现 kimjetwav 的实现中导入了 <code>erc</code>，搜索一番之后，<a href="https://doc.endlessparentheses.com/Fun/define-erc-response-handler.html">才知道 <code>define-erc-response-handler</code> 是在 <code>erc-backend.el</code> 中定义的</a>。而官网给的 <code>erc-sasl</code> 中并没有导入，于是我们尝试在官网的 <code>erc-sasl</code> 中加入 <code>erc</code>，其也可以正常工作。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://libera.chat/guides/emacs-erc">https://libera.chat/guides/emacs-erc</a><br>[2] <a href="https://libera.chat/guides/sasl">https://libera.chat/guides/sasl</a><br>[3] <a href="https://github.com/kimjetwav/erc-sasl/blob/master/erc-sasl.el">https://github.com/kimjetwav/erc-sasl/blob/master/erc-sasl.el</a><br>[4] <a href="https://github.com/syl20bnr/spacemacs/blob/master/layers/%2Bchat/erc/local/erc-sasl/erc-sasl.el">https://github.com/syl20bnr/spacemacs/blob/master/layers/%2Bchat/erc/local/erc-sasl/erc-sasl.el</a><br>[5] <a href="https://doc.endlessparentheses.com/Fun/define-erc-response-handler.html">https://doc.endlessparentheses.com/Fun/define-erc-response-handler.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 医银入肚
+
+<p>一富翁含银于口，误吞入，肚甚痛，延医治之。<br>医曰：“不难，先买纸牌一副，烧灰咽之，再用艾丸炙脐，其银自出。”<br>翁询其故，医曰：“外面用火烧，里面有强盗打劫，哪怕你的银子不出来。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Emacs</tag>
       </tags>
   </entry>
   <entry>
@@ -1457,36 +1514,6 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Emacs 编辑二进制文件</title>
-    <url>/2018/10/editing-binary-files-in-emacs/</url>
-    <content><![CDATA[<p>二进制文件是以二进制格式存储的文件，它是计算机可读的，人类不直接阅读二进制文件。所有的可执行程序都以二进制文件存储。那我们该如何编辑二进制文件呢？在我使用的 Emacs 编辑器中提供了一个 hexl-mode 的主模式来编辑二进制文件。本文记录了 Emacs 中编辑二进制文件的基本操作。</p>
-<img src="/2018/10/editing-binary-files-in-emacs/Editing_Binary_File.png" class="" title="Editing Binary File">
-
-<span id="more"></span>
-
-<h3 id="打开"><a href="#打开" class="headerlink" title="打开"></a>打开</h3><p>我们可以使用 <code>M-x hexl-find-file</code> 取代 <code>C-x C-f</code> 命令来编辑二进制文件，该命令将文件内容转换为十六进制，并允许用户进行编辑。当用户保存文件时，它将会自动转换为二进制格式。</p>
-<p>当然，我们也可以使用 `M-x hexl-mode** 来将现有的缓冲区转换为十六进制，这在以普通方式打开二进制文件时非常有用。</p>
-<h3 id="编辑"><a href="#编辑" class="headerlink" title="编辑"></a>编辑</h3><p>普通文本字符在 hexl-mode 下被覆盖。这是为了降低意外破坏文件中数据对齐的风险。针对二进制文件，hexl-mode 有特殊的插入命令。以下是 hexl-mode 的命令列表：</p>
-<ul>
-<li><strong>C-M-d</strong> 插入一个包含十进制代码的字节。</li>
-<li><strong>C-M-o</strong> 插入一个包含八进制代码的字节。</li>
-<li><strong>C-M-x</strong> 插入一个包含十六进制代码的字节。</li>
-<li><strong>C-M-[</strong> 移动到 1k 字节页面的开头。</li>
-<li><strong>C-M-]</strong> 移动到 1k 字节页面的结尾。</li>
-<li><strong>M-g</strong> 移至以十六进制指定的地址。</li>
-<li><strong>M-j</strong> 移至以十进制指定的地址。</li>
-<li><strong>C-c C-c</strong> 退出 hexl-mode，返回调用 hexl-mode 之前返回此缓冲区的主模式。</li>
-</ul>
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://www.webopedia.com/TERM/B/binary_file.html">https://www.webopedia.com/TERM/B/binary_file.html</a><br>[2] <a href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html">https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Emacs</tag>
       </tags>
   </entry>
   <entry>
@@ -2543,6 +2570,66 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>Oracle wm_concat 函数说明</title>
+    <url>/2021/03/oracle-wm-concat/</url>
+    <content><![CDATA[<p>Oracle 数据库的 <code>wm_concat</code> 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。<br>本文主要介绍 <code>wm_concat</code> 函数的功能以及其在 PostgreSQL 数据库中的替换方法。</p>
+<span id="more"></span>
+
+<h2 id="测试用例"><a href="#测试用例" class="headerlink" title="测试用例"></a>测试用例</h2><p>本文将使用下面的测试用例来测试 <code>wm_concat</code> 函数以及其替代方法。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (col1 <span class="type">int</span>, col2 <span class="type">VARCHAR</span>(<span class="number">20</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Hello&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;world&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;this&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;is&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;a&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;test&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;wm_concat test&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="Oracle"><a href="#Oracle" class="headerlink" title="Oracle"></a>Oracle</h2><p>在 Oracle 数据库中 <code>wm_concat</code> 没有相关的文档记录的，其输出如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, wm_concat(col2) <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> (col1);</span><br><span class="line"></span><br><span class="line">      COL1 WM_CONCAT(COL2)</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>由于 <code>wm_concat</code> 没有相关的文档记录，因此不建议使用该函数。其次，在 Oracle 12c 中 <code>wm_concat</code> 已经被移除了。更好的写法是通过 <code>listagg</code> 函数对其进行替换。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, <span class="built_in">listagg</span>(col2, <span class="string">&#x27;,&#x27;</span>) <span class="keyword">WITHIN</span> <span class="keyword">GROUP</span> (<span class="keyword">ORDER</span> <span class="keyword">BY</span> col2) <span class="keyword">AS</span> agg <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1;</span><br><span class="line"></span><br><span class="line">      COL1 AGG</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="PostgreSQL"><a href="#PostgreSQL" class="headerlink" title="PostgreSQL"></a>PostgreSQL</h2><p>当我们将其迁移到 PostgreSQL 时，我们可以使用 <code>string_agg</code> 函数来替换 Oracle 中的 <code>wm_concat</code> 和 <code>listagg</code> 函数。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# SELECT col1, string_agg(col2, &#x27;,&#x27;) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">    1 | Hello,world,this,is,a,test</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres# SELECT col1, string_agg(col2, &#x27;,&#x27; ORDER BY col2) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    1 | a,Hello,is,test,this,world</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下，<code>wm_concat</code> 函数是根据其聚合的列进行排序的，但是其排序的结果和 PostgreSQL 中不太一样，目前尚不清楚具体原因。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="http://psoug.org/definition/WM_CONCAT.htm">http://psoug.org/definition/WM_CONCAT.htm</a><br>[1] <a href="https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631">https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Oracle</tag>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Ping 权限拒绝</title>
+    <url>/2018/09/ping-permission-denied/</url>
+    <content><![CDATA[<p>今天在 CentOS 上遇到一个奇怪的问题，ping 程序在 root 用户下能正常使用，但是在非 root 用户下则出现如下错误：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">user@host:~ $ ping 127.0.0.1</span><br><span class="line">ping: socket: Permission denied</span><br></pre></td></tr></table></figure>
+
+<p>在 StackExchage 上也有人遇到了<a href="https://unix.stackexchange.com/questions/385980/ping-socket-permission-denied">类似的问题</a>，他需要在 PHP 中调用 ping 命令，并且他通过执行 <code>setenforce 0</code> 可以让 ping 命令正常使用，但是经我测试发现这种方法对我无效。</p>
+<p>之后在 LinuxQuestions 上发现<a href="https://www.linuxquestions.org/questions/linux-embedded-and-single-board-computer-78/socket-permission-denied-915704/">有人</a>指出 ping 命名将创建原始套接字而非 TCP 套接字，然而 Linux 系统对于普通用户创建原开套接字是禁止的，因此我们就看到了文章开始的错误，针对这一问题他也提出了解决方案，即为 ping 命令添加 suid 权限。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">user@host:~ $ chmod +s /bin/ping</span><br><span class="line">user@host:~ $ ls -al /bin/ping</span><br><span class="line">-rwsr-xr-x 1 root root 64424 Mar 10  2017 /bin/ping</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<p>那么什么是 suid 权限呢？我们所熟悉的文件权限包括读、写和可执行 (r/w/x) 三种权限，其实在 Linux 系统中对所有文件还有三种特殊的权限说明，即 SUID, SGID 和 Sticky Bits。</p>
+<h3 id="Sticky-Bit"><a href="#Sticky-Bit" class="headerlink" title="Sticky Bit"></a>Sticky Bit</h3><p>由于 Unix 是多用户操作系统并且设计为多个用户可以同时使用，而 Sticky Bit 则告诉 Unix 系统一旦程序被执行，那么他将一直保留在内存当中，这样可以避免不同用户执行同一程序进行多次加载。在设置了 Sticky Bit 位后，当一个用户使用了这个程序，另一个用户再次使用时可以避免初始化该程序的过程。Sticky Bit 的概念在快速磁盘访问 (Fast Disk Access) 和内存访问技术 (Memory Access Technologies) 出现之前非常有用。随着技术的发展程序加载到内存的时间的减少，Sticky Bit 的概念逐渐被废弃，因此，目前 Sticky Bit 的作用不是很明显。需要注意的是 Sticky Bit 只能用于可执行文件。</p>
+<h3 id="SUID-Set-User-ID-Bit"><a href="#SUID-Set-User-ID-Bit" class="headerlink" title="SUID (Set User ID) Bit"></a>SUID (Set User ID) Bit</h3><p>SUID (Set User ID) 意味着当执行应用程序时，用户的 ID 将被设置为文件或程序所有者的 ID 而不是当前用户的 ID。例如，假设我有一个应用程序他的所有者为 root 并且设置和了 SUID 位，那么当我以普通用户运行该应用程序时，该应用程序依然会以 root 身份运行。这是由于 SUID 位告诉 Linux 系统为该应用程序设置 root 用户的 ID，并且在运行时始终以 root 用户的身份去运行该应用程序 (此处文件的所有者为 root 用户)。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 设置文件 SUID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod u+s filename</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 去掉文件 SUID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod u-s filename</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="SGID-Set-Group-ID-Bit"><a href="#SGID-Set-Group-ID-Bit" class="headerlink" title="SGID (Set Group ID) Bit"></a>SGID (Set Group ID) Bit</h3><p>SGID (Set Group ID) 与 SUID 类似，他意味着文件执行时设置其执行的用户组 ID。通常情况下，在 Linux/Unix 系统中程序运行时会继承当前登录用户的权限。SGID 则可以给运行的程序临时修改有效用户组为文件所属的组。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 设置文件 SGID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod g+s filename</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 去掉文件 SGID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod g-s filename</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><ol>
+<li><a href="http://www.codecoffee.com/tipsforlinux/articles/028.html">What are the SUID, SGID and the Sticky Bits?</a></li>
+</ol>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>ping</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Oracle VARCHAR2 与 PostgreSQL VARCHAR 异同</title>
     <url>/2021/11/oracle-varchar2-vs-postgresql-varchar/</url>
     <content><![CDATA[<p>在 Oracle 迁移到 PostgreSQL 数据库的过程中，我们通常使用 PostgreSQL 中的 <code>VARCHAR</code> 类型替换 Oracle 中的 <code>VARCHAR2</code> 类型。本文将针对 Oracle 中的 <code>VARCHAR2</code> 类型和 PostgreSQL 中的 <code>VARCHAR</code> 类型进行简要的比较。</p>
@@ -2614,66 +2701,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Oracle wm_concat 函数说明</title>
-    <url>/2021/03/oracle-wm-concat/</url>
-    <content><![CDATA[<p>Oracle 数据库的 <code>wm_concat</code> 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。<br>本文主要介绍 <code>wm_concat</code> 函数的功能以及其在 PostgreSQL 数据库中的替换方法。</p>
-<span id="more"></span>
-
-<h2 id="测试用例"><a href="#测试用例" class="headerlink" title="测试用例"></a>测试用例</h2><p>本文将使用下面的测试用例来测试 <code>wm_concat</code> 函数以及其替代方法。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (col1 <span class="type">int</span>, col2 <span class="type">VARCHAR</span>(<span class="number">20</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Hello&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;world&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;this&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;is&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;a&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;test&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;wm_concat test&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<h2 id="Oracle"><a href="#Oracle" class="headerlink" title="Oracle"></a>Oracle</h2><p>在 Oracle 数据库中 <code>wm_concat</code> 没有相关的文档记录的，其输出如下所示。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, wm_concat(col2) <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> (col1);</span><br><span class="line"></span><br><span class="line">      COL1 WM_CONCAT(COL2)</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>由于 <code>wm_concat</code> 没有相关的文档记录，因此不建议使用该函数。其次，在 Oracle 12c 中 <code>wm_concat</code> 已经被移除了。更好的写法是通过 <code>listagg</code> 函数对其进行替换。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, <span class="built_in">listagg</span>(col2, <span class="string">&#x27;,&#x27;</span>) <span class="keyword">WITHIN</span> <span class="keyword">GROUP</span> (<span class="keyword">ORDER</span> <span class="keyword">BY</span> col2) <span class="keyword">AS</span> agg <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1;</span><br><span class="line"></span><br><span class="line">      COL1 AGG</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<h2 id="PostgreSQL"><a href="#PostgreSQL" class="headerlink" title="PostgreSQL"></a>PostgreSQL</h2><p>当我们将其迁移到 PostgreSQL 时，我们可以使用 <code>string_agg</code> 函数来替换 Oracle 中的 <code>wm_concat</code> 和 <code>listagg</code> 函数。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# SELECT col1, string_agg(col2, &#x27;,&#x27;) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">    1 | Hello,world,this,is,a,test</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres# SELECT col1, string_agg(col2, &#x27;,&#x27; ORDER BY col2) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    1 | a,Hello,is,test,this,world</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
-
-<p>默认情况下，<code>wm_concat</code> 函数是根据其聚合的列进行排序的，但是其排序的结果和 PostgreSQL 中不太一样，目前尚不清楚具体原因。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="http://psoug.org/definition/WM_CONCAT.htm">http://psoug.org/definition/WM_CONCAT.htm</a><br>[1] <a href="https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631">https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>Oracle</tag>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Ping 权限拒绝</title>
-    <url>/2018/09/ping-permission-denied/</url>
-    <content><![CDATA[<p>今天在 CentOS 上遇到一个奇怪的问题，ping 程序在 root 用户下能正常使用，但是在非 root 用户下则出现如下错误：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">user@host:~ $ ping 127.0.0.1</span><br><span class="line">ping: socket: Permission denied</span><br></pre></td></tr></table></figure>
-
-<p>在 StackExchage 上也有人遇到了<a href="https://unix.stackexchange.com/questions/385980/ping-socket-permission-denied">类似的问题</a>，他需要在 PHP 中调用 ping 命令，并且他通过执行 <code>setenforce 0</code> 可以让 ping 命令正常使用，但是经我测试发现这种方法对我无效。</p>
-<p>之后在 LinuxQuestions 上发现<a href="https://www.linuxquestions.org/questions/linux-embedded-and-single-board-computer-78/socket-permission-denied-915704/">有人</a>指出 ping 命名将创建原始套接字而非 TCP 套接字，然而 Linux 系统对于普通用户创建原开套接字是禁止的，因此我们就看到了文章开始的错误，针对这一问题他也提出了解决方案，即为 ping 命令添加 suid 权限。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">user@host:~ $ chmod +s /bin/ping</span><br><span class="line">user@host:~ $ ls -al /bin/ping</span><br><span class="line">-rwsr-xr-x 1 root root 64424 Mar 10  2017 /bin/ping</span><br></pre></td></tr></table></figure>
-
-<span id="more"></span>
-
-<p>那么什么是 suid 权限呢？我们所熟悉的文件权限包括读、写和可执行 (r/w/x) 三种权限，其实在 Linux 系统中对所有文件还有三种特殊的权限说明，即 SUID, SGID 和 Sticky Bits。</p>
-<h3 id="Sticky-Bit"><a href="#Sticky-Bit" class="headerlink" title="Sticky Bit"></a>Sticky Bit</h3><p>由于 Unix 是多用户操作系统并且设计为多个用户可以同时使用，而 Sticky Bit 则告诉 Unix 系统一旦程序被执行，那么他将一直保留在内存当中，这样可以避免不同用户执行同一程序进行多次加载。在设置了 Sticky Bit 位后，当一个用户使用了这个程序，另一个用户再次使用时可以避免初始化该程序的过程。Sticky Bit 的概念在快速磁盘访问 (Fast Disk Access) 和内存访问技术 (Memory Access Technologies) 出现之前非常有用。随着技术的发展程序加载到内存的时间的减少，Sticky Bit 的概念逐渐被废弃，因此，目前 Sticky Bit 的作用不是很明显。需要注意的是 Sticky Bit 只能用于可执行文件。</p>
-<h3 id="SUID-Set-User-ID-Bit"><a href="#SUID-Set-User-ID-Bit" class="headerlink" title="SUID (Set User ID) Bit"></a>SUID (Set User ID) Bit</h3><p>SUID (Set User ID) 意味着当执行应用程序时，用户的 ID 将被设置为文件或程序所有者的 ID 而不是当前用户的 ID。例如，假设我有一个应用程序他的所有者为 root 并且设置和了 SUID 位，那么当我以普通用户运行该应用程序时，该应用程序依然会以 root 身份运行。这是由于 SUID 位告诉 Linux 系统为该应用程序设置 root 用户的 ID，并且在运行时始终以 root 用户的身份去运行该应用程序 (此处文件的所有者为 root 用户)。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 设置文件 SUID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod u+s filename</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 去掉文件 SUID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod u-s filename</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="SGID-Set-Group-ID-Bit"><a href="#SGID-Set-Group-ID-Bit" class="headerlink" title="SGID (Set Group ID) Bit"></a>SGID (Set Group ID) Bit</h3><p>SGID (Set Group ID) 与 SUID 类似，他意味着文件执行时设置其执行的用户组 ID。通常情况下，在 Linux/Unix 系统中程序运行时会继承当前登录用户的权限。SGID 则可以给运行的程序临时修改有效用户组为文件所属的组。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 设置文件 SGID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod g+s filename</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 去掉文件 SGID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod g-s filename</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><ol>
-<li><a href="http://www.codecoffee.com/tipsforlinux/articles/028.html">What are the SUID, SGID and the Sticky Bits?</a></li>
-</ol>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>ping</tag>
       </tags>
   </entry>
   <entry>
@@ -4400,6 +4427,69 @@ Date:   Mon Jan 17 10:16:53 2022 +0900
       </tags>
   </entry>
   <entry>
+    <title>【译】PostgreSQL 14 - multirange 类型</title>
+    <url>/2021/10/postgresql-multirange-types/</url>
+    <content><![CDATA[<p>在最近发布的 PostgreSQL 14 中，我们最兴奋的功能之一是引入了 multirange 类型。简而言之，multirange 类型是一组不重叠的范围（range）。与范围数组不同，它们防止重叠，因此允许你有效地建立有间隙的范围模型。</p>
+<p>我们对它们的一个用例是建立时间模型。例如，如果您想记录累积的时间和某人在医院的天数，您可以将其存储为一个 datemultirange 类型。</p>
+<p>在 PostgreSQL 14 中，有相当多的运算符和函数可用，但我们需要的一些明显的运算符和函数包括聚合，如联合聚合，目前还不存在。然而，还有一些标准的运算符，如 <code>+</code>（合并两个范围）和 <code>*</code> 表示两个范围相交，<code>-</code> 表示两个范围的差，以及常见的包含布尔运算符。</p>
+<span id="more"></span>
+
+<h2 id="定义-multirange-变量"><a href="#定义-multirange-变量" class="headerlink" title="定义 multirange 变量"></a>定义 multirange 变量</h2><p>multirange 类型的典型形式是由一个外层的 <code>&#123;&#125;</code> 和一个以逗号分隔的范围列表组成的。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;&#123;[2021-05-01, 2021-06-01), [2020-09-01, 2020-10-01)</span></span><br><span class="line"><span class="string">        , [2021-09-01, 2021-09-13)&#125;&#x27;</span>::datemultirange;</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#123;[2020-09-01,2020-10-01),[2021-05-01,2021-06-01),[2021-09-01,2021-09-13)&#125;</span><br></pre></td></tr></table></figure>
+
+<p>观察它是如何将排序改为按时间顺序排列的。</p>
+<p>multirange 不能有重叠的范围，但是您可以把一个重叠的范围集写到一个 multirange 中而不会得到错误。让我们看看这里会发生了什么：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;&#123;[2021-05-01, 2021-06-01), [2021-09-02, 2021-09-15)</span></span><br><span class="line"><span class="string">        , [2021-09-01, 2021-09-13)&#125;&#x27;</span>::datemultirange;</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#123;[2021-05-01,2021-06-01),[2021-09-01,2021-09-15)&#125;</span><br></pre></td></tr></table></figure>
+
+<p>观察一下它是如何将最后两个日期范围合并成一个包含它们的联合体。</p>
+<h2 id="使用-multirange"><a href="#使用-multirange" class="headerlink" title="使用 multirange"></a>使用 multirange</h2><p>假设您有一个普通的表，它只是记录了病人的住院时间（作为一个日期范围），每次住院有一条记录。我们并不关心住院时间是否重叠，因为它们可能代表某天去做某项手术，同一天又去做另一项手术，等等。如果是在同一天，在我们的一些计算中，这两套记录将被视为一天，但您仍然需要保留原因信息，以便计费。</p>
+<p>您的表格将看起来像这样：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> stays(id <span class="type">bigint</span> GENERATED ALWAYS <span class="keyword">AS</span> <span class="keyword">IDENTITY</span>,</span><br><span class="line">    id_patient <span class="type">bigint</span>,</span><br><span class="line">    period_stay daterange, reason text,</span><br><span class="line">    <span class="keyword">CONSTRAINT</span> pk_stays <span class="keyword">PRIMARY</span> KEY (id) );</span><br></pre></td></tr></table></figure>
+
+<p>您将在其中插入如下数据：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> stays(id_patient, period_stay, reason)</span><br><span class="line"><span class="keyword">VALUES</span> (<span class="number">1</span>, daterange(<span class="string">&#x27;2021-05-10&#x27;</span>, <span class="string">&#x27;2021-06-01&#x27;</span>), <span class="string">&#x27;Operation and healing&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-05-12&#x27;</span>, <span class="string">&#x27;2021-05-13&#x27;</span>), <span class="string">&#x27;X-Ray&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-05-13&#x27;</span>, <span class="string">&#x27;2021-05-14&#x27;</span>), <span class="string">&#x27;Blood&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-05-13&#x27;</span>, <span class="string">&#x27;2021-05-14&#x27;</span>), <span class="string">&#x27;MRI&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-06-13&#x27;</span>, <span class="string">&#x27;2021-06-14&#x27;</span>), <span class="string">&#x27;Spinal Tap&#x27;</span> );</span><br></pre></td></tr></table></figure>
+
+<p>如果您想创建一个查询，将这些记录汇总到每个病人的单一记录中，并且将住院时间表示为一个多区间，那么很遗憾，我们找不到任何聚合函数来为您做这个。您必须创建你自己的聚合函数，使用一些非常难看的 CTE，或者将您的范围聚合到一个范围数组中，然后以某种方式将其铸造成一个多范围。铸造部分将为您处理重叠问题。</p>
+<p>这个例子演示了如何使用 <code>array_agg</code> 将范围聚合到一个数组中，然后使用规范的文本形式将其转换为 datemultirange。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> id_patient,</span><br><span class="line">       replace(<span class="built_in">array_agg</span>(period_stay)::text, <span class="string">&#x27;&quot;&#x27;</span>, <span class="string">&#x27;&#x27;</span>)::datemultirange <span class="keyword">AS</span> period_total_stay</span><br><span class="line"><span class="keyword">FROM</span> stays</span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> id_patient</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> id_patient;</span><br></pre></td></tr></table></figure>
+
+<p>上述查询的输出看起来像是这样的：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"> id_patient <span class="operator">|</span>                 period_total_stay</span><br><span class="line"><span class="comment">------------+---------------------------------------------------</span></span><br><span class="line">          <span class="number">1</span> <span class="operator">|</span> &#123;[<span class="number">2021</span><span class="number">-05</span><span class="number">-10</span>,<span class="number">2021</span><span class="number">-06</span><span class="number">-01</span>)&#125;</span><br><span class="line">          <span class="number">2</span> <span class="operator">|</span> &#123;[<span class="number">2021</span><span class="number">-05</span><span class="number">-12</span>,<span class="number">2021</span><span class="number">-05</span><span class="number">-14</span>),[<span class="number">2021</span><span class="number">-06</span><span class="number">-13</span>,<span class="number">2021</span><span class="number">-06</span><span class="number">-14</span>)&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的方法并不理想，因为它依赖于一个日期范围数组的典型形式，看起来就像下面这样，除了将日期范围用双引号括起来之外，与预期的 datemultirange 完全一样。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#123;&quot;[2021-05-12,2021-05-13)&quot;,</span><br><span class="line">&quot;[2021-05-13,2021-05-14)&quot;,</span><br><span class="line">&quot;[2021-05-13,2021-05-14)&quot;,&quot;[2021-06-13,2021-06-14)&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>因此，本质上与 datemultirange 的规范形式相同，但每个 daterange 周围有双引号。</p>
+<p>我们最喜欢的y一个函数是 <strong><code>unnest</code><strong>，</strong><code>unnest</code></strong> 函数支持 multirange 并返回一组范围。使用 <strong><code>array_agg</code><strong>、</strong><code>multirange</code></strong> 和 <strong><code>unnest</code></strong> 的组合，您可以从一组重叠的范围中创建一组不重叠的范围，如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> id_patient,</span><br><span class="line">    <span class="built_in">unnest</span>(replace(<span class="built_in">array_agg</span>(period_stay)::text, <span class="string">&#x27;&quot;&#x27;</span>, <span class="string">&#x27;&#x27;</span>)::datemultirange) <span class="keyword">AS</span> period_deduped_stay</span><br><span class="line"><span class="keyword">FROM</span> stays</span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> id_patient</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> id_patient;</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"> id_patient |   period_deduped_stay</span><br><span class="line">------------+-------------------------</span><br><span class="line">          1 | [2021-05-10,2021-06-01)</span><br><span class="line">          2 | [2021-05-12,2021-05-14)</span><br><span class="line">          2 | [2021-06-13,2021-06-14)</span><br><span class="line">(3 rows)</span><br></pre></td></tr></table></figure>
+
+<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><ul>
+<li>本文翻译自 <a href="https://www.postgresonline.com/">Postgres Online Journal</a> 上的 <a href="https://www.postgresonline.com/article_pfriendly/401.html">Multirange types in PostgreSQL 14</a>。</li>
+</ul>
+<div class="just-for-fun">
+笑林广记 - 属牛
+
+<p>一官遇生辰，吏典闻其属鼠，乃醵黄金铸一鼠为寿。<br>官甚喜，曰：“汝等可知奶奶生辰亦在目下乎？”<br>众吏曰：“不知，请问其属？”<br>官曰：“小我一岁，丑年生的。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>翻译</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 15 特性 - MERGE INTO 语法</title>
     <url>/2022/03/postgresql-merge-into-syntax/</url>
     <content><![CDATA[<p><code>MERGE INTO</code> 语法很早之前就在 Oracle 数据库中实现了，最近 PostgreSQL 也实现了相应的语法，该语法符合 SQL2016 标准，与 Oracle 的 <code>MERGE INTO</code> 还是有一定区别的。本文简要介绍一下 PostgreSQL 中的 <code>MERGE INTO</code> 语法。</p>
@@ -4479,69 +4569,6 @@ Date:   Mon Jan 17 10:16:53 2022 +0900
       <tags>
         <tag>PostgreSQL</tag>
         <tag>PG15</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>【译】PostgreSQL 14 - multirange 类型</title>
-    <url>/2021/10/postgresql-multirange-types/</url>
-    <content><![CDATA[<p>在最近发布的 PostgreSQL 14 中，我们最兴奋的功能之一是引入了 multirange 类型。简而言之，multirange 类型是一组不重叠的范围（range）。与范围数组不同，它们防止重叠，因此允许你有效地建立有间隙的范围模型。</p>
-<p>我们对它们的一个用例是建立时间模型。例如，如果您想记录累积的时间和某人在医院的天数，您可以将其存储为一个 datemultirange 类型。</p>
-<p>在 PostgreSQL 14 中，有相当多的运算符和函数可用，但我们需要的一些明显的运算符和函数包括聚合，如联合聚合，目前还不存在。然而，还有一些标准的运算符，如 <code>+</code>（合并两个范围）和 <code>*</code> 表示两个范围相交，<code>-</code> 表示两个范围的差，以及常见的包含布尔运算符。</p>
-<span id="more"></span>
-
-<h2 id="定义-multirange-变量"><a href="#定义-multirange-变量" class="headerlink" title="定义 multirange 变量"></a>定义 multirange 变量</h2><p>multirange 类型的典型形式是由一个外层的 <code>&#123;&#125;</code> 和一个以逗号分隔的范围列表组成的。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;&#123;[2021-05-01, 2021-06-01), [2020-09-01, 2020-10-01)</span></span><br><span class="line"><span class="string">        , [2021-09-01, 2021-09-13)&#125;&#x27;</span>::datemultirange;</span><br></pre></td></tr></table></figure>
-
-<p>输出：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#123;[2020-09-01,2020-10-01),[2021-05-01,2021-06-01),[2021-09-01,2021-09-13)&#125;</span><br></pre></td></tr></table></figure>
-
-<p>观察它是如何将排序改为按时间顺序排列的。</p>
-<p>multirange 不能有重叠的范围，但是您可以把一个重叠的范围集写到一个 multirange 中而不会得到错误。让我们看看这里会发生了什么：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;&#123;[2021-05-01, 2021-06-01), [2021-09-02, 2021-09-15)</span></span><br><span class="line"><span class="string">        , [2021-09-01, 2021-09-13)&#125;&#x27;</span>::datemultirange;</span><br></pre></td></tr></table></figure>
-
-<p>输出：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#123;[2021-05-01,2021-06-01),[2021-09-01,2021-09-15)&#125;</span><br></pre></td></tr></table></figure>
-
-<p>观察一下它是如何将最后两个日期范围合并成一个包含它们的联合体。</p>
-<h2 id="使用-multirange"><a href="#使用-multirange" class="headerlink" title="使用 multirange"></a>使用 multirange</h2><p>假设您有一个普通的表，它只是记录了病人的住院时间（作为一个日期范围），每次住院有一条记录。我们并不关心住院时间是否重叠，因为它们可能代表某天去做某项手术，同一天又去做另一项手术，等等。如果是在同一天，在我们的一些计算中，这两套记录将被视为一天，但您仍然需要保留原因信息，以便计费。</p>
-<p>您的表格将看起来像这样：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> stays(id <span class="type">bigint</span> GENERATED ALWAYS <span class="keyword">AS</span> <span class="keyword">IDENTITY</span>,</span><br><span class="line">    id_patient <span class="type">bigint</span>,</span><br><span class="line">    period_stay daterange, reason text,</span><br><span class="line">    <span class="keyword">CONSTRAINT</span> pk_stays <span class="keyword">PRIMARY</span> KEY (id) );</span><br></pre></td></tr></table></figure>
-
-<p>您将在其中插入如下数据：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> stays(id_patient, period_stay, reason)</span><br><span class="line"><span class="keyword">VALUES</span> (<span class="number">1</span>, daterange(<span class="string">&#x27;2021-05-10&#x27;</span>, <span class="string">&#x27;2021-06-01&#x27;</span>), <span class="string">&#x27;Operation and healing&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-05-12&#x27;</span>, <span class="string">&#x27;2021-05-13&#x27;</span>), <span class="string">&#x27;X-Ray&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-05-13&#x27;</span>, <span class="string">&#x27;2021-05-14&#x27;</span>), <span class="string">&#x27;Blood&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-05-13&#x27;</span>, <span class="string">&#x27;2021-05-14&#x27;</span>), <span class="string">&#x27;MRI&#x27;</span> ),</span><br><span class="line">       (<span class="number">2</span>, daterange(<span class="string">&#x27;2021-06-13&#x27;</span>, <span class="string">&#x27;2021-06-14&#x27;</span>), <span class="string">&#x27;Spinal Tap&#x27;</span> );</span><br></pre></td></tr></table></figure>
-
-<p>如果您想创建一个查询，将这些记录汇总到每个病人的单一记录中，并且将住院时间表示为一个多区间，那么很遗憾，我们找不到任何聚合函数来为您做这个。您必须创建你自己的聚合函数，使用一些非常难看的 CTE，或者将您的范围聚合到一个范围数组中，然后以某种方式将其铸造成一个多范围。铸造部分将为您处理重叠问题。</p>
-<p>这个例子演示了如何使用 <code>array_agg</code> 将范围聚合到一个数组中，然后使用规范的文本形式将其转换为 datemultirange。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> id_patient,</span><br><span class="line">       replace(<span class="built_in">array_agg</span>(period_stay)::text, <span class="string">&#x27;&quot;&#x27;</span>, <span class="string">&#x27;&#x27;</span>)::datemultirange <span class="keyword">AS</span> period_total_stay</span><br><span class="line"><span class="keyword">FROM</span> stays</span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> id_patient</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> id_patient;</span><br></pre></td></tr></table></figure>
-
-<p>上述查询的输出看起来像是这样的：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"> id_patient <span class="operator">|</span>                 period_total_stay</span><br><span class="line"><span class="comment">------------+---------------------------------------------------</span></span><br><span class="line">          <span class="number">1</span> <span class="operator">|</span> &#123;[<span class="number">2021</span><span class="number">-05</span><span class="number">-10</span>,<span class="number">2021</span><span class="number">-06</span><span class="number">-01</span>)&#125;</span><br><span class="line">          <span class="number">2</span> <span class="operator">|</span> &#123;[<span class="number">2021</span><span class="number">-05</span><span class="number">-12</span>,<span class="number">2021</span><span class="number">-05</span><span class="number">-14</span>),[<span class="number">2021</span><span class="number">-06</span><span class="number">-13</span>,<span class="number">2021</span><span class="number">-06</span><span class="number">-14</span>)&#125;</span><br></pre></td></tr></table></figure>
-
-<p>上面的方法并不理想，因为它依赖于一个日期范围数组的典型形式，看起来就像下面这样，除了将日期范围用双引号括起来之外，与预期的 datemultirange 完全一样。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#123;&quot;[2021-05-12,2021-05-13)&quot;,</span><br><span class="line">&quot;[2021-05-13,2021-05-14)&quot;,</span><br><span class="line">&quot;[2021-05-13,2021-05-14)&quot;,&quot;[2021-06-13,2021-06-14)&quot;&#125;</span><br></pre></td></tr></table></figure>
-
-<p>因此，本质上与 datemultirange 的规范形式相同，但每个 daterange 周围有双引号。</p>
-<p>我们最喜欢的y一个函数是 <strong><code>unnest</code><strong>，</strong><code>unnest</code></strong> 函数支持 multirange 并返回一组范围。使用 <strong><code>array_agg</code><strong>、</strong><code>multirange</code></strong> 和 <strong><code>unnest</code></strong> 的组合，您可以从一组重叠的范围中创建一组不重叠的范围，如下所示：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> id_patient,</span><br><span class="line">    <span class="built_in">unnest</span>(replace(<span class="built_in">array_agg</span>(period_stay)::text, <span class="string">&#x27;&quot;&#x27;</span>, <span class="string">&#x27;&#x27;</span>)::datemultirange) <span class="keyword">AS</span> period_deduped_stay</span><br><span class="line"><span class="keyword">FROM</span> stays</span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> id_patient</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> id_patient;</span><br></pre></td></tr></table></figure>
-
-<p>输出：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"> id_patient |   period_deduped_stay</span><br><span class="line">------------+-------------------------</span><br><span class="line">          1 | [2021-05-10,2021-06-01)</span><br><span class="line">          2 | [2021-05-12,2021-05-14)</span><br><span class="line">          2 | [2021-06-13,2021-06-14)</span><br><span class="line">(3 rows)</span><br></pre></td></tr></table></figure>
-
-<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><ul>
-<li>本文翻译自 <a href="https://www.postgresonline.com/">Postgres Online Journal</a> 上的 <a href="https://www.postgresonline.com/article_pfriendly/401.html">Multirange types in PostgreSQL 14</a>。</li>
-</ul>
-<div class="just-for-fun">
-笑林广记 - 属牛
-
-<p>一官遇生辰，吏典闻其属鼠，乃醵黄金铸一鼠为寿。<br>官甚喜，曰：“汝等可知奶奶生辰亦在目下乎？”<br>众吏曰：“不知，请问其属？”<br>官曰：“小我一岁，丑年生的。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>翻译</tag>
       </tags>
   </entry>
   <entry>
