@@ -354,6 +354,37 @@
       </tags>
   </entry>
   <entry>
+    <title>C 语言类型及存储类限定符</title>
+    <url>/2019/06/C-type-and-storage-class-specifiers/</url>
+    <content><![CDATA[<p>本文主要介绍 C 语言中的类型及存储类限定符，C 语言中提高了两个类型限定符：<code>const</code> 和 <code>volatile</code>；类型限定符指明了变量的访问方式。存储类限定符则指定了变量在内存中的存储方式，C 语言提供了四种存储类限定符：<code>auto</code>，<code>register</code>，<code>extern</code> 和 <code>static</code>。</p>
+<span id="more"></span>
+
+<h2 id="类型限定符"><a href="#类型限定符" class="headerlink" title="类型限定符"></a>类型限定符</h2><p>类型限定符允许您指定变量的访问方式，C 语言提供了两个类型限定符：(a) <code>const</code> 指明变量是只读的，一旦初始化，它的值将不能被改变；(b) <code>volatile</code> 表明变量是显式可变的，并且看似无用的变量访问（例如，通过指针）不应该被优化掉。例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="keyword">float</span> pi = <span class="number">3.14159f</span>;</span><br><span class="line"><span class="keyword">volatile</span> <span class="keyword">float</span> currentTemperature = <span class="number">40.0</span>;</span><br></pre></td></tr></table></figure>
+
+<p><code>const</code> 限定符除了能防止变量被意外改变之外，它还能辅助编译器进行优化。针对有回调函数或者信号处理函数更新的变量，我们可以将其定义为 <code>volatile</code> 从而避免编译器过度优化导致数据不一致。</p>
+<h2 id="存储类限定符"><a href="#存储类限定符" class="headerlink" title="存储类限定符"></a>存储类限定符</h2><p>存储类限定允许您定义变量在内存中的存储方式。<code>auto</code> 关键字用于定义函数内部的局部变量，当函数返回时，这是局部变量（自动变量）将自动被清理掉，这是函数内部的变量默认行为。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">foo</span><span class="params">(<span class="keyword">int</span> value)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> <span class="keyword">int</span> x = value;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>register</code> 关键字定义的变量被称为寄存器变量，它的行为与 <code>auto</code> 定义的变量几乎类似，稍有不同的是，该关键字表明该变量的使用频率极高，如果可能尽量将其放在寄存器中。如果变量被声明为 <code>register</code> 类型，__那么将不能对其进行取地址运算 (<code>&amp;</code>)__。这意味着您不能引用使用存储类寄存器声明的数组的元素。GCC 编译器在优化时可以很好的选择哪些变量使用被保存在寄存器中，因此寄存器变量很少使用。</p>
+<p><code>static</code> 限定符与 <code>auto</code> 的作用正好相反：当将 <code>static</code> 应用于函数内部或块内的变量时，即使函数完成或块结束之后，这些变量都将保存其值。这就是所谓的__静态存储持续期 (Static Storage Duration)__。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">sum</span> <span class="params">(<span class="keyword">int</span> x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> sumSoFar = <span class="number">0</span>;</span><br><span class="line">    sumSoFar = sumSoFar + x;</span><br><span class="line">    <span class="keyword">return</span> sumSoFar;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>此外，您还可以在顶层（即不在函数内）将变量（或函数）声明为 <code>static</code>。这些变量（全局变量）仅在当前源文件可见，其它源文件则不可见。这就给 <code>static</code> 带来了双重含义；第二种意义则是__静态链接 (Static Linkage)__。在单独的文件中具有静态链接的两个函数或变量是完全独立的；在声明它的文件之外都不可见。</p>
+<p>声明为 <code>extern</code> 的未初始化变量的默认值为 <code>0</code>，<code>0.0</code> 或 <code>NULL</code>，具体值则取决于其类型。声明为 <code>auto</code> 和 <code>register</code> 的未初始化变量保留为初始化状态，因此不应假设这些变量保存特定的值。</p>
+<p><code>extern</code> 对于声明要链接到项目的所有源文件可见的变量很有用。变量声明时并不会为其分配存储空间，所以你无法在 <code>extern</code> 声明语句中进行初始化操作。您必须同时进行 <code>extern</code> 声明和非 <code>extern</code> 声明，实际上后者是变量的定义，它将为期分配存储空间。<code>extern</code> 声明语句可以重复多次。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="keyword">int</span> numberOfClients;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> numberOfClients = <span class="number">4</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers</a></p>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>C 语言</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>MacOS Mojave 上 GDB 调试配置</title>
     <url>/2019/06/GDB-on-MacOS-Mojave/</url>
     <content><![CDATA[<p>最近在 MacOS 上写代码，需要使用 gdb 进行调试，踩了一些坑，因此在这里做一个简要记录。稍微搜索一下我们就可以知道要在 MacOS 上使用 gdb 需要先创建一个自签名证书（<a href="https://gist.github.com/gravitylow/fb595186ce6068537a6e9da6d8b5b96d">看这里</a>)。</p>
@@ -403,37 +434,6 @@
       <tags>
         <tag>MacOS</tag>
         <tag>gdb</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>C 语言类型及存储类限定符</title>
-    <url>/2019/06/C-type-and-storage-class-specifiers/</url>
-    <content><![CDATA[<p>本文主要介绍 C 语言中的类型及存储类限定符，C 语言中提高了两个类型限定符：<code>const</code> 和 <code>volatile</code>；类型限定符指明了变量的访问方式。存储类限定符则指定了变量在内存中的存储方式，C 语言提供了四种存储类限定符：<code>auto</code>，<code>register</code>，<code>extern</code> 和 <code>static</code>。</p>
-<span id="more"></span>
-
-<h2 id="类型限定符"><a href="#类型限定符" class="headerlink" title="类型限定符"></a>类型限定符</h2><p>类型限定符允许您指定变量的访问方式，C 语言提供了两个类型限定符：(a) <code>const</code> 指明变量是只读的，一旦初始化，它的值将不能被改变；(b) <code>volatile</code> 表明变量是显式可变的，并且看似无用的变量访问（例如，通过指针）不应该被优化掉。例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="keyword">float</span> pi = <span class="number">3.14159f</span>;</span><br><span class="line"><span class="keyword">volatile</span> <span class="keyword">float</span> currentTemperature = <span class="number">40.0</span>;</span><br></pre></td></tr></table></figure>
-
-<p><code>const</code> 限定符除了能防止变量被意外改变之外，它还能辅助编译器进行优化。针对有回调函数或者信号处理函数更新的变量，我们可以将其定义为 <code>volatile</code> 从而避免编译器过度优化导致数据不一致。</p>
-<h2 id="存储类限定符"><a href="#存储类限定符" class="headerlink" title="存储类限定符"></a>存储类限定符</h2><p>存储类限定允许您定义变量在内存中的存储方式。<code>auto</code> 关键字用于定义函数内部的局部变量，当函数返回时，这是局部变量（自动变量）将自动被清理掉，这是函数内部的变量默认行为。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">foo</span><span class="params">(<span class="keyword">int</span> value)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> <span class="keyword">int</span> x = value;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>register</code> 关键字定义的变量被称为寄存器变量，它的行为与 <code>auto</code> 定义的变量几乎类似，稍有不同的是，该关键字表明该变量的使用频率极高，如果可能尽量将其放在寄存器中。如果变量被声明为 <code>register</code> 类型，__那么将不能对其进行取地址运算 (<code>&amp;</code>)__。这意味着您不能引用使用存储类寄存器声明的数组的元素。GCC 编译器在优化时可以很好的选择哪些变量使用被保存在寄存器中，因此寄存器变量很少使用。</p>
-<p><code>static</code> 限定符与 <code>auto</code> 的作用正好相反：当将 <code>static</code> 应用于函数内部或块内的变量时，即使函数完成或块结束之后，这些变量都将保存其值。这就是所谓的__静态存储持续期 (Static Storage Duration)__。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">sum</span> <span class="params">(<span class="keyword">int</span> x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> sumSoFar = <span class="number">0</span>;</span><br><span class="line">    sumSoFar = sumSoFar + x;</span><br><span class="line">    <span class="keyword">return</span> sumSoFar;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>此外，您还可以在顶层（即不在函数内）将变量（或函数）声明为 <code>static</code>。这些变量（全局变量）仅在当前源文件可见，其它源文件则不可见。这就给 <code>static</code> 带来了双重含义；第二种意义则是__静态链接 (Static Linkage)__。在单独的文件中具有静态链接的两个函数或变量是完全独立的；在声明它的文件之外都不可见。</p>
-<p>声明为 <code>extern</code> 的未初始化变量的默认值为 <code>0</code>，<code>0.0</code> 或 <code>NULL</code>，具体值则取决于其类型。声明为 <code>auto</code> 和 <code>register</code> 的未初始化变量保留为初始化状态，因此不应假设这些变量保存特定的值。</p>
-<p><code>extern</code> 对于声明要链接到项目的所有源文件可见的变量很有用。变量声明时并不会为其分配存储空间，所以你无法在 <code>extern</code> 声明语句中进行初始化操作。您必须同时进行 <code>extern</code> 声明和非 <code>extern</code> 声明，实际上后者是变量的定义，它将为期分配存储空间。<code>extern</code> 声明语句可以重复多次。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">extern</span> <span class="keyword">int</span> numberOfClients;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">int</span> numberOfClients = <span class="number">4</span>;</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Type-Qualifiers</a></p>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>C 语言</tag>
       </tags>
   </entry>
   <entry>
@@ -985,6 +985,58 @@
       </tags>
   </entry>
   <entry>
+    <title>LaTeX 自定义封面</title>
+    <url>/2019/04/customize-latex-title-page/</url>
+    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
+<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
+<p style="text-align:center">图 1 LaTeX 自定义封面</p>
+
+<span id="more"></span>
+
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
+<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="keyword">\documentclass</span>&#123;book&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">\begin</span>&#123;document&#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">\begin</span>&#123;titlepage&#125;</span><br><span class="line">    <span class="keyword">\centering</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.2<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Huge</span> Customize <span class="keyword">\LaTeX</span>&#123;&#125; Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.025<span class="keyword">\textheight</span>&#125;   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;0.83<span class="keyword">\textwidth</span>&#125;&#123;0.4pt&#125;  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Large</span> Author: <span class="keyword">\textsc</span>&#123;Japin Li&#125;&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vfill</span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\large</span> <span class="keyword">\today</span>&#125;</span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">\end</span>&#123;titlepage&#125;</span><br><span class="line"><span class="keyword">\end</span>&#123;document&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
+]]></content>
+      <categories>
+        <category>排版</category>
+      </categories>
+      <tags>
+        <tag>LaTeX</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Emacs 编辑二进制文件</title>
+    <url>/2018/10/editing-binary-files-in-emacs/</url>
+    <content><![CDATA[<p>二进制文件是以二进制格式存储的文件，它是计算机可读的，人类不直接阅读二进制文件。所有的可执行程序都以二进制文件存储。那我们该如何编辑二进制文件呢？在我使用的 Emacs 编辑器中提供了一个 hexl-mode 的主模式来编辑二进制文件。本文记录了 Emacs 中编辑二进制文件的基本操作。</p>
+<img src="/2018/10/editing-binary-files-in-emacs/Editing_Binary_File.png" class="" title="Editing Binary File">
+
+<span id="more"></span>
+
+<h3 id="打开"><a href="#打开" class="headerlink" title="打开"></a>打开</h3><p>我们可以使用 <code>M-x hexl-find-file</code> 取代 <code>C-x C-f</code> 命令来编辑二进制文件，该命令将文件内容转换为十六进制，并允许用户进行编辑。当用户保存文件时，它将会自动转换为二进制格式。</p>
+<p>当然，我们也可以使用 `M-x hexl-mode** 来将现有的缓冲区转换为十六进制，这在以普通方式打开二进制文件时非常有用。</p>
+<h3 id="编辑"><a href="#编辑" class="headerlink" title="编辑"></a>编辑</h3><p>普通文本字符在 hexl-mode 下被覆盖。这是为了降低意外破坏文件中数据对齐的风险。针对二进制文件，hexl-mode 有特殊的插入命令。以下是 hexl-mode 的命令列表：</p>
+<ul>
+<li><strong>C-M-d</strong> 插入一个包含十进制代码的字节。</li>
+<li><strong>C-M-o</strong> 插入一个包含八进制代码的字节。</li>
+<li><strong>C-M-x</strong> 插入一个包含十六进制代码的字节。</li>
+<li><strong>C-M-[</strong> 移动到 1k 字节页面的开头。</li>
+<li><strong>C-M-]</strong> 移动到 1k 字节页面的结尾。</li>
+<li><strong>M-g</strong> 移至以十六进制指定的地址。</li>
+<li><strong>M-j</strong> 移至以十进制指定的地址。</li>
+<li><strong>C-c C-c</strong> 退出 hexl-mode，返回调用 hexl-mode 之前返回此缓冲区的主模式。</li>
+</ul>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://www.webopedia.com/TERM/B/binary_file.html">https://www.webopedia.com/TERM/B/binary_file.html</a><br>[2] <a href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html">https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Emacs</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>列存数据库 cstore_fdw 的实现</title>
     <url>/2018/10/cstore-fdw-implementation/</url>
     <content><![CDATA[<p>在<a href="/2018/09/introduction-cstore-fdw-columnar-store/" title="上一篇">上一篇</a>中我介绍了如何安装和使用列存数据库 cstore_fdw。接着，我将在本篇中介绍 cstore_fdw 是如何实现的。</p>
@@ -1088,28 +1140,6 @@
       </tags>
   </entry>
   <entry>
-    <title>LaTeX 自定义封面</title>
-    <url>/2019/04/customize-latex-title-page/</url>
-    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
-<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
-<p style="text-align:center">图 1 LaTeX 自定义封面</p>
-
-<span id="more"></span>
-
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
-<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="keyword">\documentclass</span>&#123;book&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">\begin</span>&#123;document&#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">\begin</span>&#123;titlepage&#125;</span><br><span class="line">    <span class="keyword">\centering</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.2<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Huge</span> Customize <span class="keyword">\LaTeX</span>&#123;&#125; Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.025<span class="keyword">\textheight</span>&#125;   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;0.83<span class="keyword">\textwidth</span>&#125;&#123;0.4pt&#125;  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Large</span> Author: <span class="keyword">\textsc</span>&#123;Japin Li&#125;&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vfill</span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\large</span> <span class="keyword">\today</span>&#125;</span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">\end</span>&#123;titlepage&#125;</span><br><span class="line"><span class="keyword">\end</span>&#123;document&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Go 语言软件包下载</title>
     <url>/2020/05/download-go-package/</url>
     <content><![CDATA[<p>作为一个刚入门的 Go 小白来说，下载第三方包就成为了第一道坎 :( 。本文简要介绍一下如何下载 Go 软件包，尤其是 Google 系列的包。</p>
@@ -1133,36 +1163,6 @@
       </categories>
       <tags>
         <tag>Go</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Emacs 编辑二进制文件</title>
-    <url>/2018/10/editing-binary-files-in-emacs/</url>
-    <content><![CDATA[<p>二进制文件是以二进制格式存储的文件，它是计算机可读的，人类不直接阅读二进制文件。所有的可执行程序都以二进制文件存储。那我们该如何编辑二进制文件呢？在我使用的 Emacs 编辑器中提供了一个 hexl-mode 的主模式来编辑二进制文件。本文记录了 Emacs 中编辑二进制文件的基本操作。</p>
-<img src="/2018/10/editing-binary-files-in-emacs/Editing_Binary_File.png" class="" title="Editing Binary File">
-
-<span id="more"></span>
-
-<h3 id="打开"><a href="#打开" class="headerlink" title="打开"></a>打开</h3><p>我们可以使用 <code>M-x hexl-find-file</code> 取代 <code>C-x C-f</code> 命令来编辑二进制文件，该命令将文件内容转换为十六进制，并允许用户进行编辑。当用户保存文件时，它将会自动转换为二进制格式。</p>
-<p>当然，我们也可以使用 `M-x hexl-mode** 来将现有的缓冲区转换为十六进制，这在以普通方式打开二进制文件时非常有用。</p>
-<h3 id="编辑"><a href="#编辑" class="headerlink" title="编辑"></a>编辑</h3><p>普通文本字符在 hexl-mode 下被覆盖。这是为了降低意外破坏文件中数据对齐的风险。针对二进制文件，hexl-mode 有特殊的插入命令。以下是 hexl-mode 的命令列表：</p>
-<ul>
-<li><strong>C-M-d</strong> 插入一个包含十进制代码的字节。</li>
-<li><strong>C-M-o</strong> 插入一个包含八进制代码的字节。</li>
-<li><strong>C-M-x</strong> 插入一个包含十六进制代码的字节。</li>
-<li><strong>C-M-[</strong> 移动到 1k 字节页面的开头。</li>
-<li><strong>C-M-]</strong> 移动到 1k 字节页面的结尾。</li>
-<li><strong>M-g</strong> 移至以十六进制指定的地址。</li>
-<li><strong>M-j</strong> 移至以十进制指定的地址。</li>
-<li><strong>C-c C-c</strong> 退出 hexl-mode，返回调用 hexl-mode 之前返回此缓冲区的主模式。</li>
-</ul>
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://www.webopedia.com/TERM/B/binary_file.html">https://www.webopedia.com/TERM/B/binary_file.html</a><br>[2] <a href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html">https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Emacs</tag>
       </tags>
   </entry>
   <entry>
@@ -1302,6 +1302,59 @@
 <li><code>show configuration</code> - 显示编译 GDB 时的详细配置信息。</li>
 </ul>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://sourceware.org/gdb/current/onlinedocs/gdb/Commands.html#Commands">https://sourceware.org/gdb/current/onlinedocs/gdb/Commands.html#Commands</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>gdb</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>GDB 崩溃问题</title>
+    <url>/2022/09/gdb-crash/</url>
+    <content><![CDATA[<center><font size=1>本图片来自于 The Art of Debugging with GDB, DDD, and Eclipse 1st Edition, Kindle Edition 的封面</font size></center>
+<img src="/2022/09/gdb-crash/gdb.png" class="">
+
+<p>今天在调试程序的时候遇到了 GDB 导致的 segfault，感觉还挺有意思的，因此在这里做一个简要记录。</p>
+<span id="more"></span>
+
+<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> lsb_release -a</span></span><br><span class="line">No LSB modules are available.</span><br><span class="line">Distributor ID: Ubuntu</span><br><span class="line">Description:    Ubuntu 18.04.6 LTS</span><br><span class="line">Release:        18.04</span><br><span class="line">Codename:       bionic</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gdb --version</span></span><br><span class="line">GNU gdb (Ubuntu 8.1.1-0ubuntu1) 8.1.1</span><br><span class="line">Copyright (C) 2018 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.  Type &quot;show copying&quot;</span><br><span class="line">and &quot;show warranty&quot; for details.</span><br><span class="line">This GDB was configured as &quot;x86_64-linux-gnu&quot;.</span><br><span class="line">Type &quot;show configuration&quot; for configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line">For help, type &quot;help&quot;.</span><br><span class="line">Type &quot;apropos word&quot; to search for commands related to &quot;word&quot;.</span><br></pre></td></tr></table></figure>
+
+<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>场景是这样的，我在一个终端中进入了一个临时的工作目录；随后，我在另一个终端中将这个临时目录删除了；之后，我再回到第一个终端，并启动 GDB 进行调试，结果就遇到了 crash。为了方便演示，我们这里使用如下的测试程序：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;GDB segfault\n&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>使用如下命令进行编译：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gcc -g -O0 -o segfault segfault.c</span></span><br></pre></td></tr></table></figure>
+
+<p>为了后续方便测试，我们将 <code>segfault</code> 这个二进制文件所在路径加入到环境变量中。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">export</span> PATH=<span class="variable">$PWD</span>:<span class="variable">$PATH</span></span></span><br></pre></td></tr></table></figure>
+
+<p>随后，我们在新建一个目录 <code>t</code>，并进入该目录。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> mkdir t &amp;&amp; <span class="built_in">cd</span> t</span></span><br></pre></td></tr></table></figure>
+
+<p>然后，在另一个终端中删除目录 <code>t</code>。最后我们在第一个终端中执行下面的调试命令即可触发。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> gdb segfault</span></span><br><span class="line">gdb: warning: error finding working directory: No such file or directory</span><br><span class="line">GNU gdb (Ubuntu 8.1.1-0ubuntu1) 8.1.1</span><br><span class="line">Copyright (C) 2018 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.  Type &quot;show copying&quot;</span><br><span class="line">and &quot;show warranty&quot; for details.</span><br><span class="line">This GDB was configured as &quot;x86_64-linux-gnu&quot;.</span><br><span class="line">Type &quot;show configuration&quot; for configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line">For help, type &quot;help&quot;.</span><br><span class="line">Type &quot;apropos word&quot; to search for commands related to &quot;word&quot;...</span><br><span class="line">Segmentation fault</span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>通过生成 coredump 文件，我们可以看到如下的信息。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ sudo gdb gdb /tmp/core.0.10585.1653385146</span><br><span class="line">GNU gdb (Ubuntu 8.1.1-0ubuntu1) 8.1.1</span><br><span class="line">Copyright (C) 2018 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.  Type <span class="string">&quot;show copying&quot;</span></span><br><span class="line">and <span class="string">&quot;show warranty&quot;</span> <span class="keyword">for</span> details.</span><br><span class="line">This GDB was configured as <span class="string">&quot;x86_64-linux-gnu&quot;</span>.</span><br><span class="line">Type <span class="string">&quot;show configuration&quot;</span> <span class="keyword">for</span> configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">&lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line">For <span class="built_in">help</span>, <span class="built_in">type</span> <span class="string">&quot;help&quot;</span>.</span><br><span class="line">Type <span class="string">&quot;apropos word&quot;</span> to search <span class="keyword">for</span> commands related to <span class="string">&quot;word&quot;</span>...</span><br><span class="line">Reading symbols from gdb...Reading symbols from /usr/lib/debug/.build-id/aa/405dd866e17b9353dd22ef4350c9f765bed9aa.debug...done.</span><br><span class="line"><span class="keyword">done</span>.</span><br><span class="line">[New LWP 10585]</span><br><span class="line">[Thread debugging using libthread_db enabled]</span><br><span class="line">Using host libthread_db library <span class="string">&quot;/lib/x86_64-linux-gnu/libthread_db.so.1&quot;</span>.</span><br><span class="line">Core was generated by `gdb -p 28121<span class="string">&#x27;.</span></span><br><span class="line"><span class="string">Program terminated with signal SIGSEGV, Segmentation fault.</span></span><br><span class="line"><span class="string">#0  __strlen_avx2 () at ../sysdeps/x86_64/multiarch/strlen-avx2.S:65</span></span><br><span class="line"><span class="string">65      ../sysdeps/x86_64/multiarch/strlen-avx2.S: No such file or directory.</span></span><br><span class="line"><span class="string">(gdb) bt</span></span><br><span class="line"><span class="string">#0  __strlen_avx2 () at ../sysdeps/x86_64/multiarch/strlen-avx2.S:65</span></span><br><span class="line"><span class="string">#1  0x0000560b9bc52469 in gdb_abspath (path=path@entry=0x560b9dd723c0 &quot;system-supplied DSO at 0x7ffc9cd80000&quot;) at ./gdb/common/pathstuff.c:143</span></span><br><span class="line"><span class="string">#2  0x0000560b9bd97d03 in objfile::objfile (this=0x560b9d077640, abfd=0x560b9ddc52b0, name=0x560b9dd723c0 &quot;system-supplied DSO at 0x7ffc9cd80000&quot;, flags_=...)</span></span><br><span class="line"><span class="string">    at ./gdb/objfiles.c:400</span></span><br><span class="line"><span class="string">#3  0x0000560b9bdff2f9 in symbol_file_add_with_addrs (abfd=abfd@entry=0x560b9ddc52b0, name=0x560b9dd723c0 &quot;system-supplied DSO at 0x7ffc9cd80000&quot;, add_flags=...,</span></span><br><span class="line"><span class="string">    addrs=addrs@entry=0x560b9cdee4d0, flags=..., parent=parent@entry=0x0) at ./gdb/symfile.c:1153</span></span><br><span class="line"><span class="string">#4  0x0000560b9bdff9e5 in symbol_file_add_from_bfd (abfd=abfd@entry=0x560b9ddc52b0, name=&lt;optimized out&gt;, add_flags=..., addrs=addrs@entry=0x560b9cdee4d0, flags=...,</span></span><br><span class="line"><span class="string">    flags@entry=..., parent=parent@entry=0x0) at ./gdb/symfile.c:1263</span></span><br><span class="line"><span class="string">#5  0x0000560b9bbb08f2 in symbol_file_add_from_memory (templ=templ@entry=0x560b9cebeb50, addr=&lt;optimized out&gt;, size=&lt;optimized out&gt;,</span></span><br><span class="line"><span class="string">    name=name@entry=0x560b9dd723c0 &quot;system-supplied DSO at 0x7ffc9cd80000&quot;, from_tty=from_tty@entry=0) at ./gdb/symfile-mem.c:133</span></span><br><span class="line"><span class="string">#6  0x0000560b9bbb0a3f in add_vsyscall_page (target=&lt;optimized out&gt;, from_tty=&lt;optimized out&gt;) at ./gdb/symfile-mem.c:205</span></span><br><span class="line"><span class="string">#7  0x0000560b9bd9a41d in generic_observer_notify (args=0x7ffd04f1f450, subject=&lt;optimized out&gt;) at ./gdb/observer.c:167</span></span><br><span class="line"><span class="string">#8  observer_notify_inferior_created (objfile=&lt;optimized out&gt;, from_tty=from_tty@entry=1) at ./observer.inc:426</span></span><br><span class="line"><span class="string">#9  0x0000560b9bd58861 in post_create_inferior (target=&lt;optimized out&gt;, from_tty=from_tty@entry=1) at ./gdb/infcmd.c:501</span></span><br><span class="line"><span class="string">#10 0x0000560b9bd5ac3c in setup_inferior (from_tty=from_tty@entry=1) at ./gdb/infcmd.c:2660</span></span><br><span class="line"><span class="string">#11 0x0000560b9bd5ad3c in attach_post_wait (from_tty=1, mode=ATTACH_POST_WAIT_STOP, args=&lt;optimized out&gt;) at ./gdb/infcmd.c:2689</span></span><br><span class="line"><span class="string">#12 0x0000560b9bcbe00d in do_my_continuations_1 (err=0, pmy_chain=&lt;synthetic pointer&gt;) at ./gdb/continuations.c:59</span></span><br><span class="line"><span class="string">#13 do_my_continuations (err=0, list=&lt;optimized out&gt;) at ./gdb/continuations.c:83</span></span><br><span class="line"><span class="string">#14 do_all_inferior_continuations (err=err@entry=0) at ./gdb/continuations.c:125</span></span><br><span class="line"><span class="string">#15 0x0000560b9bd54c97 in inferior_event_handler (event_type=&lt;optimized out&gt;, client_data=&lt;optimized out&gt;) at ./gdb/inf-loop.c:59</span></span><br><span class="line"><span class="string">#16 0x0000560b9bd6bd5c in fetch_inferior_event (client_data=&lt;optimized out&gt;) at ./gdb/infrun.c:3973</span></span><br><span class="line"><span class="string">#17 0x0000560b9bd274fd in gdb_wait_for_event (block=block@entry=0) at ./gdb/event-loop.c:859</span></span><br><span class="line"><span class="string">#18 0x0000560b9bd276ef in gdb_do_one_event () at ./gdb/event-loop.c:322</span></span><br><span class="line"><span class="string">#19 0x0000560b9bd277a6 in gdb_do_one_event () at ./gdb/event-loop.c:353</span></span><br><span class="line"><span class="string">#20 0x0000560b9be34d3c in wait_sync_command_done () at ./gdb/top.c:503</span></span><br><span class="line"><span class="string">#21 0x0000560b9be34d7a in maybe_wait_sync_command_done (was_sync=&lt;optimized out&gt;, was_sync@entry=0) at ./gdb/top.c:520</span></span><br><span class="line"><span class="string">#22 0x0000560b9bd8290f in catch_command_errors (command=0x560b9bd5ae80 &lt;attach_command(char const*, int)&gt;, arg=arg@entry=0x7ffd04f2089f &quot;28121&quot;, from_tty=1) at ./gdb/main.c:381</span></span><br><span class="line"><span class="string">#23 0x0000560b9bd83cbc in captured_main_1 (context=&lt;optimized out&gt;) at ./gdb/main.c:1061</span></span><br><span class="line"><span class="string">#24 captured_main (data=&lt;optimized out&gt;) at ./gdb/main.c:1147</span></span><br><span class="line"><span class="string">#25 gdb_main (args=&lt;optimized out&gt;) at ./gdb/main.c:1173</span></span><br><span class="line"><span class="string">#26 0x0000560b9bb8decb in main (argc=&lt;optimized out&gt;, argv=&lt;optimized out&gt;) at ./gdb/gdb.c:32</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到是在 <code>gdb_abspath()</code> 函数中调用 <code>strlen()</code> 触发的，大概率这里的值是空值。<code>gdb_abspath()</code> 函数的源码如下所示：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="function">gdb::unique_xmalloc_ptr&lt;<span class="keyword">char</span>&gt;</span></span><br><span class="line"><span class="function"><span class="title">gdb_abspath</span> <span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *path)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="built_in">gdb_assert</span> (path != <span class="literal">NULL</span> &amp;&amp; path[<span class="number">0</span>] != <span class="string">&#x27;\0&#x27;</span>);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (path[<span class="number">0</span>] == <span class="string">&#x27;~&#x27;</span>)</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">gdb_tilde_expand_up</span> (path);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (<span class="built_in">IS_ABSOLUTE_PATH</span> (path))</span><br><span class="line">    <span class="keyword">return</span> gdb::unique_xmalloc_ptr&lt;<span class="keyword">char</span>&gt; (<span class="built_in">xstrdup</span> (path));</span><br><span class="line"></span><br><span class="line">  <span class="comment">/* Beware the // my son, the Emacs barfs, the botch that catch...  */</span></span><br><span class="line">  <span class="keyword">return</span> gdb::unique_xmalloc_ptr&lt;<span class="keyword">char</span>&gt;</span><br><span class="line">    (<span class="built_in">concat</span> (current_directory,</span><br><span class="line">             <span class="built_in">IS_DIR_SEPARATOR</span> (current_directory[<span class="built_in">strlen</span> (current_directory) - <span class="number">1</span>])</span><br><span class="line">             ? <span class="string">&quot;&quot;</span> : SLASH_STRING,</span><br><span class="line">             path, (<span class="keyword">char</span> *) <span class="literal">NULL</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里的 <code>current_directory</code> 是一个全局变量，由于它为空导致了崩溃。我在代码中查找了关于该变量的所有引用，如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ grep <span class="string">&#x27;current_directory&#x27;</span> -rn . --include <span class="string">&quot;*.c&quot;</span></span><br><span class="line">./gdb/cli/cli-cmds.c:364:  <span class="keyword">if</span> (strcmp (cwd.get (), current_directory) != 0)</span><br><span class="line">./gdb/cli/cli-cmds.c:366:                      current_directory, cwd.get ());</span><br><span class="line">./gdb/cli/cli-cmds.c:368:    printf_unfiltered (_(<span class="string">&quot;Working directory %s.\n&quot;</span>), current_directory);</span><br><span class="line">./gdb/cli/cli-cmds.c:414:      xfree (current_directory);</span><br><span class="line">./gdb/cli/cli-cmds.c:415:      current_directory = dir_holder.release ();</span><br><span class="line">./gdb/cli/cli-cmds.c:419:      <span class="keyword">if</span> (IS_DIR_SEPARATOR (current_directory[strlen (current_directory) - 1]))</span><br><span class="line">./gdb/cli/cli-cmds.c:420:       current_directory = concat (current_directory, dir_holder.get (),</span><br><span class="line">./gdb/cli/cli-cmds.c:423:       current_directory = concat (current_directory, SLASH_STRING,</span><br><span class="line">./gdb/cli/cli-cmds.c:430:  <span class="keyword">for</span> (p = current_directory; *p;)</span><br><span class="line">./gdb/cli/cli-cmds.c:444:             <span class="keyword">while</span> (q != current_directory &amp;&amp; !IS_DIR_SEPARATOR (q[-1]))</span><br><span class="line">./gdb/cli/cli-cmds.c:447:             <span class="keyword">if</span> (q == current_directory)</span><br><span class="line">./gdb/cli/cli-cmds.c:448:               /* current_directory is</span><br><span class="line">./gdb/cli/cli-cmds.c:722:  <span class="built_in">chdir</span> (current_directory);</span><br><span class="line">./gdb/source.c:510:           name = current_directory;</span><br><span class="line">./gdb/source.c:540:     name = concat (current_directory, SLASH_STRING, name, (char *)NULL);</span><br><span class="line">./gdb/source.c:799:       len = strlen (current_directory);</span><br><span class="line">./gdb/source.c:806:       strcpy (filename, current_directory);</span><br><span class="line">./gdb/tracefile-tfile.c:441:    filename.reset (concat (current_directory, <span class="string">&quot;/&quot;</span>, filename.get (),</span><br><span class="line">./gdb/top.c:133:char *current_directory;</span><br><span class="line">./gdb/top.c:1875:      history_filename = concat (current_directory, <span class="string">&quot;/_gdb_history&quot;</span>,</span><br><span class="line">./gdb/top.c:1878:      history_filename = concat (current_directory, <span class="string">&quot;/.gdb_history&quot;</span>,</span><br><span class="line">./gdb/top.c:1958:    history_filename = reconcat (history_filename, current_directory, <span class="string">&quot;/&quot;</span>,</span><br><span class="line">./gdb/top.c:2123:  make_final_cleanup (do_chdir_cleanup, xstrdup (current_directory));</span><br><span class="line">./gdb/bsd-kvm.c:84:       temp = concat (current_directory, <span class="string">&quot;/&quot;</span>, filename, (char *)NULL);</span><br><span class="line">./gdb/go32-nat.c:464:  <span class="built_in">chdir</span> (current_directory);</span><br><span class="line">./gdb/common/pathstuff.c:142:    (concat (current_directory,</span><br><span class="line">./gdb/common/pathstuff.c:143:        IS_DIR_SEPARATOR (current_directory[strlen (current_directory) - 1])</span><br><span class="line">./gdb/corelow.c:290:    filename.reset (concat (current_directory, <span class="string">&quot;/&quot;</span>,</span><br><span class="line">./gdb/gdbserver/server.c:63:char *current_directory;</span><br><span class="line">./gdb/gdbserver/server.c:3598:  current_directory = getcwd (NULL, 0);</span><br><span class="line">./gdb/gdbserver/server.c:3599:  <span class="keyword">if</span> (current_directory == NULL)</span><br><span class="line">./gdb/main.c:538:  current_directory = getcwd (NULL, 0);</span><br><span class="line">./gdb/main.c:539:  <span class="keyword">if</span> (current_directory == NULL)</span><br></pre></td></tr></table></figure>
+
+<p>通过上面的查找可以看到仅在 <code>server.c</code> 和 <code>main.c</code> 中对其进行了初始化（调用 <code>getcwd()</code> 函数），事实上，在上述的测试情况下 <code>getcwd()</code> 函数将返回 <code>NULL</code>，然而其只是给出一个警告便继续执行了，因此在后续使用 <code>current_directory</code> 时是对空指针进行操作，从而导致崩溃。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">current_directory = getcwd (<span class="literal">NULL</span>, <span class="number">0</span>);</span><br><span class="line"><span class="keyword">if</span> (current_directory == <span class="literal">NULL</span>)</span><br><span class="line">  perror_warning_with_name (_(<span class="string">&quot;error finding working directory&quot;</span>));</span><br></pre></td></tr></table></figure>
+
+<p>这个问题在之后的版本被修复了<sup>[1]</sup>。但不幸的是在 GDB 8.1.1 版本没有机会没有合并（与 GDB 的版本维护策略相关），因此建议升级一下 GDB，目前的 GDB 12 版本是已经确定修复了。感兴趣如何修复的朋友可以在<a href="https://sourceware.org/git/?p=binutils-gdb.git;a=patch;h=ff8577f64987a898e1dc5eb6afb66a404fb7bb16">这里</a>看到 patch 的完整内容。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://sourceware.org/bugzilla/show_bug.cgi?id=23613">https://sourceware.org/bugzilla/show_bug.cgi?id=23613</a></p>
+<div class="just-for-fun">
+笑林广记 - 讲解
+
+<p>有姓李者暴富而骄，或嘲之云：“一童读百家姓首句，求师解释，<br>师曰：‘赵是精赵的赵字（吴俗谓人呆为赵），钱是有铜钱的钱字，孙是小猢狲的孙字，李是姓张姓李的李字。’<br>童又问：‘倒转亦可讲得否？’<br>师曰：‘也讲得。’<br>童曰：‘如何讲？’<br>师曰：‘不过姓李的小猢狲，有了几个臭铜钱，一时就精赵起来。’”</p>
+</div>
 ]]></content>
       <categories>
         <category>杂项</category>
@@ -1603,6 +1656,21 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>Git 多仓库分支同步</title>
+    <url>/2019/01/git-sync-branches-among-remote-repositories/</url>
+    <content><![CDATA[<p>今天遇到一个 git 远程仓库分支同步的问题，主要的诉求是将两个远程仓库的分支同步到一致状态。起初，项目只是在 GitHub 上进行维护，后期又在 GitLab 上创建了该项目，并且两个仓库之间的分支情况有所不同。我们可以使用如下命令同步两个远程仓库之间的分支信息。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ git fetch --all -p</span><br><span class="line">$ git push github &quot;refs/remotes/gitlab/*:refs/heads/*&quot;</span><br><span class="line">$ git push gitlab &quot;refs/remotes/github/*:refs/heads/*&quot;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> <code>github</code> 指向远端的 GitHub 项目地址，同理，<code>gitlab</code> 指向远端的 GitLab 项目地址。</p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Git 跳过 SSL 验证</title>
     <url>/2019/08/git-skip-ssl-verify/</url>
     <content><![CDATA[<p>有时，我们在克隆代码或者拉取代码时想要跳过 SSL 验证（至于为什么有这么奇葩的需求就不多说了，自行体会），git 提供了多种方式可供用户选择。</p>
@@ -1614,21 +1682,6 @@ table th:nth-of-type(2) {
 
 <p>如果您想后续的仓库都跳过 SSL 验证，可以设置全局的 <code>http.sslVerify</code>，如下所示：</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config --global http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>git</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Git 多仓库分支同步</title>
-    <url>/2019/01/git-sync-branches-among-remote-repositories/</url>
-    <content><![CDATA[<p>今天遇到一个 git 远程仓库分支同步的问题，主要的诉求是将两个远程仓库的分支同步到一致状态。起初，项目只是在 GitHub 上进行维护，后期又在 GitLab 上创建了该项目，并且两个仓库之间的分支情况有所不同。我们可以使用如下命令同步两个远程仓库之间的分支信息。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ git fetch --all -p</span><br><span class="line">$ git push github &quot;refs/remotes/gitlab/*:refs/heads/*&quot;</span><br><span class="line">$ git push gitlab &quot;refs/remotes/github/*:refs/heads/*&quot;</span><br></pre></td></tr></table></figure>
-
-<p><strong>备注：</strong> <code>github</code> 指向远端的 GitHub 项目地址，同理，<code>gitlab</code> 指向远端的 GitLab 项目地址。</p>
 ]]></content>
       <categories>
         <category>杂项</category>
@@ -1803,43 +1856,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Gtags 忽略不相关的目录</title>
-    <url>/2021/06/gtags-exclude-some-directories/</url>
-    <content><![CDATA[<p>我在 Emacs 中使用 gtags (GNU global source code tag system) 来作为代码导航的基本工具，它默认标记根目录及其子目录，但是有一些子目录其实我并不想要被标记。本文简要记录一下如何告知 gtags 忽略某些目录或文件。</p>
-<span id="more"></span>
-
-<h2 id="方法一"><a href="#方法一" class="headerlink" title="方法一"></a>方法一</h2><p>gtags 默认提供了一个配置文件，我们可以通过这个配置文件来进行定制。为了不影响其他用户，建议拷贝到各自用户的家目录下进行设置，如下所示。</p>
-<p>Linux 系统一般为 <code>/usr/local/share/gtags/gtags.conf</code>（MacOS 系统在 <code>/usr/local/etc/gtags.conf</code>），我们将其拷贝到用户家目录下，并命名为 <code>.globalrc</code>，如下所示。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">-- Linux</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/share/gtags/gtags.conf ~/.globalrc</span></span><br><span class="line">-- MacOS</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/etc/gtags.conf ~/.globalrc</span></span><br></pre></td></tr></table></figure>
-
-<p>接着，我们在该文件中搜索 <code>skip</code>，然后加上我们想要忽略的目录或文件即可，</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">common:\</span><br><span class="line">    :skip=Debug/,HTML/,HTML.pub/,tags,TAGS,ID,y.tab.c,y.tab.h,gtags.files,cscope.files,cscope.out,cscope.po.out,cscope.in.out,SCCS/,RCS/,CVS/,CVSROOT/,&#123;arch&#125;/,autom4te.cache/,*.orig,*.rej,*.bak,*~,#*#,*.swp,*.tmp,*_flymake.*,*_flymake,*.o,*.a,*.so,*.lo,*.zip,*.gz,*.bz2,*.xz,*.lzh,*.Z,*.tgz,*.min.js,*min.css:</span><br></pre></td></tr></table></figure>
-
-<p>该项使用逗号作为分隔符，支持正则表达式。</p>
-<h2 id="方法二"><a href="#方法二" class="headerlink" title="方法二"></a>方法二</h2><p>上述方法稍微复杂，针对不同的项目，配置起来比较繁琐，最近在看到 <a href="http://peter.eisentraut.org/">Peter Eisentraut</a> 关于 <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">PostgreSQL 中使用 GNU Global 的文章</a>之后，才发现原来还可以这样优雅的解决。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ git ls-files &gt; gtags.files  <span class="comment"># Git 托管的源码目录</span></span><br><span class="line">$ gtags</span><br></pre></td></tr></table></figure>
-
-<p>我们利用 git 的特性来获取到所有的文件，然后将其保存到 <code>gtags.files</code> 文件中，随后在执行 <code>gtags</code> 命令来生成符号信息。这种方式也存在一些缺点：</p>
-<ol>
-<li>它不能为自动生成的文件提供导航；</li>
-<li>每次拉取新代码时，都需要重复执行 <code>git ls-files &gt; gtags.files &amp;&amp; gtags</code> 命令；</li>
-<li>新增的文件（尚未纳入 git 托管）同样不能提供导航。</li>
-</ol>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories">https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories</a><br>[2] <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql</a></p>
-<div class="just-for-fun">
-笑林广记 - 帝怕妒妇
-
-<p>房夫人性妒悍，玄龄惧之，不敢置一妾。<br>太宗命后召夫人，告以媵妾之流，今有定制，帝将有美女之赐。<br>夫人执意不回，帝遣斟以恐之，曰：“若然，是抗旨矣，当饮此鸠。”<br>夫人一举而尽，略无留难。曰：“我见尚怕，何况于玄龄？”</p>
-</div>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>gtags</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Golang cron v3 定时任务</title>
     <url>/2021/08/golang-cron/</url>
     <content><![CDATA[<p>最近由于工作原因，需要在 Golang 中创建一个定时任务来执行一些工作。在 Linux 中，我们可以通过 crontab 来实现这个功能；在 Golang 中也有一个名为 <a href="https://github.com/robfig/cron">cron</a> 的包，通过它我们可以很方便地在 Golang 中实现定时任务，本文简要记录了 <a href="https://github.com/robfig/cron">cron</a> 的使用方法。</p>
@@ -1976,6 +1992,43 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>Go</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Gtags 忽略不相关的目录</title>
+    <url>/2021/06/gtags-exclude-some-directories/</url>
+    <content><![CDATA[<p>我在 Emacs 中使用 gtags (GNU global source code tag system) 来作为代码导航的基本工具，它默认标记根目录及其子目录，但是有一些子目录其实我并不想要被标记。本文简要记录一下如何告知 gtags 忽略某些目录或文件。</p>
+<span id="more"></span>
+
+<h2 id="方法一"><a href="#方法一" class="headerlink" title="方法一"></a>方法一</h2><p>gtags 默认提供了一个配置文件，我们可以通过这个配置文件来进行定制。为了不影响其他用户，建议拷贝到各自用户的家目录下进行设置，如下所示。</p>
+<p>Linux 系统一般为 <code>/usr/local/share/gtags/gtags.conf</code>（MacOS 系统在 <code>/usr/local/etc/gtags.conf</code>），我们将其拷贝到用户家目录下，并命名为 <code>.globalrc</code>，如下所示。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">-- Linux</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/share/gtags/gtags.conf ~/.globalrc</span></span><br><span class="line">-- MacOS</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/etc/gtags.conf ~/.globalrc</span></span><br></pre></td></tr></table></figure>
+
+<p>接着，我们在该文件中搜索 <code>skip</code>，然后加上我们想要忽略的目录或文件即可，</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">common:\</span><br><span class="line">    :skip=Debug/,HTML/,HTML.pub/,tags,TAGS,ID,y.tab.c,y.tab.h,gtags.files,cscope.files,cscope.out,cscope.po.out,cscope.in.out,SCCS/,RCS/,CVS/,CVSROOT/,&#123;arch&#125;/,autom4te.cache/,*.orig,*.rej,*.bak,*~,#*#,*.swp,*.tmp,*_flymake.*,*_flymake,*.o,*.a,*.so,*.lo,*.zip,*.gz,*.bz2,*.xz,*.lzh,*.Z,*.tgz,*.min.js,*min.css:</span><br></pre></td></tr></table></figure>
+
+<p>该项使用逗号作为分隔符，支持正则表达式。</p>
+<h2 id="方法二"><a href="#方法二" class="headerlink" title="方法二"></a>方法二</h2><p>上述方法稍微复杂，针对不同的项目，配置起来比较繁琐，最近在看到 <a href="http://peter.eisentraut.org/">Peter Eisentraut</a> 关于 <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">PostgreSQL 中使用 GNU Global 的文章</a>之后，才发现原来还可以这样优雅的解决。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ git ls-files &gt; gtags.files  <span class="comment"># Git 托管的源码目录</span></span><br><span class="line">$ gtags</span><br></pre></td></tr></table></figure>
+
+<p>我们利用 git 的特性来获取到所有的文件，然后将其保存到 <code>gtags.files</code> 文件中，随后在执行 <code>gtags</code> 命令来生成符号信息。这种方式也存在一些缺点：</p>
+<ol>
+<li>它不能为自动生成的文件提供导航；</li>
+<li>每次拉取新代码时，都需要重复执行 <code>git ls-files &gt; gtags.files &amp;&amp; gtags</code> 命令；</li>
+<li>新增的文件（尚未纳入 git 托管）同样不能提供导航。</li>
+</ol>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories">https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories</a><br>[2] <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql</a></p>
+<div class="just-for-fun">
+笑林广记 - 帝怕妒妇
+
+<p>房夫人性妒悍，玄龄惧之，不敢置一妾。<br>太宗命后召夫人，告以媵妾之流，今有定制，帝将有美女之赐。<br>夫人执意不回，帝遣斟以恐之，曰：“若然，是抗旨矣，当饮此鸠。”<br>夫人一举而尽，略无留难。曰：“我见尚怕，何况于玄龄？”</p>
+</div>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>gtags</tag>
       </tags>
   </entry>
   <entry>
@@ -2240,6 +2293,38 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>LaTeX 页码设置</title>
+    <url>/2019/03/latex-page-numbering/</url>
+    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
+<span id="more"></span>
+
+<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
+<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
+<ul>
+<li><strong>empty</strong> - 没有页眉和页脚</li>
+<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
+<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
+<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
+</ul>
+<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
+<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
+<ul>
+<li><strong>arabic</strong> - 阿拉伯数字</li>
+<li><strong>roman</strong> - 小写的罗马数字</li>
+<li><strong>Roman</strong> - 大写的罗马数字</li>
+<li><strong>alph</strong> - 小写的字符形式</li>
+<li><strong>Alph</strong> - 大写的字符形式</li>
+</ul>
+<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">\documentclass&#123;article&#125;</span><br><span class="line"></span><br><span class="line">\usepackage&#123;fontspec, xunicode, xlextra&#125;</span><br><span class="line">\usepackage&#123;xeCJK&#125;</span><br><span class="line"></span><br><span class="line">\title&#123;\LaTeX 页码设置&#125;</span><br><span class="line">\author&#123;Japinli&#125;</span><br><span class="line"></span><br><span class="line">\begin&#123;document&#125;</span><br><span class="line">\maketitle</span><br><span class="line">\thispagestyle&#123;empty&#125; % 当前页不显示页码</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\pagestyle&#123;headings&#125;</span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;Roman&#125;</span><br><span class="line"></span><br><span class="line">\section*&#123;前言&#125;</span><br><span class="line">学习如何在\LaTeX 中设置页码。</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\tableofcontents</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;arabic&#125;</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格&#125;</span><br><span class="line"></span><br><span class="line">\LaTeX 中包含五种页码风格，分别是\emph&#123;arabic&#125;，\emph&#123;roman&#125;，\emph&#123;Roman&#125;，</span><br><span class="line">\emph&#123;alph&#125;和\emph&#123;Alph&#125;。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格说明&#125;</span><br><span class="line"></span><br><span class="line">\emph&#123;arabic&#125;代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;roman&#125;代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Roman&#125;代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;alph&#125;代表小写的字符类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Alph&#125;代表大写的字符类型。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格设置&#125;</span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用\emph&#123;\textbackslash pagenumbering\&#123;sytle\&#125;&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line">\end&#123;document&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>排版</category>
+      </categories>
+      <tags>
+        <tag>LaTeX</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 发布者与订阅者不同的 datestyle 导致失败</title>
     <url>/2021/10/logical-replication-with-different-datestyle-between-publisher-and-subscriber/</url>
     <content><![CDATA[<p>最近在浏览 PostgreSQL 邮件列表时发现一个 bug：逻辑复制时，如果发布者和订阅者的 <code>datestyle</code> 不一致可能导致逻辑复制失败。本文简要记录这个问题的分析与修复方法。</p>
@@ -2304,35 +2389,42 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>LaTeX 页码设置</title>
-    <url>/2019/03/latex-page-numbering/</url>
-    <content><![CDATA[<p>默认情况下，LaTeX 会在每个页面的底部生成一个页码编号，即使是标题页也是如此。通常情况下，我们不需要在标题页输出页码编号，而且目录页一般也会采用罗马数字的形式给出页码，而正文内容则以阿拉伯数字的形式给出页码编号。本文接下来介绍了 LaTeX 中基本的页码设置。</p>
+    <title>Psql 内存泄漏</title>
+    <url>/2022/07/memory-leak-in-psql-describe/</url>
+    <content><![CDATA[<img src="/2022/07/memory-leak-in-psql-describe/memory-leak.jpeg" class="">
+
+<p>今天在邮件列表中发现一个关于 <a href="https://www.postgresql.org/message-id/OS0PR01MB61136CE4A6A21950B82202F8FB8F9%40OS0PR01MB6113.jpnprd01.prod.outlook.com">psql 内存泄露的问题</a>，经过测试，确实存在内存泄露。同时，我在查看周围的代码时，还发现其它地方也存在类似的内存泄漏。本文简要记录一下该问题。</p>
 <span id="more"></span>
 
-<h2 id="页码设置相关的命令"><a href="#页码设置相关的命令" class="headerlink" title="页码设置相关的命令"></a>页码设置相关的命令</h2><p>在 LaTex 中，与页码和页面设置相关的命令有 <code>\pagestyle&#123;type&#125;</code>，<code>\thispagestyle&#123;type&#125;</code>，<code>setcounter&#123;page&#125;&#123;number&#125;</code> 和 <code>\pagenumbering&#123;style&#125;</code>。</p>
-<p>其中 <code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 命令用于设置页面样式 (页眉和页脚)。<code>\pagestyle&#123;type&#125;</code> 和 <code>\thispagestyle&#123;type&#125;</code> 的主要区别在于 <code>\pagestyle&#123;type&#125;</code> 对后续所有页面都有效，而 <code>\thispagestyle&#123;type&#125;</code> 仅仅对当前页面有效。在 LaTeX 中，默认提供了以下五种页面样式：</p>
-<ul>
-<li><strong>empty</strong> - 没有页眉和页脚</li>
-<li><strong>plain</strong> - 没有页眉，页脚包含一个居中的页码</li>
-<li><strong>headings</strong> - 没有页脚，页眉包含章/节或者字节的名字和页码</li>
-<li><strong>myheadings</strong> - 没有页脚，页眉包含有页码</li>
-</ul>
-<p>默认情况下，页码从第一页开始 (通常是包含标题页的) 并且以阿拉伯数字形式显示 (例如：1，2，3, … )。页码的编号也可以通过 <code>\setcounter&#123;page&#125;&#123;number&#125;</code> 命令手动设置，需要注意的是，手动设置可能会导致重复的页码出现。</p>
-<p><code>\pagenumbering&#123;style&#125;</code> 命令则用于改变页码的显示风格。LaTeX 中页码风格包含以下五类：</p>
-<ul>
-<li><strong>arabic</strong> - 阿拉伯数字</li>
-<li><strong>roman</strong> - 小写的罗马数字</li>
-<li><strong>Roman</strong> - 大写的罗马数字</li>
-<li><strong>alph</strong> - 小写的字符形式</li>
-<li><strong>Alph</strong> - 大写的字符形式</li>
-</ul>
-<h2 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">\documentclass&#123;article&#125;</span><br><span class="line"></span><br><span class="line">\usepackage&#123;fontspec, xunicode, xlextra&#125;</span><br><span class="line">\usepackage&#123;xeCJK&#125;</span><br><span class="line"></span><br><span class="line">\title&#123;\LaTeX 页码设置&#125;</span><br><span class="line">\author&#123;Japinli&#125;</span><br><span class="line"></span><br><span class="line">\begin&#123;document&#125;</span><br><span class="line">\maketitle</span><br><span class="line">\thispagestyle&#123;empty&#125; % 当前页不显示页码</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\pagestyle&#123;headings&#125;</span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;Roman&#125;</span><br><span class="line"></span><br><span class="line">\section*&#123;前言&#125;</span><br><span class="line">学习如何在\LaTeX 中设置页码。</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\tableofcontents</span><br><span class="line">\newpage</span><br><span class="line"></span><br><span class="line">\setcounter&#123;page&#125;&#123;1&#125;</span><br><span class="line">\pagenumbering&#123;arabic&#125;</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格&#125;</span><br><span class="line"></span><br><span class="line">\LaTeX 中包含五种页码风格，分别是\emph&#123;arabic&#125;，\emph&#123;roman&#125;，\emph&#123;Roman&#125;，</span><br><span class="line">\emph&#123;alph&#125;和\emph&#123;Alph&#125;。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格说明&#125;</span><br><span class="line"></span><br><span class="line">\emph&#123;arabic&#125;代表阿拉伯数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;roman&#125;代表小写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Roman&#125;代表大写的罗马数字类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;alph&#125;代表小写的字符类型。</span><br><span class="line"></span><br><span class="line">\emph&#123;Alph&#125;代表大写的字符类型。</span><br><span class="line"></span><br><span class="line">\section&#123;页码风格设置&#125;</span><br><span class="line"></span><br><span class="line">为了改变页码的风格，可以使用\emph&#123;\textbackslash pagenumbering\&#123;sytle\&#125;&#125;</span><br><span class="line">命令设置。</span><br><span class="line"></span><br><span class="line">\end&#123;document&#125;</span><br></pre></td></tr></table></figure>
+<p>内存泄露发生在 <code>validateSQLNamePattern()</code> 函数中，其函数定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">validateSQLNamePattern</span><span class="params">(PQExpBuffer buf, <span class="keyword">const</span> <span class="keyword">char</span> *pattern, <span class="keyword">bool</span> have_where,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">bool</span> force_escape, <span class="keyword">const</span> <span class="keyword">char</span> *schemavar,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">const</span> <span class="keyword">char</span> *namevar, <span class="keyword">const</span> <span class="keyword">char</span> *altnamevar,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">const</span> <span class="keyword">char</span> *visibilityrule, <span class="keyword">bool</span> *added_clause,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">int</span> maxparts)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    PQExpBufferData dbbuf;</span><br><span class="line">    <span class="keyword">int</span>         dotcnt;</span><br><span class="line">    <span class="keyword">bool</span>        added;</span><br><span class="line"></span><br><span class="line">    initPQExpBuffer(&amp;dbbuf);</span><br><span class="line">    added = processSQLNamePattern(pset.db, buf, pattern, have_where, force_escape,</span><br><span class="line">                                  schemavar, namevar, altnamevar,</span><br><span class="line">                                  visibilityrule, &amp;dbbuf, &amp;dotcnt);</span><br><span class="line">    <span class="keyword">if</span> (added_clause != <span class="literal">NULL</span>)</span><br><span class="line">        *added_clause = added;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (dotcnt &gt;= maxparts)</span><br><span class="line">    &#123;</span><br><span class="line">        pg_log_error(<span class="string">&quot;improper qualified name (too many dotted names): %s&quot;</span>,</span><br><span class="line">                     pattern);</span><br><span class="line">        termPQExpBuffer(&amp;dbbuf);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (maxparts &gt; <span class="number">1</span> &amp;&amp; dotcnt == maxparts - <span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (PQdb(pset.db) == <span class="literal">NULL</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            pg_log_error(<span class="string">&quot;You are currently not connected to a database.&quot;</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">strcmp</span>(PQdb(pset.db), dbbuf.data) != <span class="number">0</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            pg_log_error(<span class="string">&quot;cross-database references are not implemented: %s&quot;</span>,</span><br><span class="line">                         pattern);</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>相信您一眼就能发现哪儿出现了内存泄露。</p>
+<p><code>initPQExpBuffer()</code> 函数将调用 <code>malloc()</code> 函数分配 512 字节的内存。该函数仅在 <code>dotcnt &gt;= maxparts</code> 时释放了其分配的内存，后续忽略了该内存的释放，从而导致内存泄露。我们可以通过诸如 <code>\dRp</code> 命令来测试。</p>
+<p>由于每次泄露的内存比较小，为了能明显的感知内存泄露，我们可以通过 vim 来创建一个包含 10000 条 <code>\dRp</code> 的 SQL 文件，随后使用 psql 连接数据库并执行该文件，同时，使用 <code>top</code> 命令和 <code>/proc/pid/status</code> 观察内存变化。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ top -p <span class="variable">$pid</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ <span class="keyword">while</span> <span class="literal">true</span>; <span class="keyword">do</span> cat /proc/<span class="variable">$pid</span>/status | grep -i rss; sleep 1; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<p>注意，<code>$pid</code> 为 psql 进程的 ID。</p>
+<p>通过上述操作可以看到内存会一直小幅度上涨，并且不会被释放。我们尝试应用下面的补丁，可以避免内存泄露。</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/bin/psql/describe.c b/src/bin/psql/describe.c</span></span><br><span class="line"><span class="comment">index 88d92a08ae..0ce38e4b4c 100644</span></span><br><span class="line"><span class="comment">--- a/src/bin/psql/describe.c</span></span><br><span class="line"><span class="comment">+++ b/src/bin/psql/describe.c</span></span><br><span class="line"><span class="meta">@@ -6023,15 +6023,18 @@</span> validateSQLNamePattern(PQExpBuffer buf, const char *pattern, bool have_where,</span><br><span class="line"> 		if (PQdb(pset.db) == NULL)</span><br><span class="line"> 		&#123;</span><br><span class="line"> 			pg_log_error(&quot;You are currently not connected to a database.&quot;);</span><br><span class="line"><span class="addition">+			termPQExpBuffer(&amp;dbbuf);</span></span><br><span class="line"> 			return false;</span><br><span class="line"> 		&#125;</span><br><span class="line"> 		if (strcmp(PQdb(pset.db), dbbuf.data) != 0)</span><br><span class="line"> 		&#123;</span><br><span class="line"> 			pg_log_error(&quot;cross-database references are not implemented: %s&quot;,</span><br><span class="line"> 						 pattern);</span><br><span class="line"><span class="addition">+			termPQExpBuffer(&amp;dbbuf);</span></span><br><span class="line"> 			return false;</span><br><span class="line"> 		&#125;</span><br><span class="line"> 	&#125;</span><br><span class="line"><span class="addition">+	termPQExpBuffer(&amp;dbbuf);</span></span><br><span class="line"> 	return true;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>当我们在重复上面的测试步骤，可以发现内存基本上不会发生变化。随后我又查看了 <code>psql/describe.c</code> 文件中关于 <code>validateSQLNamePattern()</code> 调用的地方，发现其也存在大量的内存泄露。主要集中在 <code>initPQExpBuffer()</code> 函数调用后，在错误情况下，忽略了该内存的释放。我们可以使用诸如 <code>\dRp .*fdkf.*</code> 的命令来进行测试。由于补丁内容比较大，就不展示了，在下面的参考链接中包含了该 patch。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/OS0PR01MB61136CE4A6A21950B82202F8FB8F9%40OS0PR01MB6113.jpnprd01.prod.outlook.com">https://www.postgresql.org/message-id/OS0PR01MB61136CE4A6A21950B82202F8FB8F9%40OS0PR01MB6113.jpnprd01.prod.outlook.com</a></p>
+<p><strong>备注：</strong>图片来源于 <a href="https://www.krwalters.com/2018/03/14/memory-leak-in-woodstock/%E3%80%82">https://www.krwalters.com/2018/03/14/memory-leak-in-woodstock/。</a></p>
+<div class="just-for-fun">
+笑林广记 - 春生帖
+
+<p>一财主不通文墨，谓友曰：“某人甚是欠通，清早来拜我，就写晚生帖。”<br>傍一监生曰：“这倒还差不远，好像这两日秋天拜客，竟有写春生帖子的哩。”</p>
+</div>
 ]]></content>
       <categories>
-        <category>排版</category>
+        <category>数据库</category>
       </categories>
       <tags>
-        <tag>LaTeX</tag>
+        <tag>PostgreSQL</tag>
+        <tag>psql</tag>
       </tags>
   </entry>
   <entry>
@@ -2411,45 +2503,6 @@ table th:nth-of-type(2) {
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
         <tag>迁移</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Psql 内存泄漏</title>
-    <url>/2022/07/memory-leak-in-psql-describe/</url>
-    <content><![CDATA[<img src="/2022/07/memory-leak-in-psql-describe/memory-leak.jpeg" class="">
-
-<p>今天在邮件列表中发现一个关于 <a href="https://www.postgresql.org/message-id/OS0PR01MB61136CE4A6A21950B82202F8FB8F9%40OS0PR01MB6113.jpnprd01.prod.outlook.com">psql 内存泄露的问题</a>，经过测试，确实存在内存泄露。同时，我在查看周围的代码时，还发现其它地方也存在类似的内存泄漏。本文简要记录一下该问题。</p>
-<span id="more"></span>
-
-<p>内存泄露发生在 <code>validateSQLNamePattern()</code> 函数中，其函数定义如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">validateSQLNamePattern</span><span class="params">(PQExpBuffer buf, <span class="keyword">const</span> <span class="keyword">char</span> *pattern, <span class="keyword">bool</span> have_where,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">bool</span> force_escape, <span class="keyword">const</span> <span class="keyword">char</span> *schemavar,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">const</span> <span class="keyword">char</span> *namevar, <span class="keyword">const</span> <span class="keyword">char</span> *altnamevar,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">const</span> <span class="keyword">char</span> *visibilityrule, <span class="keyword">bool</span> *added_clause,</span></span></span><br><span class="line"><span class="params"><span class="function">                       <span class="keyword">int</span> maxparts)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    PQExpBufferData dbbuf;</span><br><span class="line">    <span class="keyword">int</span>         dotcnt;</span><br><span class="line">    <span class="keyword">bool</span>        added;</span><br><span class="line"></span><br><span class="line">    initPQExpBuffer(&amp;dbbuf);</span><br><span class="line">    added = processSQLNamePattern(pset.db, buf, pattern, have_where, force_escape,</span><br><span class="line">                                  schemavar, namevar, altnamevar,</span><br><span class="line">                                  visibilityrule, &amp;dbbuf, &amp;dotcnt);</span><br><span class="line">    <span class="keyword">if</span> (added_clause != <span class="literal">NULL</span>)</span><br><span class="line">        *added_clause = added;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (dotcnt &gt;= maxparts)</span><br><span class="line">    &#123;</span><br><span class="line">        pg_log_error(<span class="string">&quot;improper qualified name (too many dotted names): %s&quot;</span>,</span><br><span class="line">                     pattern);</span><br><span class="line">        termPQExpBuffer(&amp;dbbuf);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (maxparts &gt; <span class="number">1</span> &amp;&amp; dotcnt == maxparts - <span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (PQdb(pset.db) == <span class="literal">NULL</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            pg_log_error(<span class="string">&quot;You are currently not connected to a database.&quot;</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">strcmp</span>(PQdb(pset.db), dbbuf.data) != <span class="number">0</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            pg_log_error(<span class="string">&quot;cross-database references are not implemented: %s&quot;</span>,</span><br><span class="line">                         pattern);</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>相信您一眼就能发现哪儿出现了内存泄露。</p>
-<p><code>initPQExpBuffer()</code> 函数将调用 <code>malloc()</code> 函数分配 512 字节的内存。该函数仅在 <code>dotcnt &gt;= maxparts</code> 时释放了其分配的内存，后续忽略了该内存的释放，从而导致内存泄露。我们可以通过诸如 <code>\dRp</code> 命令来测试。</p>
-<p>由于每次泄露的内存比较小，为了能明显的感知内存泄露，我们可以通过 vim 来创建一个包含 10000 条 <code>\dRp</code> 的 SQL 文件，随后使用 psql 连接数据库并执行该文件，同时，使用 <code>top</code> 命令和 <code>/proc/pid/status</code> 观察内存变化。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ top -p <span class="variable">$pid</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ <span class="keyword">while</span> <span class="literal">true</span>; <span class="keyword">do</span> cat /proc/<span class="variable">$pid</span>/status | grep -i rss; sleep 1; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-
-<p>注意，<code>$pid</code> 为 psql 进程的 ID。</p>
-<p>通过上述操作可以看到内存会一直小幅度上涨，并且不会被释放。我们尝试应用下面的补丁，可以避免内存泄露。</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/bin/psql/describe.c b/src/bin/psql/describe.c</span></span><br><span class="line"><span class="comment">index 88d92a08ae..0ce38e4b4c 100644</span></span><br><span class="line"><span class="comment">--- a/src/bin/psql/describe.c</span></span><br><span class="line"><span class="comment">+++ b/src/bin/psql/describe.c</span></span><br><span class="line"><span class="meta">@@ -6023,15 +6023,18 @@</span> validateSQLNamePattern(PQExpBuffer buf, const char *pattern, bool have_where,</span><br><span class="line"> 		if (PQdb(pset.db) == NULL)</span><br><span class="line"> 		&#123;</span><br><span class="line"> 			pg_log_error(&quot;You are currently not connected to a database.&quot;);</span><br><span class="line"><span class="addition">+			termPQExpBuffer(&amp;dbbuf);</span></span><br><span class="line"> 			return false;</span><br><span class="line"> 		&#125;</span><br><span class="line"> 		if (strcmp(PQdb(pset.db), dbbuf.data) != 0)</span><br><span class="line"> 		&#123;</span><br><span class="line"> 			pg_log_error(&quot;cross-database references are not implemented: %s&quot;,</span><br><span class="line"> 						 pattern);</span><br><span class="line"><span class="addition">+			termPQExpBuffer(&amp;dbbuf);</span></span><br><span class="line"> 			return false;</span><br><span class="line"> 		&#125;</span><br><span class="line"> 	&#125;</span><br><span class="line"><span class="addition">+	termPQExpBuffer(&amp;dbbuf);</span></span><br><span class="line"> 	return true;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
-
-<p>当我们在重复上面的测试步骤，可以发现内存基本上不会发生变化。随后我又查看了 <code>psql/describe.c</code> 文件中关于 <code>validateSQLNamePattern()</code> 调用的地方，发现其也存在大量的内存泄露。主要集中在 <code>initPQExpBuffer()</code> 函数调用后，在错误情况下，忽略了该内存的释放。我们可以使用诸如 <code>\dRp .*fdkf.*</code> 的命令来进行测试。由于补丁内容比较大，就不展示了，在下面的参考链接中包含了该 patch。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/OS0PR01MB61136CE4A6A21950B82202F8FB8F9%40OS0PR01MB6113.jpnprd01.prod.outlook.com">https://www.postgresql.org/message-id/OS0PR01MB61136CE4A6A21950B82202F8FB8F9%40OS0PR01MB6113.jpnprd01.prod.outlook.com</a></p>
-<p><strong>备注：</strong>图片来源于 <a href="https://www.krwalters.com/2018/03/14/memory-leak-in-woodstock/%E3%80%82">https://www.krwalters.com/2018/03/14/memory-leak-in-woodstock/。</a></p>
-<div class="just-for-fun">
-笑林广记 - 春生帖
-
-<p>一财主不通文墨，谓友曰：“某人甚是欠通，清早来拜我，就写晚生帖。”<br>傍一监生曰：“这倒还差不远，好像这两日秋天拜客，竟有写春生帖子的哩。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>psql</tag>
       </tags>
   </entry>
   <entry>
@@ -2787,43 +2840,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL auto_explain 插件内存泄露</title>
-    <url>/2021/02/postgresql-auto-explain-memory-leak/</url>
-    <content><![CDATA[<p>最近看到 PostgreSQL 邮件列表中有人说 auto_explain 插件在特定情况下会导致 OOM 问题，经过一番分析发现原来是由于内存上下文的问题导致的。目前该泄露已经修复，并合并到代码库中。</p>
-<img src="/2021/02/postgresql-auto-explain-memory-leak/fix_memory_leak_in_auto_explain.png" class="">
-
-<span id="more"></span>
-
-<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>首先我们来看看如何重现这个问题。首先，我们需要一个已运行的 PostgreSQL 数据库服务器。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ psql postgres -c &#x27;ALTER SYSTEM SET shared_preload_libraries TO auto_explain;&#x27;</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">$ psql postgres -c &#x27;ALTER SYSTEM SET auto_explain.log_min_duration TO 0;&#x27;</span><br><span class="line">$ psql postgres -c &#x27;ALTER SYSTEM SET auto_explain.log_nested_statements TO on;&#x27;</span><br><span class="line">$ pg_ctl restart</span><br></pre></td></tr></table></figure>
-
-<p>接着，我们通过 psql 连接数据库，并创建如下函数。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">FUNCTION</span> gibberish(<span class="type">int</span>) <span class="keyword">RETURNS</span> text</span><br><span class="line"><span class="keyword">LANGUAGE</span> <span class="keyword">SQL</span> <span class="keyword">AS</span> $_$</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">left</span>(string_agg(md5(random()::text),$$$$),$<span class="number">1</span>) <span class="keyword">FROM</span> generate_series(<span class="number">0</span>,$<span class="number">1</span><span class="operator">/</span><span class="number">32</span>)</span><br><span class="line">$_$;</span><br></pre></td></tr></table></figure>
-
-<p>接着我们执行下面的查询命令。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    x, md5(random()::text) <span class="keyword">as</span> t11,</span><br><span class="line">    gibberish(<span class="number">1500</span>) <span class="keyword">as</span> t12</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    generate_series(<span class="number">1</span>,<span class="number">20e6</span>) f(x);</span><br></pre></td></tr></table></figure>
-
-<p>这个为了简化我省略了 <code>CREATE TABLE j1 AS</code>，因为这个不是内存泄露的关键。在执行上述命令的时候，我们可以通过 <code>top -p &lt;pid&gt;</code> 去观察，发现确实是内存一直在增长。</p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>为了缩写范围，我尝试将 auto_explain 插件移除，并执行上面的查询，发现内存并不会增长。那么内存泄露的问题就被缩小到了 auto_explain 代码中了，通过查看 auto_explain 源码，我发现这里面有两个地方会显示的调用内存分配 <code>explain_ExecutorStart()</code> 函数和 <code>explain_ExecutorEnd()</code>。该 bug 的发现者指出该内存泄露是发生在 SQL function 内存上下文中，经过调试我发现确实在执行 <code>explain_ExecutorEnd()</code> 函数时该内存上下文为 SQL function。</p>
-<p>那么 SQL function 的内存上下文是什么时候创建的呢？通过查找，我发现它是在 <code>src/backend/executor/functions.c</code> 文件中的 <code>init_sql_fcache()</code> 函数中创建的。然而，在调用函数时 <code>fmgr_sql()</code> 函数中有如下注释。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">fmgr_sql</span><span class="params">(PG_FUNCTION_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fcache == <span class="literal">NULL</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        init_sql_fcache(fcinfo, PG_GET_COLLATION(), lazyEvalOK);</span><br><span class="line">        fcache = (SQLFunctionCachePtr) fcinfo-&gt;flinfo-&gt;fn_extra;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Switch to context in which the fcache lives.  This ensures that our</span></span><br><span class="line"><span class="comment">     * tuplestore etc will have sufficient lifetime.  The sub-executor is</span></span><br><span class="line"><span class="comment">     * responsible for deleting per-tuple information.  (XXX in the case of a</span></span><br><span class="line"><span class="comment">     * long-lived FmgrInfo, this policy represents more memory leakage, but</span></span><br><span class="line"><span class="comment">     * it&#x27;s not entirely clear where to keep stuff instead.)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    oldcontext = MemoryContextSwitchTo(fcache-&gt;fcontext);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这里可以看到，SQL function 的内存上下文可能会存在较长的生命周期，那么我们频繁的在该内存上下文上分配内存，就有可能导致内存泄露，而 <code>explain_ExecutorEnd()</code> 函数执行时的内存上下文就是在 SQL function 内存上下文中，对于相对简单的查询，可能这并不会有什么问题，这也是这个内存泄露没有被即使发现的原因，当我们执行上面的查询时这个问题就暴露出来了。</p>
-<p><strong>备注：</strong> 这里的内存泄露主要是 <code>explain_ExecutorEnd()</code> 函数中 <code>ExplainState</code> 结构的分配导致的。</p>
-<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>那么这个问题这么解决呢？在分析了之后，我发现这个内存的分配其实在执行完 <code>ExecutorEnd()</code> 之后就不再需要了，因此我们可以将其放在每个查询的内存上下文中（即 <code>queryDesc-&gt;estate-&gt;es_query_cxt</code> 中），那么每次执行完之后该内存就被回收了，从而避免了内存泄露。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">diff --git a/contrib/auto_explain/auto_explain.c b/contrib/auto_explain/auto_explain.c</span><br><span class="line">index faa6231d87..445bb37191 100644</span><br><span class="line">--- a/contrib/auto_explain/auto_explain.c</span><br><span class="line">+++ b/contrib/auto_explain/auto_explain.c</span><br><span class="line">@@ -371,8 +371,15 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> &#123;</span><br><span class="line"> 	if (queryDesc-&gt;totaltime &amp;&amp; auto_explain_enabled())</span><br><span class="line"> 	&#123;</span><br><span class="line">+		MemoryContext oldcxt;</span><br><span class="line"> 		double		msec;</span><br><span class="line"></span><br><span class="line">+		/*</span><br><span class="line">+		 * Make sure we operate in the per-query context, so any cruft will be</span><br><span class="line">+		 * discarded later during ExecutorEnd.</span><br><span class="line">+		 */</span><br><span class="line">+		oldcxt = MemoryContextSwitchTo(queryDesc-&gt;estate-&gt;es_query_cxt);</span><br><span class="line">+</span><br><span class="line"> 		/*</span><br><span class="line"> 		 * Make sure stats accumulation is done.  (Note: it&#x27;s okay if several</span><br><span class="line"> 		 * levels of hook all do this.)</span><br><span class="line">@@ -424,9 +431,9 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> 					(errmsg(&quot;duration: %.3f ms  plan:\n%s&quot;,</span><br><span class="line"> 							msec, es-&gt;str-&gt;data),</span><br><span class="line"> 					 errhidestmt(true)));</span><br><span class="line">-</span><br><span class="line">-			pfree(es-&gt;str-&gt;data);</span><br><span class="line"> 		&#125;</span><br><span class="line">+</span><br><span class="line">+		MemoryContextSwitchTo(oldcxt);</span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"> 	if (prev_ExecutorEnd)</span><br></pre></td></tr></table></figure>
-
-<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://www.postgresql.org/message-id/CAMkU%3D1wCVtbeRn0s9gt12KwQ7PLXovbpM8eg25SYocKW3BT4hg%40mail.gmail.com">memory leak in auto_explain</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 修改配置参数</title>
     <url>/2020/06/postgresql-alter-system/</url>
     <content><![CDATA[<p>今天在使用 <code>ALTER SYSTEM</code> 来修改 PostgreSQL 参数时遇到无法启动数据库的问题。如下所示：</p>
@@ -2858,6 +2874,43 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL auto_explain 插件内存泄露</title>
+    <url>/2021/02/postgresql-auto-explain-memory-leak/</url>
+    <content><![CDATA[<p>最近看到 PostgreSQL 邮件列表中有人说 auto_explain 插件在特定情况下会导致 OOM 问题，经过一番分析发现原来是由于内存上下文的问题导致的。目前该泄露已经修复，并合并到代码库中。</p>
+<img src="/2021/02/postgresql-auto-explain-memory-leak/fix_memory_leak_in_auto_explain.png" class="">
+
+<span id="more"></span>
+
+<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>首先我们来看看如何重现这个问题。首先，我们需要一个已运行的 PostgreSQL 数据库服务器。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ psql postgres -c &#x27;ALTER SYSTEM SET shared_preload_libraries TO auto_explain;&#x27;</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">$ psql postgres -c &#x27;ALTER SYSTEM SET auto_explain.log_min_duration TO 0;&#x27;</span><br><span class="line">$ psql postgres -c &#x27;ALTER SYSTEM SET auto_explain.log_nested_statements TO on;&#x27;</span><br><span class="line">$ pg_ctl restart</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们通过 psql 连接数据库，并创建如下函数。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">FUNCTION</span> gibberish(<span class="type">int</span>) <span class="keyword">RETURNS</span> text</span><br><span class="line"><span class="keyword">LANGUAGE</span> <span class="keyword">SQL</span> <span class="keyword">AS</span> $_$</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">left</span>(string_agg(md5(random()::text),$$$$),$<span class="number">1</span>) <span class="keyword">FROM</span> generate_series(<span class="number">0</span>,$<span class="number">1</span><span class="operator">/</span><span class="number">32</span>)</span><br><span class="line">$_$;</span><br></pre></td></tr></table></figure>
+
+<p>接着我们执行下面的查询命令。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">    x, md5(random()::text) <span class="keyword">as</span> t11,</span><br><span class="line">    gibberish(<span class="number">1500</span>) <span class="keyword">as</span> t12</span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">    generate_series(<span class="number">1</span>,<span class="number">20e6</span>) f(x);</span><br></pre></td></tr></table></figure>
+
+<p>这个为了简化我省略了 <code>CREATE TABLE j1 AS</code>，因为这个不是内存泄露的关键。在执行上述命令的时候，我们可以通过 <code>top -p &lt;pid&gt;</code> 去观察，发现确实是内存一直在增长。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>为了缩写范围，我尝试将 auto_explain 插件移除，并执行上面的查询，发现内存并不会增长。那么内存泄露的问题就被缩小到了 auto_explain 代码中了，通过查看 auto_explain 源码，我发现这里面有两个地方会显示的调用内存分配 <code>explain_ExecutorStart()</code> 函数和 <code>explain_ExecutorEnd()</code>。该 bug 的发现者指出该内存泄露是发生在 SQL function 内存上下文中，经过调试我发现确实在执行 <code>explain_ExecutorEnd()</code> 函数时该内存上下文为 SQL function。</p>
+<p>那么 SQL function 的内存上下文是什么时候创建的呢？通过查找，我发现它是在 <code>src/backend/executor/functions.c</code> 文件中的 <code>init_sql_fcache()</code> 函数中创建的。然而，在调用函数时 <code>fmgr_sql()</code> 函数中有如下注释。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">fmgr_sql</span><span class="params">(PG_FUNCTION_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (fcache == <span class="literal">NULL</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        init_sql_fcache(fcinfo, PG_GET_COLLATION(), lazyEvalOK);</span><br><span class="line">        fcache = (SQLFunctionCachePtr) fcinfo-&gt;flinfo-&gt;fn_extra;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Switch to context in which the fcache lives.  This ensures that our</span></span><br><span class="line"><span class="comment">     * tuplestore etc will have sufficient lifetime.  The sub-executor is</span></span><br><span class="line"><span class="comment">     * responsible for deleting per-tuple information.  (XXX in the case of a</span></span><br><span class="line"><span class="comment">     * long-lived FmgrInfo, this policy represents more memory leakage, but</span></span><br><span class="line"><span class="comment">     * it&#x27;s not entirely clear where to keep stuff instead.)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    oldcontext = MemoryContextSwitchTo(fcache-&gt;fcontext);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里可以看到，SQL function 的内存上下文可能会存在较长的生命周期，那么我们频繁的在该内存上下文上分配内存，就有可能导致内存泄露，而 <code>explain_ExecutorEnd()</code> 函数执行时的内存上下文就是在 SQL function 内存上下文中，对于相对简单的查询，可能这并不会有什么问题，这也是这个内存泄露没有被即使发现的原因，当我们执行上面的查询时这个问题就暴露出来了。</p>
+<p><strong>备注：</strong> 这里的内存泄露主要是 <code>explain_ExecutorEnd()</code> 函数中 <code>ExplainState</code> 结构的分配导致的。</p>
+<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>那么这个问题这么解决呢？在分析了之后，我发现这个内存的分配其实在执行完 <code>ExecutorEnd()</code> 之后就不再需要了，因此我们可以将其放在每个查询的内存上下文中（即 <code>queryDesc-&gt;estate-&gt;es_query_cxt</code> 中），那么每次执行完之后该内存就被回收了，从而避免了内存泄露。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">diff --git a/contrib/auto_explain/auto_explain.c b/contrib/auto_explain/auto_explain.c</span><br><span class="line">index faa6231d87..445bb37191 100644</span><br><span class="line">--- a/contrib/auto_explain/auto_explain.c</span><br><span class="line">+++ b/contrib/auto_explain/auto_explain.c</span><br><span class="line">@@ -371,8 +371,15 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> &#123;</span><br><span class="line"> 	if (queryDesc-&gt;totaltime &amp;&amp; auto_explain_enabled())</span><br><span class="line"> 	&#123;</span><br><span class="line">+		MemoryContext oldcxt;</span><br><span class="line"> 		double		msec;</span><br><span class="line"></span><br><span class="line">+		/*</span><br><span class="line">+		 * Make sure we operate in the per-query context, so any cruft will be</span><br><span class="line">+		 * discarded later during ExecutorEnd.</span><br><span class="line">+		 */</span><br><span class="line">+		oldcxt = MemoryContextSwitchTo(queryDesc-&gt;estate-&gt;es_query_cxt);</span><br><span class="line">+</span><br><span class="line"> 		/*</span><br><span class="line"> 		 * Make sure stats accumulation is done.  (Note: it&#x27;s okay if several</span><br><span class="line"> 		 * levels of hook all do this.)</span><br><span class="line">@@ -424,9 +431,9 @@ explain_ExecutorEnd(QueryDesc *queryDesc)</span><br><span class="line"> 					(errmsg(&quot;duration: %.3f ms  plan:\n%s&quot;,</span><br><span class="line"> 							msec, es-&gt;str-&gt;data),</span><br><span class="line"> 					 errhidestmt(true)));</span><br><span class="line">-</span><br><span class="line">-			pfree(es-&gt;str-&gt;data);</span><br><span class="line"> 		&#125;</span><br><span class="line">+</span><br><span class="line">+		MemoryContextSwitchTo(oldcxt);</span><br><span class="line"> 	&#125;</span><br><span class="line"></span><br><span class="line"> 	if (prev_ExecutorEnd)</span><br></pre></td></tr></table></figure>
+
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://www.postgresql.org/message-id/CAMkU%3D1wCVtbeRn0s9gt12KwQ7PLXovbpM8eg25SYocKW3BT4hg%40mail.gmail.com">memory leak in auto_explain</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>源码分析</tag>
       </tags>
   </entry>
   <entry>
@@ -6641,30 +6694,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </tags>
   </entry>
   <entry>
-    <title>Greenplum 数据库 semctl 失败之无效参数</title>
-    <url>/2019/07/semctl-failed-invalid-argument/</url>
-    <content><![CDATA[<p>在编译完成之后对 Greenplum 数据库进行安装测试时遇到如下问题，</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">psql: FATAL:  semctl(592740353, 7, SETVAL, 0) failed: Invalid argument (pg_sema.c:151)</span><br></pre></td></tr></table></figure>
-
-<p>从而导致数据库启动失败，从错误结果来看应该是与信号量相关。那么具体是怎么回事呢？</p>
-<p>文献 <a href="https://wiki.postgresql.org/wiki/Systemd">[1]</a> 中给出了关于这个错误的详细说明，问题是由 System V IPC 对象导致的。</p>
-<p>配置文件 <code>logind.conf</code> 中的 <code>RemoveIPC</code> 参数控制着 System V IPC 对象是否在用户完全退出的情况下被清除（系统用户排除在外）。在 <code>systemd 212</code> 版本之后这个选项默认是开启的，即 <code>RemoveIPC=yes</code>。仍在被使用的共享内存段不会被清理，因此 <code>systemd</code> 不会去清理正在使用的共享内存段；但是信号量没有进程附加的概念，因此，当用户退出或进程终止时，即便该信号量正在被使用也会被清理（这里的理解不一定正确，建议直接看原文）。</p>
-<span id="more"></span>
-
-<h2 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h2><p>在了解了问题的本质之后，我们来看看如何解决这个问题。正如前面所说的，系统用户可以免除这个问题的困扰，那么我们的第一种方法就是建立一个系统用户，然后使用这个用户来运行数据库（<code>useradd -r</code> 命令）。</p>
-<p>不过，还是比较推荐第二种方式，即修改 <code>RemoveIPC</code> 为 <code>RemoveIPC=no</code>，随后重启 <code>systemd-logind</code>。Ubuntu 下的做法如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ echo &quot;RemoveIPC=no&quot; &gt;&gt; /etc/systemd/logind.conf</span><br><span class="line">$ systemctl restart systemd-logind</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://wiki.postgresql.org/wiki/Systemd">https://wiki.postgresql.org/wiki/Systemd</a><br>[2] <a href="https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com">https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com</a><br>[3] <a href="https://www.postgresql.org/message-id/CAK7tEys9-O4BTERbs3Xuk2BfFNNd55u2sM9j5R2Fi7v6BHjrQw@mail.gmail.com">BUG #13818: PostgreSQL crashes after cronjob runs as “postgres”</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>Greenplum</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>LaTeX 查看命令的定义</title>
     <url>/2019/04/show-LaTeX-command-definition/</url>
     <content><![CDATA[<p>最近在使用 LaTeX 撰写文档时需要重定义一个命令的，但是我想要知道该命令的原始定义时怎样的，经过查找发现 LaTeX 在这方面做得还是很不错的。目前，我知道有两种方式可以获取命令的定义：(a) 在文档中使用 <code>\show\command</code>；(b) 在命令行中使用 <code>texdef command</code>。</p>
@@ -6691,6 +6720,30 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </categories>
       <tags>
         <tag>LaTeX</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Greenplum 数据库 semctl 失败之无效参数</title>
+    <url>/2019/07/semctl-failed-invalid-argument/</url>
+    <content><![CDATA[<p>在编译完成之后对 Greenplum 数据库进行安装测试时遇到如下问题，</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">psql: FATAL:  semctl(592740353, 7, SETVAL, 0) failed: Invalid argument (pg_sema.c:151)</span><br></pre></td></tr></table></figure>
+
+<p>从而导致数据库启动失败，从错误结果来看应该是与信号量相关。那么具体是怎么回事呢？</p>
+<p>文献 <a href="https://wiki.postgresql.org/wiki/Systemd">[1]</a> 中给出了关于这个错误的详细说明，问题是由 System V IPC 对象导致的。</p>
+<p>配置文件 <code>logind.conf</code> 中的 <code>RemoveIPC</code> 参数控制着 System V IPC 对象是否在用户完全退出的情况下被清除（系统用户排除在外）。在 <code>systemd 212</code> 版本之后这个选项默认是开启的，即 <code>RemoveIPC=yes</code>。仍在被使用的共享内存段不会被清理，因此 <code>systemd</code> 不会去清理正在使用的共享内存段；但是信号量没有进程附加的概念，因此，当用户退出或进程终止时，即便该信号量正在被使用也会被清理（这里的理解不一定正确，建议直接看原文）。</p>
+<span id="more"></span>
+
+<h2 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h2><p>在了解了问题的本质之后，我们来看看如何解决这个问题。正如前面所说的，系统用户可以免除这个问题的困扰，那么我们的第一种方法就是建立一个系统用户，然后使用这个用户来运行数据库（<code>useradd -r</code> 命令）。</p>
+<p>不过，还是比较推荐第二种方式，即修改 <code>RemoveIPC</code> 为 <code>RemoveIPC=no</code>，随后重启 <code>systemd-logind</code>。Ubuntu 下的做法如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ echo &quot;RemoveIPC=no&quot; &gt;&gt; /etc/systemd/logind.conf</span><br><span class="line">$ systemctl restart systemd-logind</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://wiki.postgresql.org/wiki/Systemd">https://wiki.postgresql.org/wiki/Systemd</a><br>[2] <a href="https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com">https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com</a><br>[3] <a href="https://www.postgresql.org/message-id/CAK7tEys9-O4BTERbs3Xuk2BfFNNd55u2sM9j5R2Fi7v6BHjrQw@mail.gmail.com">BUG #13818: PostgreSQL crashes after cronjob runs as “postgres”</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Greenplum</tag>
       </tags>
   </entry>
   <entry>
@@ -6894,6 +6947,27 @@ index 16ab2238e7..6c19749194 100644
       </tags>
   </entry>
   <entry>
+    <title>Ubuntu 笔记本盖住不挂机</title>
+    <url>/2020/03/ubuntu-lid-switch-action/</url>
+    <content><![CDATA[<p>我有一台旧笔记本装有 Ubuntu 18.04 系统，希望把它当作一个服务器，这时我就需要在盖住笔记本时系统不休眠。</p>
+<p>Ubuntu 系统中提供了 Login Manager 来管理这些行为，它的配置文件为 /etc/systemd/logind.conf。通过<br><code>man logind.conf</code> 我们可以看到其详细说明。</p>
+<p>其中有一项 <code>HandleLidSwitch</code>，它控制了笔记本盖住的行为，默认情况下是 <code>suspend</code>，我们可以将其修改为 <code>ignore</code> 即可以实现我们的目的。例如，我们修改 /etc/system/logind.conf 文件中的</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#HandleLidSwitch=suspend</span><br></pre></td></tr></table></figure>
+
+<p>行修改为</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">HandleLidSwitch=ignore</span><br></pre></td></tr></table></figure>
+
+<p>然后重启 systemd-logind 服务即可。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo service systemd-logind restart</span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Ubuntu</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Ubuntu 修改 I/O 调度算法</title>
     <url>/2019/03/ubuntu-modify-io-scheduler/</url>
     <content><![CDATA[<p>Linux I/O 调度器控制着内核读写磁盘的工作方式。系统管理员可以通过更改调度器来自定义磁盘调度算法，从而优化系统性能。有三种调度程序可供选择，每种调度程序都有其优点。这些调度器是：</p>
@@ -6923,27 +6997,6 @@ index 16ab2238e7..6c19749194 100644
 
 <p>通过这种方式修改我们需要重启机器以使修改生效，当然我们可以结合临时修改的方式，从而避免重启。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 谭峰，张文升《PostgreSQL 实战》<br>[2] <a href="https://www.techrepublic.com/article/how-to-change-the-linux-io-scheduler-to-fit-your-needs/">How to change the linux io scheduler to fit your needs</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Ubuntu</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Ubuntu 笔记本盖住不挂机</title>
-    <url>/2020/03/ubuntu-lid-switch-action/</url>
-    <content><![CDATA[<p>我有一台旧笔记本装有 Ubuntu 18.04 系统，希望把它当作一个服务器，这时我就需要在盖住笔记本时系统不休眠。</p>
-<p>Ubuntu 系统中提供了 Login Manager 来管理这些行为，它的配置文件为 /etc/systemd/logind.conf。通过<br><code>man logind.conf</code> 我们可以看到其详细说明。</p>
-<p>其中有一项 <code>HandleLidSwitch</code>，它控制了笔记本盖住的行为，默认情况下是 <code>suspend</code>，我们可以将其修改为 <code>ignore</code> 即可以实现我们的目的。例如，我们修改 /etc/system/logind.conf 文件中的</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#HandleLidSwitch=suspend</span><br></pre></td></tr></table></figure>
-
-<p>行修改为</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">HandleLidSwitch=ignore</span><br></pre></td></tr></table></figure>
-
-<p>然后重启 systemd-logind 服务即可。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo service systemd-logind restart</span></span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
         <category>杂项</category>
