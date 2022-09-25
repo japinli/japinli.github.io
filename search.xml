@@ -141,6 +141,38 @@
       </tags>
   </entry>
   <entry>
+    <title>C 程序结构和范围</title>
+    <url>/2020/01/C-program-structure-and-scope/</url>
+    <content><![CDATA[<p>在之前的几篇关于 C 语言的文章中，我们以及掌握了 C 语言的基本要素，本文主要介绍 C 语言的程序结构和范围。</p>
+<span id="more"></span>
+
+<h2 id="程序结构"><a href="#程序结构" class="headerlink" title="程序结构"></a>程序结构</h2><p>我们可以将 C 程序写在一个源文件中，然而，更为常见的是将其按照功能模块将其划分到不同的源文件中。</p>
+<p>通常，头文件（即以 <code>.h</code> 结尾的文件）包含函数和变量的声明；源文件（即以 <code>.c</code> 结尾的文件）包含相应的定义。如果我们不想某些声明被外部文件访问，那么也可以将声明放在源文件中。</p>
+<p>例如，如果我们编写一个求平方根的函数，我们希望可以在定义该函数以外的文件访问，那么我们需要将函数的声明放在头文件中（即以 <code>.h</code> 结尾的文件）。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.h */</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">double</span></span></span><br><span class="line"><span class="function"><span class="title">computeSqrt</span><span class="params">(<span class="keyword">double</span> x)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>该头文件可能包含其它我们需要使用的函数但其定义在不同的源文件中，我们可能不需要知道这些函数的实现。</p>
+<p>This header file could be included by other source files which need to use your function, but do not need to know how it was implemented.</p>
+<p>上述函数的定义应该在相应的源文件中出现（即以 <code>.c</code> 结尾的文件）。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.c */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;sqrt.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">double</span></span></span><br><span class="line"><span class="function"><span class="title">computeSqrt</span><span class="params">(<span class="keyword">double</span> x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">double</span> result;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="范围"><a href="#范围" class="headerlink" title="范围"></a>范围</h2><p>范围是指程序的哪些部分可以“看到”声明的对象。声明的对象可以只在特定的函数中可见、或者是特定的文件、亦或者是包含这个声明的头文件的一系列源文件中（需要使用 <code>extern</code> 声明）。</p>
+<p>除非特定说明，在文件的顶层（即不在函数内）进行的声明对整个文件都是可见的，包括从函数内部，但在文件外部不可见；在函数内进行的声明仅在这些函数内可见；此外，声明对之前的声明不可见，例如：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">10</span>;</span><br><span class="line"><span class="keyword">int</span> y = x + <span class="number">5</span>;</span><br></pre></td></tr></table></figure>
+
+<p>这样是可以的，但是如下方式则是不行的。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = y + <span class="number">5</span>;</span><br><span class="line"><span class="keyword">int</span> y = <span class="number">10</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope</a></p>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>C 语言</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>C 语言词法元素</title>
     <url>/2019/06/C-lexical-elements/</url>
     <content><![CDATA[<p>本文主要介绍 C 语言的词法元素，包括标识符、关键字、常量、操作符以及分隔符。其中关于操作符的一些更为详细的信息将在后续进行介绍。</p>
@@ -313,38 +345,6 @@
 <h2 id="操作符"><a href="#操作符" class="headerlink" title="操作符"></a>操作符</h2><p>操作符（运算符）是一个特殊标记，它对一个，两个或三个操作数执行操作，例如加法或减法。后续将给出更为详细的介绍。</p>
 <h2 id="分隔符"><a href="#分隔符" class="headerlink" title="分隔符"></a>分隔符</h2><p>分隔符用于分割标记（<code>tokens</code>）。分隔符本身也是一种标记。它们由单个字符组成并代表其自身，C 语言中的分隔符标记包括 <code>(</code>, <code>)</code>, <code>[</code>, <code>]</code>, <code>&#123;</code>, <code>&#125;</code>, <code>;</code>, <code>,</code>, <code>.</code>, <code>:</code>。空白也是一种分隔符，但它不属于标记。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Lexical-Elements">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Lexical-Elements</a></p>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>C 语言</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>C 程序结构和范围</title>
-    <url>/2020/01/C-program-structure-and-scope/</url>
-    <content><![CDATA[<p>在之前的几篇关于 C 语言的文章中，我们以及掌握了 C 语言的基本要素，本文主要介绍 C 语言的程序结构和范围。</p>
-<span id="more"></span>
-
-<h2 id="程序结构"><a href="#程序结构" class="headerlink" title="程序结构"></a>程序结构</h2><p>我们可以将 C 程序写在一个源文件中，然而，更为常见的是将其按照功能模块将其划分到不同的源文件中。</p>
-<p>通常，头文件（即以 <code>.h</code> 结尾的文件）包含函数和变量的声明；源文件（即以 <code>.c</code> 结尾的文件）包含相应的定义。如果我们不想某些声明被外部文件访问，那么也可以将声明放在源文件中。</p>
-<p>例如，如果我们编写一个求平方根的函数，我们希望可以在定义该函数以外的文件访问，那么我们需要将函数的声明放在头文件中（即以 <code>.h</code> 结尾的文件）。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.h */</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">double</span></span></span><br><span class="line"><span class="function"><span class="title">computeSqrt</span><span class="params">(<span class="keyword">double</span> x)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>该头文件可能包含其它我们需要使用的函数但其定义在不同的源文件中，我们可能不需要知道这些函数的实现。</p>
-<p>This header file could be included by other source files which need to use your function, but do not need to know how it was implemented.</p>
-<p>上述函数的定义应该在相应的源文件中出现（即以 <code>.c</code> 结尾的文件）。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* sqrt.c */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;sqrt.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">double</span></span></span><br><span class="line"><span class="function"><span class="title">computeSqrt</span><span class="params">(<span class="keyword">double</span> x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">double</span> result;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="范围"><a href="#范围" class="headerlink" title="范围"></a>范围</h2><p>范围是指程序的哪些部分可以“看到”声明的对象。声明的对象可以只在特定的函数中可见、或者是特定的文件、亦或者是包含这个声明的头文件的一系列源文件中（需要使用 <code>extern</code> 声明）。</p>
-<p>除非特定说明，在文件的顶层（即不在函数内）进行的声明对整个文件都是可见的，包括从函数内部，但在文件外部不可见；在函数内进行的声明仅在这些函数内可见；此外，声明对之前的声明不可见，例如：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">10</span>;</span><br><span class="line"><span class="keyword">int</span> y = x + <span class="number">5</span>;</span><br></pre></td></tr></table></figure>
-
-<p>这样是可以的，但是如下方式则是不行的。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">int</span> x = y + <span class="number">5</span>;</span><br><span class="line"><span class="keyword">int</span> y = <span class="number">10</span>;</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope">https://www.gnu.org/software/gnu-c-manual/gnu-c-manual.html#Program-Structure-and-Scope</a></p>
 ]]></content>
       <categories>
         <category>编程</category>
@@ -630,6 +630,31 @@
       </tags>
   </entry>
   <entry>
+    <title>非超级用户下运行 Solaris SMF 服务</title>
+    <url>/2019/10/SMF-on-Solaris-under-non-superuser/</url>
+    <content><![CDATA[<p>今天在 Solaris 上遇到一个问题，我需要在非超级用户下运行某个服务。默认情况下，通过 SMF 管理的都是在 root 用户下运行的，但是我们可以通过修改配置文件来使其运行到特定用户下。</p>
+<span id="more"></span>
+
+<p>例如，我们有如下一个配置文件（部分）：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>现在，我们想要 <code>exec_binary</code> 在 <code>tom</code> 用户下运行，那么我们需要加入 <code>method_credential</code> 元素，如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_credential</span> <span class="attr">user</span>=<span class="string">&quot;tom&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>这样，我们便可以在 <code>tom</code> 用户下运行 <code>exec_binary</code> 的服务了，这里需要注意 <code>method_credential</code> 的位置，它需要位于 <code>method_environment</code> 之前，否则将出现如下问题。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">element method_context: validity error : Element method_context content does not follow the DTD, expecting ((method_profile | method_credential)? , method_environment?), got (method_environment method_credential )</span><br><span class="line">svccfg: Document is not valid.</span><br></pre></td></tr></table></figure>
+
+<p>我们可通过查看 <code>/usr/share/lib/xml/dtd/service_bundle.dtd.1</code> 文件来了解更多的 SMF 配置信息。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/">https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/</a><br>[2] <a href="https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html">https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Solaris</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</title>
     <url>/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/</url>
     <content><![CDATA[<p>本文简要记录一下如何将 Oracle 数据库中的 <code>sys_connect_by_path()</code> 函数迁移到 PostgreSQL 数据库中。</p>
@@ -662,31 +687,6 @@
       <tags>
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>非超级用户下运行 Solaris SMF 服务</title>
-    <url>/2019/10/SMF-on-Solaris-under-non-superuser/</url>
-    <content><![CDATA[<p>今天在 Solaris 上遇到一个问题，我需要在非超级用户下运行某个服务。默认情况下，通过 SMF 管理的都是在 root 用户下运行的，但是我们可以通过修改配置文件来使其运行到特定用户下。</p>
-<span id="more"></span>
-
-<p>例如，我们有如下一个配置文件（部分）：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>现在，我们想要 <code>exec_binary</code> 在 <code>tom</code> 用户下运行，那么我们需要加入 <code>method_credential</code> 元素，如下所示：</p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">exec_method</span> <span class="attr">type</span>=<span class="string">&quot;method&quot;</span> <span class="attr">name</span>=<span class="string">&quot;start&quot;</span> <span class="attr">exec</span>=<span class="string">&quot;/path/to/exec_binary <span class="symbol">&amp;amp;</span>&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">method_context</span> <span class="attr">working_directory</span>=<span class="string">&quot;/path/to/work&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_credential</span> <span class="attr">user</span>=<span class="string">&quot;tom&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">method_environment</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">envar</span> <span class="attr">name</span>=<span class="string">&quot;HOME&quot;</span> <span class="attr">value</span>=<span class="string">&quot;/home/path&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">method_environment</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">method_context</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">exec_method</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>这样，我们便可以在 <code>tom</code> 用户下运行 <code>exec_binary</code> 的服务了，这里需要注意 <code>method_credential</code> 的位置，它需要位于 <code>method_environment</code> 之前，否则将出现如下问题。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">element method_context: validity error : Element method_context content does not follow the DTD, expecting ((method_profile | method_credential)? , method_environment?), got (method_environment method_credential )</span><br><span class="line">svccfg: Document is not valid.</span><br></pre></td></tr></table></figure>
-
-<p>我们可通过查看 <code>/usr/share/lib/xml/dtd/service_bundle.dtd.1</code> 文件来了解更多的 SMF 配置信息。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/">https://www.linuxquestions.org/questions/solaris-opensolaris-20/problem-by-validate-a-manefest-file-4175468958/</a><br>[2] <a href="https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html">https://www.master-tutorial.design/2010/06/credentials-and-projects-for-solaris-10.html</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Solaris</tag>
       </tags>
   </entry>
   <entry>
@@ -985,58 +985,6 @@
       </tags>
   </entry>
   <entry>
-    <title>LaTeX 自定义封面</title>
-    <url>/2019/04/customize-latex-title-page/</url>
-    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
-<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
-<p style="text-align:center">图 1 LaTeX 自定义封面</p>
-
-<span id="more"></span>
-
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
-<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="keyword">\documentclass</span>&#123;book&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">\begin</span>&#123;document&#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">\begin</span>&#123;titlepage&#125;</span><br><span class="line">    <span class="keyword">\centering</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.2<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Huge</span> Customize <span class="keyword">\LaTeX</span>&#123;&#125; Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.025<span class="keyword">\textheight</span>&#125;   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;0.83<span class="keyword">\textwidth</span>&#125;&#123;0.4pt&#125;  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Large</span> Author: <span class="keyword">\textsc</span>&#123;Japin Li&#125;&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vfill</span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\large</span> <span class="keyword">\today</span>&#125;</span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">\end</span>&#123;titlepage&#125;</span><br><span class="line"><span class="keyword">\end</span>&#123;document&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Emacs 编辑二进制文件</title>
-    <url>/2018/10/editing-binary-files-in-emacs/</url>
-    <content><![CDATA[<p>二进制文件是以二进制格式存储的文件，它是计算机可读的，人类不直接阅读二进制文件。所有的可执行程序都以二进制文件存储。那我们该如何编辑二进制文件呢？在我使用的 Emacs 编辑器中提供了一个 hexl-mode 的主模式来编辑二进制文件。本文记录了 Emacs 中编辑二进制文件的基本操作。</p>
-<img src="/2018/10/editing-binary-files-in-emacs/Editing_Binary_File.png" class="" title="Editing Binary File">
-
-<span id="more"></span>
-
-<h3 id="打开"><a href="#打开" class="headerlink" title="打开"></a>打开</h3><p>我们可以使用 <code>M-x hexl-find-file</code> 取代 <code>C-x C-f</code> 命令来编辑二进制文件，该命令将文件内容转换为十六进制，并允许用户进行编辑。当用户保存文件时，它将会自动转换为二进制格式。</p>
-<p>当然，我们也可以使用 `M-x hexl-mode** 来将现有的缓冲区转换为十六进制，这在以普通方式打开二进制文件时非常有用。</p>
-<h3 id="编辑"><a href="#编辑" class="headerlink" title="编辑"></a>编辑</h3><p>普通文本字符在 hexl-mode 下被覆盖。这是为了降低意外破坏文件中数据对齐的风险。针对二进制文件，hexl-mode 有特殊的插入命令。以下是 hexl-mode 的命令列表：</p>
-<ul>
-<li><strong>C-M-d</strong> 插入一个包含十进制代码的字节。</li>
-<li><strong>C-M-o</strong> 插入一个包含八进制代码的字节。</li>
-<li><strong>C-M-x</strong> 插入一个包含十六进制代码的字节。</li>
-<li><strong>C-M-[</strong> 移动到 1k 字节页面的开头。</li>
-<li><strong>C-M-]</strong> 移动到 1k 字节页面的结尾。</li>
-<li><strong>M-g</strong> 移至以十六进制指定的地址。</li>
-<li><strong>M-j</strong> 移至以十进制指定的地址。</li>
-<li><strong>C-c C-c</strong> 退出 hexl-mode，返回调用 hexl-mode 之前返回此缓冲区的主模式。</li>
-</ul>
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://www.webopedia.com/TERM/B/binary_file.html">https://www.webopedia.com/TERM/B/binary_file.html</a><br>[2] <a href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html">https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Emacs</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>列存数据库 cstore_fdw 的实现</title>
     <url>/2018/10/cstore-fdw-implementation/</url>
     <content><![CDATA[<p>在<a href="/2018/09/introduction-cstore-fdw-columnar-store/" title="上一篇">上一篇</a>中我介绍了如何安装和使用列存数据库 cstore_fdw。接着，我将在本篇中介绍 cstore_fdw 是如何实现的。</p>
@@ -1140,6 +1088,28 @@
       </tags>
   </entry>
   <entry>
+    <title>LaTeX 自定义封面</title>
+    <url>/2019/04/customize-latex-title-page/</url>
+    <content><![CDATA[<p>本文主要记录在使用 LaTeX 进行封面自定义的相关实现，如下图 1 所示。</p>
+<img src="/2019/04/customize-latex-title-page/customize-title-page.png" class="" title="LaTeX Title Page">
+<p style="text-align:center">图 1 LaTeX 自定义封面</p>
+
+<span id="more"></span>
+
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>图 1 的封面通过 LaTeX 实现起来非常简单，我们只需要会使用几个基本的命令就足够了。从图中我们可以将封面分为六个部分，它们分别是最上面的横线、居中的标题、标题下的横线、作者信息、日期以及封面底部的横线。如下所示：</p>
+<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="keyword">\documentclass</span>&#123;book&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">\begin</span>&#123;document&#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">\begin</span>&#123;titlepage&#125;</span><br><span class="line">    <span class="keyword">\centering</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Top rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;   <span class="comment">% The top horizontal rule</span></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.2<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between top horizontal rule and title</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Title</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Huge</span> Customize <span class="keyword">\LaTeX</span>&#123;&#125; Title Page&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.025<span class="keyword">\textheight</span>&#125;   <span class="comment">% Whitespace between the title and short horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;0.83<span class="keyword">\textwidth</span>&#125;&#123;0.4pt&#125;  <span class="comment">% The short horizontal rule under title</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between the short horizontal rule and author</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Author</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\Large</span> Author: <span class="keyword">\textsc</span>&#123;Japin Li&#125;&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">\vfill</span>  <span class="comment">% Whitespace between author and date</span></span><br><span class="line"></span><br><span class="line">    &#123;<span class="keyword">\large</span> <span class="keyword">\today</span>&#125;</span><br><span class="line">    <span class="keyword">\vspace</span>&#123;0.1<span class="keyword">\textheight</span>&#125;  <span class="comment">% Whitespace between date and bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line">    <span class="comment">%    Bottom rules</span></span><br><span class="line">    <span class="comment">%------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">\rule</span>&#123;<span class="keyword">\textwidth</span>&#125;&#123;1pt&#125;  <span class="comment">% The bottom horizontal rule</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">\end</span>&#123;titlepage&#125;</span><br><span class="line"><span class="keyword">\end</span>&#123;document&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上面的示例中我只是将 <code>titlepage</code> 直接在文档中给出，其实我们还可以通过重定义 <code>\maketitle</code> 命令来实现自定义封面，这时我们还需要传入一些特定的参数，详细实现可以参考我实现的 <a href="https://github.com/japinli/ferret">ferret</a>。您也可以在封面中使用 <code>\includegraphics</code> 命令来导入图片。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://en.wikibooks.org/wiki/LaTeX/Title_Creation">https://en.wikibooks.org/wiki/LaTeX/Title_Creation</a></p>
+]]></content>
+      <categories>
+        <category>排版</category>
+      </categories>
+      <tags>
+        <tag>LaTeX</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Go 语言软件包下载</title>
     <url>/2020/05/download-go-package/</url>
     <content><![CDATA[<p>作为一个刚入门的 Go 小白来说，下载第三方包就成为了第一道坎 :( 。本文简要介绍一下如何下载 Go 软件包，尤其是 Google 系列的包。</p>
@@ -1163,6 +1133,36 @@
       </categories>
       <tags>
         <tag>Go</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Emacs 编辑二进制文件</title>
+    <url>/2018/10/editing-binary-files-in-emacs/</url>
+    <content><![CDATA[<p>二进制文件是以二进制格式存储的文件，它是计算机可读的，人类不直接阅读二进制文件。所有的可执行程序都以二进制文件存储。那我们该如何编辑二进制文件呢？在我使用的 Emacs 编辑器中提供了一个 hexl-mode 的主模式来编辑二进制文件。本文记录了 Emacs 中编辑二进制文件的基本操作。</p>
+<img src="/2018/10/editing-binary-files-in-emacs/Editing_Binary_File.png" class="" title="Editing Binary File">
+
+<span id="more"></span>
+
+<h3 id="打开"><a href="#打开" class="headerlink" title="打开"></a>打开</h3><p>我们可以使用 <code>M-x hexl-find-file</code> 取代 <code>C-x C-f</code> 命令来编辑二进制文件，该命令将文件内容转换为十六进制，并允许用户进行编辑。当用户保存文件时，它将会自动转换为二进制格式。</p>
+<p>当然，我们也可以使用 `M-x hexl-mode** 来将现有的缓冲区转换为十六进制，这在以普通方式打开二进制文件时非常有用。</p>
+<h3 id="编辑"><a href="#编辑" class="headerlink" title="编辑"></a>编辑</h3><p>普通文本字符在 hexl-mode 下被覆盖。这是为了降低意外破坏文件中数据对齐的风险。针对二进制文件，hexl-mode 有特殊的插入命令。以下是 hexl-mode 的命令列表：</p>
+<ul>
+<li><strong>C-M-d</strong> 插入一个包含十进制代码的字节。</li>
+<li><strong>C-M-o</strong> 插入一个包含八进制代码的字节。</li>
+<li><strong>C-M-x</strong> 插入一个包含十六进制代码的字节。</li>
+<li><strong>C-M-[</strong> 移动到 1k 字节页面的开头。</li>
+<li><strong>C-M-]</strong> 移动到 1k 字节页面的结尾。</li>
+<li><strong>M-g</strong> 移至以十六进制指定的地址。</li>
+<li><strong>M-j</strong> 移至以十进制指定的地址。</li>
+<li><strong>C-c C-c</strong> 退出 hexl-mode，返回调用 hexl-mode 之前返回此缓冲区的主模式。</li>
+</ul>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[1] <a href="https://www.webopedia.com/TERM/B/binary_file.html">https://www.webopedia.com/TERM/B/binary_file.html</a><br>[2] <a href="https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html">https://www.gnu.org/software/emacs/manual/html_node/emacs/Editing-Binary-Files.html</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Emacs</tag>
       </tags>
   </entry>
   <entry>
@@ -1656,21 +1656,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Git 多仓库分支同步</title>
-    <url>/2019/01/git-sync-branches-among-remote-repositories/</url>
-    <content><![CDATA[<p>今天遇到一个 git 远程仓库分支同步的问题，主要的诉求是将两个远程仓库的分支同步到一致状态。起初，项目只是在 GitHub 上进行维护，后期又在 GitLab 上创建了该项目，并且两个仓库之间的分支情况有所不同。我们可以使用如下命令同步两个远程仓库之间的分支信息。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ git fetch --all -p</span><br><span class="line">$ git push github &quot;refs/remotes/gitlab/*:refs/heads/*&quot;</span><br><span class="line">$ git push gitlab &quot;refs/remotes/github/*:refs/heads/*&quot;</span><br></pre></td></tr></table></figure>
-
-<p><strong>备注：</strong> <code>github</code> 指向远端的 GitHub 项目地址，同理，<code>gitlab</code> 指向远端的 GitLab 项目地址。</p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Git 跳过 SSL 验证</title>
     <url>/2019/08/git-skip-ssl-verify/</url>
     <content><![CDATA[<p>有时，我们在克隆代码或者拉取代码时想要跳过 SSL 验证（至于为什么有这么奇葩的需求就不多说了，自行体会），git 提供了多种方式可供用户选择。</p>
@@ -1682,6 +1667,21 @@ table th:nth-of-type(2) {
 
 <p>如果您想后续的仓库都跳过 SSL 验证，可以设置全局的 <code>http.sslVerify</code>，如下所示：</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config --global http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git 多仓库分支同步</title>
+    <url>/2019/01/git-sync-branches-among-remote-repositories/</url>
+    <content><![CDATA[<p>今天遇到一个 git 远程仓库分支同步的问题，主要的诉求是将两个远程仓库的分支同步到一致状态。起初，项目只是在 GitHub 上进行维护，后期又在 GitLab 上创建了该项目，并且两个仓库之间的分支情况有所不同。我们可以使用如下命令同步两个远程仓库之间的分支信息。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ git fetch --all -p</span><br><span class="line">$ git push github &quot;refs/remotes/gitlab/*:refs/heads/*&quot;</span><br><span class="line">$ git push gitlab &quot;refs/remotes/github/*:refs/heads/*&quot;</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> <code>github</code> 指向远端的 GitHub 项目地址，同理，<code>gitlab</code> 指向远端的 GitLab 项目地址。</p>
 ]]></content>
       <categories>
         <category>杂项</category>
@@ -2911,6 +2911,65 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL COPY CSV 中的 \. 引用问题</title>
+    <url>/2022/09/postgresql-backslash-dot-quoting-in-copy/</url>
+    <content><![CDATA[<p>本文简要记录一个由 psql 提供的 <code>\copy</code> 元命令引发的错误，如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">postgres<span class="operator">=</span># \<span class="keyword">copy</span> tbl <span class="keyword">FROM</span> <span class="string">&#x27;/tmp/tbl.csv&#x27;</span> <span class="keyword">WITH</span> csv;</span><br><span class="line">ERROR:  unterminated CSV quoted field</span><br><span class="line">CONTEXT:  <span class="keyword">COPY</span> tbl, line <span class="number">1</span>: &quot;&quot;</span><br><span class="line">\.</span><br><span class="line">&quot;</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<h2 id="引子"><a href="#引子" class="headerlink" title="引子"></a>引子</h2><p>当我们通过 <code>COPY</code> 命令导入数据是，PostgreSQL 默认使用 <code>\.</code> 作为数据的分隔符。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (info text);</span><br><span class="line"><span class="keyword">COPY</span> tbl <span class="keyword">FROM</span> stdin <span class="keyword">WITH</span> csv;</span><br><span class="line"><span class="operator">&gt;&gt;</span> hello world</span><br><span class="line"><span class="operator">&gt;&gt;</span> \.</span><br><span class="line"><span class="keyword">COPY</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+<p>现在让我们来看看下面的示例。首先我们将表清空，然后在插入一条记录。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">TRUNCATE</span> tbl;</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="string">&#x27;</span></span><br><span class="line"><span class="string">\.</span></span><br><span class="line"><span class="string">&#x27;</span>);</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> tbl;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"> info</span><br><span class="line">------</span><br><span class="line">     +</span><br><span class="line"> \.  +</span><br><span class="line"></span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>接着我们将其导出到文件中。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">COPY</span> tbl <span class="keyword">TO</span> <span class="string">&#x27;/tmp/tbl.csv&#x27;</span> <span class="keyword">WITH</span> csv;</span><br></pre></td></tr></table></figure>
+
+<p>查看 <code>/tmp/tbl.csv</code>，数据成功导出。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ cat /tmp/tbl.csv</span><br><span class="line"><span class="string">&quot;</span></span><br><span class="line"><span class="string">\.</span></span><br><span class="line"><span class="string">&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 支持 <code>COPY</code> 和 <code>\copy</code> 两种方式。<code>COPY</code> 的方式是在服务器端执行，而 <code>\copy</code> 是 psql 提供的命令，它是在客户端执行的。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">COPY</span> tbl <span class="keyword">FROM</span> <span class="string">&#x27;/tmp/tbl.csv&#x27;</span> <span class="keyword">WITH</span> csv;</span><br><span class="line"><span class="keyword">SELECT</span> ctid, <span class="operator">*</span> <span class="keyword">FROM</span> tbl;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"> ctid  | info</span><br><span class="line">-------+------</span><br><span class="line"> (0,1) |     +</span><br><span class="line">       | \.  +</span><br><span class="line">       |</span><br><span class="line"> (0,2) |     +</span><br><span class="line">       | \.  +</span><br><span class="line">       |</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>当我们使用 <code>\copy</code> 导入时，数据将无法导入。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">\<span class="keyword">copy</span> tbl <span class="keyword">FROM</span> <span class="string">&#x27;/tmp/tbl.csv&#x27;</span> <span class="keyword">WITH</span> csv;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ERROR:  unterminated CSV quoted field</span><br><span class="line">CONTEXT:  COPY tbl, line 1: &quot;&quot;</span><br><span class="line">\.</span><br><span class="line">&quot;</span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>通过调试，我们可以看到无论是 <code>COPY</code> 还是 <code>\copy</code>，最后都是执行 <code>CopyGetData()</code> 函数，其堆栈如下所示。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">(gdb) bt</span><br><span class="line">#0  CopyGetData (cstate=0x555743f07418, databuf=0x555743faaf50, minread=1, maxread=65536)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfromparse.c:247</span><br><span class="line">#1  0x00005557425c18da in CopyLoadRawBuf (cstate=0x555743f07418)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfromparse.c:627</span><br><span class="line">#2  0x00005557425c1a95 in CopyLoadInputBuf (cstate=0x555743f07418)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfromparse.c:689</span><br><span class="line">#3  0x00005557425c2df2 in CopyReadLineText (cstate=0x555743f07418)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfromparse.c:1186</span><br><span class="line">#4  0x00005557425c29cf in CopyReadLine (cstate=0x555743f07418)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfromparse.c:1044</span><br><span class="line">#5  0x00005557425c1f20 in NextCopyFromRawFields (cstate=0x555743f07418,</span><br><span class="line">    fields=0x7ffd4b9f0d88, nfields=0x7ffd4b9f0d64)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfromparse.c:820</span><br><span class="line">#6  0x00005557425c21f3 in NextCopyFrom (cstate=0x555743f07418, econtext=0x555743fbb298,</span><br><span class="line">    values=0x555743fa69f8, nulls=0x555743fa6a00)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfromparse.c:882</span><br><span class="line">#7  0x00005557425bebfc in CopyFrom (cstate=0x555743f07418)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copyfrom.c:859</span><br><span class="line">#8  0x00005557425bb88d in DoCopy (pstate=0x555743f01840, stmt=0x555743ee1518,</span><br><span class="line">    stmt_location=0, stmt_len=29, processed=0x7ffd4b9f11a0)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/commands/copy.c:298</span><br><span class="line">#9  0x0000555742905c21 in standard_ProcessUtility (pstmt=0x555743ee18e0,</span><br><span class="line">    queryString=0x555743ee09d0 &quot;COPY  tbl FROM STDIN WITH csv;&quot;, readOnlyTree=false,</span><br><span class="line">    context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x555743ee19d0,</span><br><span class="line">    qc=0x7ffd4b9f1510)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/tcop/utility.c:742</span><br><span class="line">#10 0x00005557429055b9 in ProcessUtility (pstmt=0x555743ee18e0,</span><br><span class="line">    queryString=0x555743ee09d0 &quot;COPY  tbl FROM STDIN WITH csv;&quot;, readOnlyTree=false,</span><br><span class="line">    context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x555743ee19d0,</span><br><span class="line">    qc=0x7ffd4b9f1510)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/backend/tcop/utility.c:530</span><br></pre></td></tr></table></figure>
+
+<p>函数 <code>CopyGetData()</code> 将根据数据的来源不同获取数据，具体来说，上面的 <code>COPY</code> 和 <code>\copy</code> 两条语句的数据来源分别为 <code>COPY_FILE</code> 和 <code>COPY_FRONTEND</code>。<code>COPY_FILE</code> 的方式是读本地文件（服务器端的），而 <code>COPY_FRONTEND</code> 则是读取客户端的数据（由 <code>pq_getmessage()</code> 函数完成）。</p>
+<p>现在，我们可以将问题范围的缩小到 psql 端了。那么我们看看 psql 端是如何处理 <code>\copy</code> 命令。其执行的堆栈信息如下所示。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#0  handleCopyIn (conn=0x5618b20ac2b0, copystream=0x5618b20b5390, isbinary=false,</span><br><span class="line">    res=0x7ffcd76cf5b0) at /mnt/workspace/postgresql/build/../src/bin/psql/copy.c:514</span><br><span class="line">#1  0x00005618b053aa9d in HandleCopyResult (resultp=0x7ffcd76cf608)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/bin/psql/common.c:939</span><br><span class="line">#2  0x00005618b053bc79 in ExecQueryAndProcessResults (</span><br><span class="line">    query=0x5618b20da760 &quot;COPY  tbl FROM STDIN WITH csv;&quot;, elapsed_msec=0x7ffcd76cf698,</span><br><span class="line">    svpt_gone_p=0x7ffcd76cf68c, is_watch=false, opt=0x0, printQueryFout=0x0)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/bin/psql/common.c:1565</span><br><span class="line">#3  0x00005618b053b19f in SendQuery (</span><br><span class="line">    query=0x5618b20da760 &quot;COPY  tbl FROM STDIN WITH csv;&quot;)</span><br><span class="line">    at /mnt/workspace/postgresql/build/../src/bin/psql/common.c:1172</span><br><span class="line">#4  0x00005618b053e4e0 in do_copy (</span><br><span class="line">    args=0x5618b20da4c0 &quot;tbl FROM &#x27;/tmp/tbl.csv&#x27; WITH csv;&quot;)</span><br></pre></td></tr></table></figure>
+
+<p>从上面的信息我们可以得知，<code>\copy</code> 命令被转换成 <code>COPY ... FROM STDIN WITH csv;</code>，随后在 <code>handleCopyIn()</code> 函数中读取文件内容并发送到服务器端。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">handleCopyIn</span><span class="params">(PGconn *conn, FILE *copystream, <span class="keyword">bool</span> isbinary, PGresult **res)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line">            fgresult = fgets(&amp;buf[buflen], COPYBUFSIZ - buflen, copystream);</span><br><span class="line"></span><br><span class="line">            sigint_interrupt_enabled = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (!fgresult)</span><br><span class="line">                copydone = <span class="literal">true</span>;</span><br><span class="line">            <span class="keyword">else</span></span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">int</span>         linelen;</span><br><span class="line"></span><br><span class="line">                linelen = <span class="built_in">strlen</span>(fgresult);</span><br><span class="line">                buflen += linelen;</span><br><span class="line"></span><br><span class="line">                <span class="comment">/* current line is done? */</span></span><br><span class="line">                <span class="keyword">if</span> (buf[buflen - <span class="number">1</span>] == <span class="string">&#x27;\n&#x27;</span>)</span><br><span class="line">                &#123;</span><br><span class="line">                    <span class="comment">/* check for EOF marker, but not on a partial line */</span></span><br><span class="line">                    <span class="keyword">if</span> (at_line_begin)</span><br><span class="line">                    &#123;</span><br><span class="line">                        <span class="comment">/*</span></span><br><span class="line"><span class="comment">                         * This code erroneously assumes &#x27;\.&#x27; on a line alone</span></span><br><span class="line"><span class="comment">                         * inside a quoted CSV string terminates the \copy.</span></span><br><span class="line"><span class="comment">                         * https://www.postgresql.org/message-id/E1TdNVQ-0001ju-GO@wrigleys.postgresql.org</span></span><br><span class="line"><span class="comment">                         */</span></span><br><span class="line">                        <span class="keyword">if</span> ((linelen == <span class="number">3</span> &amp;&amp; <span class="built_in">memcmp</span>(fgresult, <span class="string">&quot;\\.\n&quot;</span>, <span class="number">3</span>) == <span class="number">0</span>) ||</span><br><span class="line">                            (linelen == <span class="number">4</span> &amp;&amp; <span class="built_in">memcmp</span>(fgresult, <span class="string">&quot;\\.\r\n&quot;</span>, <span class="number">4</span>) == <span class="number">0</span>))</span><br><span class="line">                        &#123;</span><br><span class="line">                            copydone = <span class="literal">true</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> (copystream == pset.cur_cmd_source)</span><br><span class="line">                    &#123;</span><br><span class="line">                        pset.lineno++;</span><br><span class="line">                        pset.stmt_lineno++;</span><br><span class="line">                    &#125;</span><br><span class="line">                    at_line_begin = <span class="literal">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                    at_line_begin = <span class="literal">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">    [...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的代码中，我们可以看到，psql 中的 <code>\copy</code> 命令是按行读取（fgets() 函数），然后判断是否为 <code>\.</code>，若是则代表结束，它无法处理当前内容是否在引号内，因此，psql 只发送了部分数据到服务器从而导致了错误。</p>
+<p>下面是 Tom Lane 对于这个问题的看法。大意就是在文档中添加一个警告事项。</p>
+<blockquote>
+<p>A documentation warning might be the appropriate response.  I don’t see any plausible way for psql to actually fix the problem, short of a protocol change to allow the backend to tell it how the data stream is going to be parsed.</p>
+</blockquote>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/flat/E1TdNVQ-0001ju-GO%40wrigleys.postgresql.org">https://www.postgresql.org/message-id/flat/E1TdNVQ-0001ju-GO%40wrigleys.postgresql.org</a><br>[2] <a href="https://www.postgresql.org/message-id/10e3eff6-eb04-4b3f-aeb4-b920192b977a%40manitou-mail.org">https://www.postgresql.org/message-id/10e3eff6-eb04-4b3f-aeb4-b920192b977a%40manitou-mail.org</a></p>
+<div class="just-for-fun">
+笑林广记 - 训子
+
+<p>富翁子不识字，人劝以延师训子。先学一字是一画，次二字是二画，次三字三画。<br>其子便欣然投笔告父曰：“儿已都晓字义，何用师为？”<br>父喜之乃谢去。一日父欲招万姓者饮，命子晨起治状，至午不见写成。<br>父往询之，子恚曰：“姓亦多矣，如何偏姓万，自早至今才得五百画哩！”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>BUG</tag>
       </tags>
   </entry>
   <entry>
@@ -6409,28 +6468,6 @@ Date:   Wed Dec 9 15:12:05 2020 +0100
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 更新 configure 引入无关更改</title>
-    <url>/2021/02/postgresql-update-configure-file/</url>
-    <content><![CDATA[<p>PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="meta">@@ -1187,6 +1189,15 @@</span> do</span><br><span class="line">   | -silent | --silent | --silen | --sile | --sil)</span><br><span class="line">     silent=yes ;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+  -runstatedir | --runstatedir | --runstatedi | --runstated \</span></span><br><span class="line"><span class="addition">+  | --runstate | --runstat | --runsta | --runst | --runs \</span></span><br><span class="line"><span class="addition">+  | --run | --ru | --r)</span></span><br><span class="line"><span class="addition">+    ac_prev=runstatedir ;;</span></span><br><span class="line"><span class="addition">+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \</span></span><br><span class="line"><span class="addition">+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \</span></span><br><span class="line"><span class="addition">+  | --run=* | --ru=* | --r=*)</span></span><br><span class="line"><span class="addition">+    runstatedir=$ac_optarg ;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -14714,7 +14738,7 @@</span> else</span><br><span class="line">     We can&#x27;t simply define LARGE_OFF_T to be 9223372036854775807,</span><br><span class="line">     since some C++ compilers masquerading as C compilers</span><br><span class="line">     incorrectly reject 9223372036854775807.  */</span><br><span class="line"><span class="deletion">-#define LARGE_OFF_T (((off_t) 1 &lt;&lt; 62) - 1 + ((off_t) 1 &lt;&lt; 62))</span></span><br><span class="line"><span class="addition">+#define LARGE_OFF_T ((((off_t) 1 &lt;&lt; 31) &lt;&lt; 31) - 1 + (((off_t) 1 &lt;&lt; 31) &lt;&lt; 31))</span></span><br><span class="line">   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721</span><br><span class="line">               &amp;&amp; LARGE_OFF_T % 2147483647 == 1)</span><br><span class="line">              ? 1 : -1];</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。</p>
-<span id="more"></span>
-
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>我们可以从 autoconf 的<a href="https://www.gnu.org/software/autoconf/#downloading">官网下载</a>并重新安装。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> wget https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar xf autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./configure --prefix=/usr/<span class="built_in">local</span>/autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> make</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> sudo make install</span></span><br></pre></td></tr></table></figure>
-
-<p>最后将 <code>/usr/local/autoconf-2.69/bin</code> 加入到 <code>PATH</code> 环境变量的开始（确保我们安装的 autoconf 先于系统的即可）并重新载入环境变量。随后执行 <code>autoreconf</code> 命令更新 <code>configure</code> 文件，这时就不会引入其他无关的更改。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz">https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 更新组合类型的 domain 类型数组导致崩溃</title>
     <url>/2021/10/postgresql-update-on-domain-array-based-on-a-composite-crashed/</url>
     <content><![CDATA[<p>最近发现 PostgreSQL 在更新组合类型构成的 domain 数组将导致数据库崩溃。在写这篇文章的时候这个 bug 已经被修复了。</p>
@@ -6510,6 +6547,28 @@ Date:   Wed Dec 9 15:12:05 2020 +0100
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 更新 configure 引入无关更改</title>
+    <url>/2021/02/postgresql-update-configure-file/</url>
+    <content><![CDATA[<p>PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="meta">@@ -1187,6 +1189,15 @@</span> do</span><br><span class="line">   | -silent | --silent | --silen | --sile | --sil)</span><br><span class="line">     silent=yes ;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+  -runstatedir | --runstatedir | --runstatedi | --runstated \</span></span><br><span class="line"><span class="addition">+  | --runstate | --runstat | --runsta | --runst | --runs \</span></span><br><span class="line"><span class="addition">+  | --run | --ru | --r)</span></span><br><span class="line"><span class="addition">+    ac_prev=runstatedir ;;</span></span><br><span class="line"><span class="addition">+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \</span></span><br><span class="line"><span class="addition">+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \</span></span><br><span class="line"><span class="addition">+  | --run=* | --ru=* | --r=*)</span></span><br><span class="line"><span class="addition">+    runstatedir=$ac_optarg ;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -14714,7 +14738,7 @@</span> else</span><br><span class="line">     We can&#x27;t simply define LARGE_OFF_T to be 9223372036854775807,</span><br><span class="line">     since some C++ compilers masquerading as C compilers</span><br><span class="line">     incorrectly reject 9223372036854775807.  */</span><br><span class="line"><span class="deletion">-#define LARGE_OFF_T (((off_t) 1 &lt;&lt; 62) - 1 + ((off_t) 1 &lt;&lt; 62))</span></span><br><span class="line"><span class="addition">+#define LARGE_OFF_T ((((off_t) 1 &lt;&lt; 31) &lt;&lt; 31) - 1 + (((off_t) 1 &lt;&lt; 31) &lt;&lt; 31))</span></span><br><span class="line">   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721</span><br><span class="line">               &amp;&amp; LARGE_OFF_T % 2147483647 == 1)</span><br><span class="line">              ? 1 : -1];</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。</p>
+<span id="more"></span>
+
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>我们可以从 autoconf 的<a href="https://www.gnu.org/software/autoconf/#downloading">官网下载</a>并重新安装。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> wget https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar xf autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./configure --prefix=/usr/<span class="built_in">local</span>/autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> make</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> sudo make install</span></span><br></pre></td></tr></table></figure>
+
+<p>最后将 <code>/usr/local/autoconf-2.69/bin</code> 加入到 <code>PATH</code> 环境变量的开始（确保我们安装的 autoconf 先于系统的即可）并重新载入环境变量。随后执行 <code>autoreconf</code> 命令更新 <code>configure</code> 文件，这时就不会引入其他无关的更改。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz">https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -6694,6 +6753,30 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </tags>
   </entry>
   <entry>
+    <title>Greenplum 数据库 semctl 失败之无效参数</title>
+    <url>/2019/07/semctl-failed-invalid-argument/</url>
+    <content><![CDATA[<p>在编译完成之后对 Greenplum 数据库进行安装测试时遇到如下问题，</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">psql: FATAL:  semctl(592740353, 7, SETVAL, 0) failed: Invalid argument (pg_sema.c:151)</span><br></pre></td></tr></table></figure>
+
+<p>从而导致数据库启动失败，从错误结果来看应该是与信号量相关。那么具体是怎么回事呢？</p>
+<p>文献 <a href="https://wiki.postgresql.org/wiki/Systemd">[1]</a> 中给出了关于这个错误的详细说明，问题是由 System V IPC 对象导致的。</p>
+<p>配置文件 <code>logind.conf</code> 中的 <code>RemoveIPC</code> 参数控制着 System V IPC 对象是否在用户完全退出的情况下被清除（系统用户排除在外）。在 <code>systemd 212</code> 版本之后这个选项默认是开启的，即 <code>RemoveIPC=yes</code>。仍在被使用的共享内存段不会被清理，因此 <code>systemd</code> 不会去清理正在使用的共享内存段；但是信号量没有进程附加的概念，因此，当用户退出或进程终止时，即便该信号量正在被使用也会被清理（这里的理解不一定正确，建议直接看原文）。</p>
+<span id="more"></span>
+
+<h2 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h2><p>在了解了问题的本质之后，我们来看看如何解决这个问题。正如前面所说的，系统用户可以免除这个问题的困扰，那么我们的第一种方法就是建立一个系统用户，然后使用这个用户来运行数据库（<code>useradd -r</code> 命令）。</p>
+<p>不过，还是比较推荐第二种方式，即修改 <code>RemoveIPC</code> 为 <code>RemoveIPC=no</code>，随后重启 <code>systemd-logind</code>。Ubuntu 下的做法如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ echo &quot;RemoveIPC=no&quot; &gt;&gt; /etc/systemd/logind.conf</span><br><span class="line">$ systemctl restart systemd-logind</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://wiki.postgresql.org/wiki/Systemd">https://wiki.postgresql.org/wiki/Systemd</a><br>[2] <a href="https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com">https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com</a><br>[3] <a href="https://www.postgresql.org/message-id/CAK7tEys9-O4BTERbs3Xuk2BfFNNd55u2sM9j5R2Fi7v6BHjrQw@mail.gmail.com">BUG #13818: PostgreSQL crashes after cronjob runs as “postgres”</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Greenplum</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>LaTeX 查看命令的定义</title>
     <url>/2019/04/show-LaTeX-command-definition/</url>
     <content><![CDATA[<p>最近在使用 LaTeX 撰写文档时需要重定义一个命令的，但是我想要知道该命令的原始定义时怎样的，经过查找发现 LaTeX 在这方面做得还是很不错的。目前，我知道有两种方式可以获取命令的定义：(a) 在文档中使用 <code>\show\command</code>；(b) 在命令行中使用 <code>texdef command</code>。</p>
@@ -6720,30 +6803,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </categories>
       <tags>
         <tag>LaTeX</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Greenplum 数据库 semctl 失败之无效参数</title>
-    <url>/2019/07/semctl-failed-invalid-argument/</url>
-    <content><![CDATA[<p>在编译完成之后对 Greenplum 数据库进行安装测试时遇到如下问题，</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">psql: FATAL:  semctl(592740353, 7, SETVAL, 0) failed: Invalid argument (pg_sema.c:151)</span><br></pre></td></tr></table></figure>
-
-<p>从而导致数据库启动失败，从错误结果来看应该是与信号量相关。那么具体是怎么回事呢？</p>
-<p>文献 <a href="https://wiki.postgresql.org/wiki/Systemd">[1]</a> 中给出了关于这个错误的详细说明，问题是由 System V IPC 对象导致的。</p>
-<p>配置文件 <code>logind.conf</code> 中的 <code>RemoveIPC</code> 参数控制着 System V IPC 对象是否在用户完全退出的情况下被清除（系统用户排除在外）。在 <code>systemd 212</code> 版本之后这个选项默认是开启的，即 <code>RemoveIPC=yes</code>。仍在被使用的共享内存段不会被清理，因此 <code>systemd</code> 不会去清理正在使用的共享内存段；但是信号量没有进程附加的概念，因此，当用户退出或进程终止时，即便该信号量正在被使用也会被清理（这里的理解不一定正确，建议直接看原文）。</p>
-<span id="more"></span>
-
-<h2 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h2><p>在了解了问题的本质之后，我们来看看如何解决这个问题。正如前面所说的，系统用户可以免除这个问题的困扰，那么我们的第一种方法就是建立一个系统用户，然后使用这个用户来运行数据库（<code>useradd -r</code> 命令）。</p>
-<p>不过，还是比较推荐第二种方式，即修改 <code>RemoveIPC</code> 为 <code>RemoveIPC=no</code>，随后重启 <code>systemd-logind</code>。Ubuntu 下的做法如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ echo &quot;RemoveIPC=no&quot; &gt;&gt; /etc/systemd/logind.conf</span><br><span class="line">$ systemctl restart systemd-logind</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://wiki.postgresql.org/wiki/Systemd">https://wiki.postgresql.org/wiki/Systemd</a><br>[2] <a href="https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com">https://www.postgresql.org/message-id/flat/1481075896588-5933635.post%40n3.nabble.com</a><br>[3] <a href="https://www.postgresql.org/message-id/CAK7tEys9-O4BTERbs3Xuk2BfFNNd55u2sM9j5R2Fi7v6BHjrQw@mail.gmail.com">BUG #13818: PostgreSQL crashes after cronjob runs as “postgres”</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>Greenplum</tag>
       </tags>
   </entry>
   <entry>
