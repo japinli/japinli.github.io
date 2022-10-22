@@ -373,14 +373,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2020/03/ubuntu-lid-switch-action/</loc>
+    <loc>https://blog.japinli.top/2019/03/ubuntu-modify-io-scheduler/</loc>
     
     <lastmod>2021-10-14</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/03/ubuntu-modify-io-scheduler/</loc>
+    <loc>https://blog.japinli.top/2020/03/ubuntu-lid-switch-action/</loc>
     
     <lastmod>2021-10-14</lastmod>
     
@@ -737,14 +737,14 @@
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2019/01/import-certificate-into-eclipse/</loc>
+    <loc>https://blog.japinli.top/2018/09/introduction-cstore-fdw-columnar-store/</loc>
     
     <lastmod>2021-10-14</lastmod>
     
   </url>
   
   <url>
-    <loc>https://blog.japinli.top/2018/09/introduction-cstore-fdw-columnar-store/</loc>
+    <loc>https://blog.japinli.top/2019/01/import-certificate-into-eclipse/</loc>
     
     <lastmod>2021-10-14</lastmod>
     
@@ -1082,6 +1082,13 @@
   </url>
   
   <url>
+    <loc>https://blog.japinli.top/tags/LaTeX/</loc>
+    <lastmod>2022-10-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://blog.japinli.top/tags/cstore-fdw/</loc>
     <lastmod>2022-10-22</lastmod>
     <changefreq>daily</changefreq>
@@ -1090,13 +1097,6 @@
   
   <url>
     <loc>https://blog.japinli.top/tags/%E5%88%97%E5%AD%98/</loc>
-    <lastmod>2022-10-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://blog.japinli.top/tags/LaTeX/</loc>
     <lastmod>2022-10-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
