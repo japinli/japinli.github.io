@@ -84,9 +84,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">48</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">49</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">7</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">134</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">135</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -162,7 +162,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">134</span>
+          <span class="site-state-item-count">135</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -173,7 +173,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">48</span>
+        <span class="site-state-item-count">49</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -216,6 +216,128 @@
 
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/" class="post-title-link" itemprop="url">PostgreSQL 无法更改外键引用的聚集列的数据类型</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-12 14:00:48" itemprop="dateCreated datePublished" datetime="2022-03-12T14:00:48+08:00">2022-03-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>9.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>9 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>最近在邮件列表中看到一个关于聚集列的数据类型修改导致的异常问题 <a target="_blank" rel="noopener" href="https://www.postgresql.org/message-id/17409-52871dda8b5741cb%40postgresql.org">BUG #17409</a>。本文简要记录一下分析过程以及解决方案。目前该问题已经被修复，在 14.1 和 14.2 版本中应该可以重现。</p>
+<pre><code>commit 641f3dffcdf1c7378cfb94c98b6642793181d6db
+Author: Tom Lane &lt;tgl@sss.pgh.pa.us&gt;
+Date:   Fri Mar 11 13:47:26 2022 -0500
+
+    Restore the previous semantics of get_constraint_index().
+
+    Commit 8b069ef5d changed this function to look at pg_constraint.conindid
+    rather than searching pg_depend.  That was a good performance improvement,
+    but it failed to preserve the exact semantics.  The old code would only
+    return an index that was &quot;owned by&quot; (internally dependent on) the
+    specified constraint, whereas the new code will also return indexes that
+    are just referenced by foreign key constraints.  This confuses ALTER
+    TABLE, which was implicitly expecting the previous semantics, into
+    failing with errors like
+        ERROR:  relation 146621 has multiple clustered indexes
+    or
+        ERROR:  &quot;pk_attbl&quot; is not an index for table &quot;atref&quot;
+
+    We can fix this without reverting the performance improvement by adding
+    a contype check in get_constraint_index().  Another way could be to
+    make ALTER TABLE check it, but I&#39;m worried that extension code could
+    also have subtle dependencies on the old semantics.
+
+    Tom Lane and Japin Li, per bug #17409 from Holly Roberts.
+    Back-patch to v14 where the error crept in.
+
+    Discussion: https://postgr.es/m/17409-52871dda8b5741cb@postgresql.org
+</code></pre>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -1110,130 +1232,6 @@ Date:   Tue Nov 16 15:20:50 2021 -0500
 
 
 
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2022/01/postgresql-jsonlog/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/logo.png">
-      <meta itemprop="name" content="Japin Li">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Japin">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/01/postgresql-jsonlog/" class="post-title-link" itemprop="url">PostgreSQL 15 特性 - jsonlog 日志</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2022-01-17 22:17:24" itemprop="dateCreated datePublished" datetime="2022-01-17T22:17:24+08:00">2022-01-17</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>4.7k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>PostgreSQL 15 新增了 jsonlog 日志选项，即可以将日志存储为 json 格式，下面是详细的提交信息。</p>
-<pre><code>commit dc686681e0799b12c40f44f85fc5bfd7fed4e57f
-Author: Michael Paquier &lt;michael@paquier.xyz&gt;
-Date:   Mon Jan 17 10:16:53 2022 +0900
-
-    Introduce log_destination=jsonlog
-
-    &quot;jsonlog&quot; is a new value that can be added to log_destination to provide
-    logs in the JSON format, with its output written to a file, making it
-    the third type of destination of this kind, after &quot;stderr&quot; and
-    &quot;csvlog&quot;.  The format is convenient to feed logs to other applications.
-    There is also a plugin external to core that provided this feature using
-    the hook in elog.c, but this had to overwrite the output of &quot;stderr&quot; to
-    work, so being able to do both at the same time was not possible.  The
-    files generated by this log format are suffixed with &quot;.json&quot;, and use
-    the same rotation policies as the other two formats depending on the
-    backend configuration.
-
-    This takes advantage of the refactoring work done previously in ac7c807,
-    bed6ed3, 8b76f89 and 2d77d83 for the backend parts, and 72b76f7 for the
-    TAP tests, making the addition of any new file-based format rather
-    straight-forward.
-
-    The documentation is updated to list all the keys and the values that
-    can exist in this new format.  pg_current_logfile() also required a
-    refresh for the new option.
-
-    Author: Sehrope Sarkuni, Michael Paquier
-    Reviewed-by: Nathan Bossart, Justin Pryzby
-    Discussion: https://postgr.es/m/CAH7T-aqswBM6JWe4pDehi1uOiufqe06DJWaU5=X7dDLyqUExHg@mail.gmail.com
-</code></pre>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/01/postgresql-jsonlog/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
   <nav class="pagination">
     <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/14/">14</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
@@ -1258,13 +1256,13 @@ Date:   Mon Jan 17 10:16:53 2022 +0900
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">677k</span>
+    <span title="站点总字数">680k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">10:16</span>
+    <span title="站点阅读时长">10:18</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
