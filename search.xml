@@ -690,84 +690,6 @@
       </tags>
   </entry>
   <entry>
-    <title>【译】Boyer-Moore 多数派投票算法</title>
-    <url>/2021/08/boyer-moore-majority-voting-algorithm/</url>
-    <content><![CDATA[<img src="/2021/08/boyer-moore-majority-voting-algorithm/boyer-moore.gif" class="">
-
-<p>Boyer-Moore 投票算法是流行的最优算法之一，它用于在给定元素中找出出现次数超过 <code>N/2</code> 的元素。它需要对给定元素进行 2 次遍历，其时间复杂度为 <code>O(N)</code>，空间复杂度为 <code>O(1)</code>。</p>
-<span id="more"></span>
-
-<p>让我们通过一个例子来看看其算法背后的原理。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">输入：&#123;1,1,1,1,2,3,5&#125;</span><br><span class="line">输出：1</span><br><span class="line">解释：1 出现超过 3 次。</span><br><span class="line">输入：&#123;1,2,3&#125;</span><br><span class="line">输出：-1</span><br></pre></td></tr></table></figure>
-
-<p>该算法的工作原理是，如果一个元素出现超过 <code>N/2</code> 次，则意味着除此之外的其余元素肯定会小于 <code>N/2</code>。那么，让我们检查一下算法的过程。</p>
-<ul>
-<li>首先，从给定的元素集中选择一个候选元素，如果它与候选元素相同，则增加投票数。否则，减少票数如果票数变为 <code>0</code>，则选择另一个新元素作为新候选元素。</li>
-</ul>
-<h2 id="背后的原理"><a href="#背后的原理" class="headerlink" title="背后的原理"></a>背后的原理</h2><p>当元素与候选元素相同时，我们增加投票数；当元素与候选元素不相同时，我们减少投票数。我们减少投票实际上意味着我们正在降低所选候选元素获胜机会，因为我们知道如果获选元素是多数，那么它出现的次数必然超过 <code>N/2</code> 次，而其余的元素则少于 <code>N/2</code> 次。当我们发现与候选元素不同的元素时，我们会持续的减少投票数。当投票数变为 <code>0</code> 时，这就意味着有相同数量的不同元素，这不应该成为多数元素的情况。因此，候选元素不能成为多数元素，所以我们选择当前的元素作为新的候选元素，并继续上述过程，直到所有元素都完成。最后的候选元素将是我们的多数元素。我们用第 2 次遍历来检查候选元素的数量是否大于 <code>N/2</code>，如果是的话，我们就认为它是多数元素。</p>
-<h2 id="实现算法的步骤"><a href="#实现算法的步骤" class="headerlink" title="实现算法的步骤"></a>实现算法的步骤</h2><ol>
-<li>找到多数的候选元素<ul>
-<li>初始化变量 <code>i, votes = 0, candidate = -1</code></li>
-<li>使用 <code>for</code> 循环遍历数组</li>
-<li>如果 <code>votes = 0</code>，则选择 <code>candidate = arr[i]</code>，并且增加投票数 <code>votes = 1</code></li>
-<li>如果当前的元素与候选元素相同，则 <code>votes++</code></li>
-<li>否则 <code>votes--</code></li>
-</ul>
-</li>
-<li>检查候选元素是否有超过 <code>N/2</code> 投票数<ul>
-<li>初始化变量 <code>count = 0</code>，如果元素与候选者相同则加 <code>1</code></li>
-<li>检查 <code>count &gt; N/2</code>，如果是返回候选元素</li>
-<li>否则返回 <code>-1</code></li>
-</ul>
-</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我们模拟上面的例子：</span><br><span class="line">给定元素：</span><br><span class="line">  arr[] =       1    1    1    1    2    3    5</span><br><span class="line"> votes = 0      1    2    3    4    3    2    1</span><br><span class="line"> candidate = -1 1    1    1    1    1    1    1</span><br><span class="line"> candidate = 1  第一次遍历后</span><br><span class="line">                1    1    1    1    2    3    5</span><br><span class="line"> count = 0      1    2    3    4    4    4    4</span><br><span class="line"> candidate = 1</span><br><span class="line"> Hence count &gt; 7/2 =3</span><br><span class="line"> 因此，1 是多数元素。</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">// C++ implementation for the above approach</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> std;</span><br><span class="line"><span class="comment">// Function to find majority element</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">findMajority</span><span class="params">(<span class="keyword">int</span> arr[], <span class="keyword">int</span> n)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> i, candidate = <span class="number">-1</span>, votes = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// Finding majority candidate</span></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (votes == <span class="number">0</span>) &#123;</span><br><span class="line">            candidate = arr[i];</span><br><span class="line">            votes = <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (arr[i] == candidate)</span><br><span class="line">                votes++;</span><br><span class="line">            <span class="keyword">else</span></span><br><span class="line">                votes--;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// Checking if majority candidate occurs more than n/2</span></span><br><span class="line">    <span class="comment">// times</span></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (arr[i] == candidate) &#123;</span><br><span class="line">            count++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (count &gt; n / <span class="number">2</span>)</span><br><span class="line">        <span class="keyword">return</span> candidate;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> arr[] = &#123; <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span> &#125;;</span><br><span class="line">    <span class="keyword">int</span> n = <span class="built_in"><span class="keyword">sizeof</span></span>(arr) / <span class="built_in"><span class="keyword">sizeof</span></span>(arr[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">int</span> majority = <span class="built_in">findMajority</span>(arr, n);</span><br><span class="line">    cout &lt;&lt; <span class="string">&quot; The majority element is : &quot;</span> &lt;&lt; majority;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>时间复杂度：</strong> <code>O(n)</code>（对于数组的两次遍历）<br><strong>空间复杂度：</strong> <code>O(1)</code></p>
-<h2 id="原文"><a href="#原文" class="headerlink" title="原文"></a>原文</h2><p>[1] <a href="https://www.geeksforgeeks.org/boyer-moore-majority-voting-algorithm/">https://www.geeksforgeeks.org/boyer-moore-majority-voting-algorithm/</a></p>
-<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><p>该算法来自于 <a href="https://www.cs.ou.edu/~rlpage/dmtools/mjrty.pdf">MJRTY - A Fast Majority Vote Algorithm</a> 论文。您可以在<a href="https://www.cs.utexas.edu/~moore/best-ideas/mjrty/index.html">这里</a>看到算法的演示。</p>
-<div class="just-for-fun">
-笑林广记 - 不明
-
-<p>一官断事不明，惟好酒怠政，贪财酷民。<br>百姓怨恨，乃作诗以诮之云：“黑漆皮灯笼，半天萤火虫，粉墙画白虎，黄纸写乌龙，茄子敲泥磬，冬瓜撞木钟，唯知钱与酒，不管正和公。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>翻译</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Ubuntu 系统 DNS 服务器配置</title>
-    <url>/2018/09/configure-dns-on-ubuntu/</url>
-    <content><![CDATA[<p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
-<img src="/2018/09/configure-dns-on-ubuntu/Domain_name_space.png" class="" title="Domain name space">
-
-<span id="more"></span>
-
-<p>在 Ubuntu 平台，我目前所了解到的 DNS 的配置主要有两种方式 (配置文件修改)：网络配置文件 interfaces 和域名解析配置文件 resolvconf。</p>
-<h3 id="网络配置文件"><a href="#网络配置文件" class="headerlink" title="网络配置文件"></a>网络配置文件</h3><p>若是通过网络配置文件修改 DNS，那么我们只需要在 /etc/network/interfaces 文件中加入 nameserver 即可，如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">dns-nameserver 114.114.114.114</span><br><span class="line">dns-nameservers 8.8.8.8 8.8.4.4</span><br></pre></td></tr></table></figure>
-
-<p>dns-nameserver: 用于添加一个域名服务器，如果需要指定多个域名服务器则需要使用添加多行。<br>dns-nameservers: 用于同时指定多个域名服务器地址，用空格隔开。</p>
-<p>通过这种方式修改 DNS 后需要重启电脑方可生效。</p>
-<h3 id="域名解析配置文件"><a href="#域名解析配置文件" class="headerlink" title="域名解析配置文件"></a>域名解析配置文件</h3><p>Ubuntu 系统提供了 resolvconf 工具来管理其域名信息，其配置文件为在 /etc/resolvconf/resolv.conf.d/ 目录下，通过修改该目录下的 head 文件，我们可以添加特定的域名服务器。例如：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">nameserver 114.114.114.114</span><br><span class="line">nameserver 8.8.8.8</span><br><span class="line">nameserver 8.8.4.4</span><br></pre></td></tr></table></figure>
-
-<p>在该文件中，每个域名服务器的地址单独一行，不能同时在一行上指定多个域名服务器。修改成功后，我们只需要运行 <code>sudo resolvconf -u</code> 更新 /etc/resolv.conf 文件即可。这种方式不需要重启电脑。此外，我们也可以直接在 /etc/resolv.conf 文件中添加域名服务器，但是这种方式添加的域名服务器在系统重启之后将失效，这是因为 /etc/resolv.conf 文件是由 resolvconf 命令生成的，重启后该文件将被重写。</p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>DNS</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>重拾 ARP 协议</title>
     <url>/2019/09/arp-protocol/</url>
     <content><![CDATA[<p>ARP (Address Resolution Protoco)，中文地址解析协议，用来将网络层的 IP 地址转换为数据链路层的物理地址，该协议属于 TCP/IP 协议簇。当一台主机把以太网数据帧发送到位于同一局域网上的另一台主机时，是根据 48 bit 的以太网地址来确定目的接口的。设备驱动程序从不检查 IP 数据报中的目的 IP 地址。而地址解析为这两种不同的地址形式提供映射: 32 bit 的 IP 地址和数据链路层使用的任何类型的地址。<a href="https://tools.ietf.org/rfc/rfc826.txt">RFC 826</a> 给出了 ARP 协议的规范。ARP 协议为 IP 地址到对应的硬件物理地址提供了动态映射，通常情况下用户或系统管理员不用担心。</p>
@@ -826,6 +748,58 @@
       </tags>
   </entry>
   <entry>
+    <title>【译】Boyer-Moore 多数派投票算法</title>
+    <url>/2021/08/boyer-moore-majority-voting-algorithm/</url>
+    <content><![CDATA[<img src="/2021/08/boyer-moore-majority-voting-algorithm/boyer-moore.gif" class="">
+
+<p>Boyer-Moore 投票算法是流行的最优算法之一，它用于在给定元素中找出出现次数超过 <code>N/2</code> 的元素。它需要对给定元素进行 2 次遍历，其时间复杂度为 <code>O(N)</code>，空间复杂度为 <code>O(1)</code>。</p>
+<span id="more"></span>
+
+<p>让我们通过一个例子来看看其算法背后的原理。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">输入：&#123;1,1,1,1,2,3,5&#125;</span><br><span class="line">输出：1</span><br><span class="line">解释：1 出现超过 3 次。</span><br><span class="line">输入：&#123;1,2,3&#125;</span><br><span class="line">输出：-1</span><br></pre></td></tr></table></figure>
+
+<p>该算法的工作原理是，如果一个元素出现超过 <code>N/2</code> 次，则意味着除此之外的其余元素肯定会小于 <code>N/2</code>。那么，让我们检查一下算法的过程。</p>
+<ul>
+<li>首先，从给定的元素集中选择一个候选元素，如果它与候选元素相同，则增加投票数。否则，减少票数如果票数变为 <code>0</code>，则选择另一个新元素作为新候选元素。</li>
+</ul>
+<h2 id="背后的原理"><a href="#背后的原理" class="headerlink" title="背后的原理"></a>背后的原理</h2><p>当元素与候选元素相同时，我们增加投票数；当元素与候选元素不相同时，我们减少投票数。我们减少投票实际上意味着我们正在降低所选候选元素获胜机会，因为我们知道如果获选元素是多数，那么它出现的次数必然超过 <code>N/2</code> 次，而其余的元素则少于 <code>N/2</code> 次。当我们发现与候选元素不同的元素时，我们会持续的减少投票数。当投票数变为 <code>0</code> 时，这就意味着有相同数量的不同元素，这不应该成为多数元素的情况。因此，候选元素不能成为多数元素，所以我们选择当前的元素作为新的候选元素，并继续上述过程，直到所有元素都完成。最后的候选元素将是我们的多数元素。我们用第 2 次遍历来检查候选元素的数量是否大于 <code>N/2</code>，如果是的话，我们就认为它是多数元素。</p>
+<h2 id="实现算法的步骤"><a href="#实现算法的步骤" class="headerlink" title="实现算法的步骤"></a>实现算法的步骤</h2><ol>
+<li>找到多数的候选元素<ul>
+<li>初始化变量 <code>i, votes = 0, candidate = -1</code></li>
+<li>使用 <code>for</code> 循环遍历数组</li>
+<li>如果 <code>votes = 0</code>，则选择 <code>candidate = arr[i]</code>，并且增加投票数 <code>votes = 1</code></li>
+<li>如果当前的元素与候选元素相同，则 <code>votes++</code></li>
+<li>否则 <code>votes--</code></li>
+</ul>
+</li>
+<li>检查候选元素是否有超过 <code>N/2</code> 投票数<ul>
+<li>初始化变量 <code>count = 0</code>，如果元素与候选者相同则加 <code>1</code></li>
+<li>检查 <code>count &gt; N/2</code>，如果是返回候选元素</li>
+<li>否则返回 <code>-1</code></li>
+</ul>
+</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">我们模拟上面的例子：</span><br><span class="line">给定元素：</span><br><span class="line">  arr[] =       1    1    1    1    2    3    5</span><br><span class="line"> votes = 0      1    2    3    4    3    2    1</span><br><span class="line"> candidate = -1 1    1    1    1    1    1    1</span><br><span class="line"> candidate = 1  第一次遍历后</span><br><span class="line">                1    1    1    1    2    3    5</span><br><span class="line"> count = 0      1    2    3    4    4    4    4</span><br><span class="line"> candidate = 1</span><br><span class="line"> Hence count &gt; 7/2 =3</span><br><span class="line"> 因此，1 是多数元素。</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="comment">// C++ implementation for the above approach</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> std;</span><br><span class="line"><span class="comment">// Function to find majority element</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">findMajority</span><span class="params">(<span class="keyword">int</span> arr[], <span class="keyword">int</span> n)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> i, candidate = <span class="number">-1</span>, votes = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// Finding majority candidate</span></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (votes == <span class="number">0</span>) &#123;</span><br><span class="line">            candidate = arr[i];</span><br><span class="line">            votes = <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (arr[i] == candidate)</span><br><span class="line">                votes++;</span><br><span class="line">            <span class="keyword">else</span></span><br><span class="line">                votes--;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// Checking if majority candidate occurs more than n/2</span></span><br><span class="line">    <span class="comment">// times</span></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; n; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (arr[i] == candidate) &#123;</span><br><span class="line">            count++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (count &gt; n / <span class="number">2</span>)</span><br><span class="line">        <span class="keyword">return</span> candidate;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> arr[] = &#123; <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span> &#125;;</span><br><span class="line">    <span class="keyword">int</span> n = <span class="built_in"><span class="keyword">sizeof</span></span>(arr) / <span class="built_in"><span class="keyword">sizeof</span></span>(arr[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">int</span> majority = <span class="built_in">findMajority</span>(arr, n);</span><br><span class="line">    cout &lt;&lt; <span class="string">&quot; The majority element is : &quot;</span> &lt;&lt; majority;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>时间复杂度：</strong> <code>O(n)</code>（对于数组的两次遍历）<br><strong>空间复杂度：</strong> <code>O(1)</code></p>
+<h2 id="原文"><a href="#原文" class="headerlink" title="原文"></a>原文</h2><p>[1] <a href="https://www.geeksforgeeks.org/boyer-moore-majority-voting-algorithm/">https://www.geeksforgeeks.org/boyer-moore-majority-voting-algorithm/</a></p>
+<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><p>该算法来自于 <a href="https://www.cs.ou.edu/~rlpage/dmtools/mjrty.pdf">MJRTY - A Fast Majority Vote Algorithm</a> 论文。您可以在<a href="https://www.cs.utexas.edu/~moore/best-ideas/mjrty/index.html">这里</a>看到算法的演示。</p>
+<div class="just-for-fun">
+笑林广记 - 不明
+
+<p>一官断事不明，惟好酒怠政，贪财酷民。<br>百姓怨恨，乃作诗以诮之云：“黑漆皮灯笼，半天萤火虫，粉墙画白虎，黄纸写乌龙，茄子敲泥磬，冬瓜撞木钟，唯知钱与酒，不管正和公。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>翻译</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>OpenSSH 私钥转 RSA 私钥</title>
     <url>/2022/01/convert-openssh-private-key-to-rsa-private-key/</url>
     <content><![CDATA[<p>今天遇到关于私钥格式的问题，需要通过远程连接访问远端的服务器，该服务器是客户给的，然后通过 ssh 的方式访问，然而客户给的私钥是如下形式的：</p>
@@ -865,29 +839,29 @@
       </tags>
   </entry>
   <entry>
-    <title>MacOS 上创建 U 盘启动器</title>
-    <url>/2020/07/create-u-bootloader-on-macos/</url>
-    <content><![CDATA[<p>本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。</p>
+    <title>Ubuntu 系统 DNS 服务器配置</title>
+    <url>/2018/09/configure-dns-on-ubuntu/</url>
+    <content><![CDATA[<p>域名系统 (Domain Name System, DNS) 是为连接到互联网或专用网络的计算机、服务或其他资源提供的一个分散且分级的命名系统。他可以理解为域名和 IP 地址相互映射的一个分布式数据库，通过域名系统，用户可以使用相对容易记忆的域名来访问互联网，而不用去记忆难以理解的 IP 字符串，由域名到 IP 地址转换的过程则被叫做域名解析。下图给出了一个典型的域名分级系统 (图片来源于维基百科)。</p>
+<img src="/2018/09/configure-dns-on-ubuntu/Domain_name_space.png" class="" title="Domain name space">
+
 <span id="more"></span>
 
-<p>我们在官网现在的镜像大都是以 iso 结尾的文件，例如，本文中使用的 ubuntu-16.04-server-amd64.iso 镜像，在 Linux 平台，我们可以直接使用 dd 将这个镜像写到 U 盘上即可作为启动盘，但是在 MacOS 平台上，则需要将 iso 文件转换为 dmg 格式。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> hdiutil convert -format UDRW ubuntu-16.04-server-amd64.iso -o ubuntu-16.04-server-amd64.img</span></span><br><span class="line">Reading Master Boot Record (MBR : 0)…</span><br><span class="line">Reading Ubuntu-Server 18.04.4 LTS arm64  (Apple_ISO : 1)…</span><br><span class="line">Reading  (Type CD : 2)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Reading  (Type EF : 3)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Elapsed Time:  2.094s</span><br><span class="line">Speed: 454.9Mbytes/sec</span><br><span class="line">Savings: 0.0%</span><br><span class="line">created: /Users/japin/Downloads/ubuntu-18.04.4-server-arm64.img.dmg</span><br></pre></td></tr></table></figure>
+<p>在 Ubuntu 平台，我目前所了解到的 DNS 的配置主要有两种方式 (配置文件修改)：网络配置文件 interfaces 和域名解析配置文件 resolvconf。</p>
+<h3 id="网络配置文件"><a href="#网络配置文件" class="headerlink" title="网络配置文件"></a>网络配置文件</h3><p>若是通过网络配置文件修改 DNS，那么我们只需要在 /etc/network/interfaces 文件中加入 nameserver 即可，如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">dns-nameserver 114.114.114.114</span><br><span class="line">dns-nameservers 8.8.8.8 8.8.4.4</span><br></pre></td></tr></table></figure>
 
-<p>从上面的命令我们可以看到，文件将自动加上 dmg 后缀。上面的命令将 ubuntu-16.04-server-amd64.iso 镜像转换为 UDRW 格式并存储到 ubuntu-16.04-server-amd64.img.dmg 文件中。</p>
-<p>接下来我们通过 diskutil 命令查看当前 U 盘的位置。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil list</span></span><br><span class="line">/dev/disk0 (internal, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      GUID_partition_scheme                        *251.0 GB   disk0</span><br><span class="line">   1:                        EFI EFI                     314.6 MB   disk0s1</span><br><span class="line">   2:                 Apple_APFS Container disk1         250.7 GB   disk0s2</span><br><span class="line"></span><br><span class="line">/dev/disk1 (synthesized):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      APFS Container Scheme -                      +250.7 GB   disk1</span><br><span class="line">                                 Physical Store disk0s2</span><br><span class="line">   1:                APFS Volume Macintosh HD            11.1 GB    disk1s1</span><br><span class="line">   2:                APFS Volume Macintosh HD - Data     76.8 GB    disk1s2</span><br><span class="line">   3:                APFS Volume Preboot                 81.3 MB    disk1s3</span><br><span class="line">   4:                APFS Volume Recovery                528.1 MB   disk1s4</span><br><span class="line">   5:                APFS Volume VM                      3.2 GB     disk1s5</span><br><span class="line"></span><br><span class="line">/dev/disk2 (external, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:     Apple_partition_scheme                        *8.1 GB     disk2</span><br><span class="line">   1:        Apple_partition_map                         4.1 KB     disk2s1</span><br><span class="line">   2:                  Apple_HFS                         2.5 MB     disk2s2</span><br></pre></td></tr></table></figure>
+<p>dns-nameserver: 用于添加一个域名服务器，如果需要指定多个域名服务器则需要使用添加多行。<br>dns-nameservers: 用于同时指定多个域名服务器地址，用空格隔开。</p>
+<p>通过这种方式修改 DNS 后需要重启电脑方可生效。</p>
+<h3 id="域名解析配置文件"><a href="#域名解析配置文件" class="headerlink" title="域名解析配置文件"></a>域名解析配置文件</h3><p>Ubuntu 系统提供了 resolvconf 工具来管理其域名信息，其配置文件为在 /etc/resolvconf/resolv.conf.d/ 目录下，通过修改该目录下的 head 文件，我们可以添加特定的域名服务器。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">nameserver 114.114.114.114</span><br><span class="line">nameserver 8.8.8.8</span><br><span class="line">nameserver 8.8.4.4</span><br></pre></td></tr></table></figure>
 
-<p>可以看到，我们的 U 盘对应的是 <code>/dev/disk2</code>，使用下面的命令卸载 U 盘。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil unmountDisk /dev/disk2</span></span><br><span class="line">Unmount of all volumes on disk2 was successful</span><br></pre></td></tr></table></figure>
-
-<p>最后，使用 dd 命令将其写入到 U 盘中，这里需要注意我们的 U 盘设备名应使用 <code>/dev/rdisk2</code>，即在 <code>/dev/disk2</code> 的磁盘名前面加上 <code>r</code> 字母。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo dd <span class="keyword">if</span>=ubuntu-18.04.4-server-arm64.img.dmg of=/dev/rdisk2 bs=1m</span></span><br></pre></td></tr></table></figure>
+<p>在该文件中，每个域名服务器的地址单独一行，不能同时在一行上指定多个域名服务器。修改成功后，我们只需要运行 <code>sudo resolvconf -u</code> 更新 /etc/resolv.conf 文件即可。这种方式不需要重启电脑。此外，我们也可以直接在 /etc/resolv.conf 文件中添加域名服务器，但是这种方式添加的域名服务器在系统重启之后将失效，这是因为 /etc/resolv.conf 文件是由 resolvconf 命令生成的，重启后该文件将被重写。</p>
 ]]></content>
       <categories>
         <category>杂项</category>
       </categories>
       <tags>
-        <tag>MacOS</tag>
+        <tag>DNS</tag>
       </tags>
   </entry>
   <entry>
@@ -937,6 +911,32 @@
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MacOS 上创建 U 盘启动器</title>
+    <url>/2020/07/create-u-bootloader-on-macos/</url>
+    <content><![CDATA[<p>本文记载了如何在 MacOS 平台制作 U 盘安装镜像，这里主要使用到了 hdiutil，diskutil 和 dd 三个命令。</p>
+<span id="more"></span>
+
+<p>我们在官网现在的镜像大都是以 iso 结尾的文件，例如，本文中使用的 ubuntu-16.04-server-amd64.iso 镜像，在 Linux 平台，我们可以直接使用 dd 将这个镜像写到 U 盘上即可作为启动盘，但是在 MacOS 平台上，则需要将 iso 文件转换为 dmg 格式。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> hdiutil convert -format UDRW ubuntu-16.04-server-amd64.iso -o ubuntu-16.04-server-amd64.img</span></span><br><span class="line">Reading Master Boot Record (MBR : 0)…</span><br><span class="line">Reading Ubuntu-Server 18.04.4 LTS arm64  (Apple_ISO : 1)…</span><br><span class="line">Reading  (Type CD : 2)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Reading  (Type EF : 3)…</span><br><span class="line">....................................................................................................</span><br><span class="line">Elapsed Time:  2.094s</span><br><span class="line">Speed: 454.9Mbytes/sec</span><br><span class="line">Savings: 0.0%</span><br><span class="line">created: /Users/japin/Downloads/ubuntu-18.04.4-server-arm64.img.dmg</span><br></pre></td></tr></table></figure>
+
+<p>从上面的命令我们可以看到，文件将自动加上 dmg 后缀。上面的命令将 ubuntu-16.04-server-amd64.iso 镜像转换为 UDRW 格式并存储到 ubuntu-16.04-server-amd64.img.dmg 文件中。</p>
+<p>接下来我们通过 diskutil 命令查看当前 U 盘的位置。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil list</span></span><br><span class="line">/dev/disk0 (internal, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      GUID_partition_scheme                        *251.0 GB   disk0</span><br><span class="line">   1:                        EFI EFI                     314.6 MB   disk0s1</span><br><span class="line">   2:                 Apple_APFS Container disk1         250.7 GB   disk0s2</span><br><span class="line"></span><br><span class="line">/dev/disk1 (synthesized):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:      APFS Container Scheme -                      +250.7 GB   disk1</span><br><span class="line">                                 Physical Store disk0s2</span><br><span class="line">   1:                APFS Volume Macintosh HD            11.1 GB    disk1s1</span><br><span class="line">   2:                APFS Volume Macintosh HD - Data     76.8 GB    disk1s2</span><br><span class="line">   3:                APFS Volume Preboot                 81.3 MB    disk1s3</span><br><span class="line">   4:                APFS Volume Recovery                528.1 MB   disk1s4</span><br><span class="line">   5:                APFS Volume VM                      3.2 GB     disk1s5</span><br><span class="line"></span><br><span class="line">/dev/disk2 (external, physical):</span><br><span class="line"><span class="meta">   #</span><span class="bash">:                       TYPE NAME                    SIZE       IDENTIFIER</span></span><br><span class="line">   0:     Apple_partition_scheme                        *8.1 GB     disk2</span><br><span class="line">   1:        Apple_partition_map                         4.1 KB     disk2s1</span><br><span class="line">   2:                  Apple_HFS                         2.5 MB     disk2s2</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，我们的 U 盘对应的是 <code>/dev/disk2</code>，使用下面的命令卸载 U 盘。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> diskutil unmountDisk /dev/disk2</span></span><br><span class="line">Unmount of all volumes on disk2 was successful</span><br></pre></td></tr></table></figure>
+
+<p>最后，使用 dd 命令将其写入到 U 盘中，这里需要注意我们的 U 盘设备名应使用 <code>/dev/rdisk2</code>，即在 <code>/dev/disk2</code> 的磁盘名前面加上 <code>r</code> 字母。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo dd <span class="keyword">if</span>=ubuntu-18.04.4-server-arm64.img.dmg of=/dev/rdisk2 bs=1m</span></span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>MacOS</tag>
       </tags>
   </entry>
   <entry>
@@ -1364,6 +1364,38 @@
       </tags>
   </entry>
   <entry>
+    <title>Git bisect 自动二分查找</title>
+    <url>/2022/12/git-automated-bisecting/</url>
+    <content><![CDATA[<p>在 <a href="/2022/02/git-bisect-in-practice/" title="Git bisect 二分查找实践">Git bisect 二分查找实践</a>这篇文章中我们知道了如何通过 <code>git bisect</code> 来进行快速定位，但是，我们需要手动的去执行测试命令以确定哪个提交是正常的，哪个提交是异常的。本文记录了如何将 <code>git bisect</code> 的二分查找自动化。</p>
+<span id="more"></span>
+
+<h2 id="自动二分查找"><a href="#自动二分查找" class="headerlink" title="自动二分查找"></a>自动二分查找</h2><p><code>git bisect</code> 提供了一个 <code>run</code> 子命令，它将运行一个用户指定的命令来测试当前的提交是否符合预期。如果当前提交符合用户预期，那么用户提供的命令需要以 <code>0</code> 退出，否则用户命令需要以 <code>[1,127)</code> 的值退出，其中 <code>125</code> 保留特殊用途，其他任何值都将导致 <code>git bisect</code> 进程退出。</p>
+<p>如果某个提交不能被测试，那么用户命令应返回 <code>125</code>，此时这个提交将被跳过，相当于执行 <code>git bisect skip</code>。</p>
+<p>我们拿 PostgreSQL 中一个<a href="https://www.postgresql.org/message-id/CALDQics_oBEYfOnu_zH6yw9WR1waPCmcrqxQ8%2B39hK3Op%3Dz2UQ%40mail.gmail.com">关于 ICU 的示例</a>来演示 <code>git bisect run</code> 的使用。我们可以写个简单的脚本来测试这个功能，脚本如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> PGHOME=<span class="variable">$PWD</span>/pg</span><br><span class="line"><span class="built_in">export</span> PATH=<span class="variable">$PGHOME</span>/bin:<span class="variable">$PATH</span></span><br><span class="line"><span class="built_in">export</span> LD_LIBRARY_PATH=<span class="variable">$PGHOME</span>/lib:<span class="variable">$LD_LIBRARY_PATH</span></span><br><span class="line"><span class="built_in">export</span> PGDATA=<span class="variable">$PGHOME</span>/pgdata</span><br><span class="line"><span class="built_in">export</span> PGPORT=9230</span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> /home/japin/Codes/postgresql/build</span><br><span class="line">pg_ctl stop &gt;stop.log 2&gt;&amp;1</span><br><span class="line">rm -rf $(ls -I <span class="string">&#x27;*.sh&#x27;</span>)</span><br><span class="line"></span><br><span class="line">../configure \</span><br><span class="line">    --prefix=<span class="variable">$PWD</span>/pg \</span><br><span class="line">    --enable-tap-tests \</span><br><span class="line">    --enable-debug \</span><br><span class="line">    --enable-cassert \</span><br><span class="line">    --enable-depend \</span><br><span class="line">    --with-icu \</span><br><span class="line">    --with-llvm \</span><br><span class="line">    --with-openssl \</span><br><span class="line">    --with-python \</span><br><span class="line">    --with-pam \</span><br><span class="line">    CFLAGS=<span class="string">&#x27;-O0 -Wmissing-prototypes -Wincompatible-pointer-types&#x27;</span> \</span><br><span class="line">    &gt;configure.log 2&gt;&amp;1</span><br><span class="line">make -j $(nproc) -s &amp;&amp; make install -s</span><br><span class="line">(<span class="built_in">cd</span> contrib/ &amp;&amp; make -j $(nproc) -s &amp;&amp; make install -s)</span><br><span class="line"></span><br><span class="line">initdb &gt;initdb.log 2&gt;&amp;1 &amp;&amp; pg_ctl -l <span class="built_in">log</span> start &gt;start.log 2&gt;&amp;1</span><br><span class="line">psql postgres -c <span class="string">&quot;CREATE COLLATION t (LC_COLLATE = &#x27;en&#x27;, LC_CTYPE = &#x27;en&#x27;, PROVIDER = &#x27;icu&#x27;, DETERMINISTIC = false);&quot;</span> 2&gt;&amp;1 | grep <span class="string">&#x27;ERROR&#x27;</span></span><br><span class="line"><span class="keyword">if</span> <span class="built_in">test</span> <span class="string">&quot;$?&quot;</span> == <span class="string">&quot;0&quot;</span> ; <span class="keyword">then</span></span><br><span class="line">    <span class="built_in">exit</span> 1</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">    <span class="built_in">exit</span> 0</span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+
+<p><code>40b1491357</code> 为已知存在问题的提交，而 <code>bafad2c5b2</code> 是已知可以正常执行的提交。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ git bisect start 40b1491357 bafad2c5b2</span><br><span class="line">Bisecting: 1684 revisions left to <span class="built_in">test</span> after this (roughly 11 steps)</span><br><span class="line">[53ef6c40f1e7ff6c9ad9a221cd9999dd147ec3a2] Expose a few more PL/pgSQL <span class="built_in">functions</span> to debugger plugins.</span><br></pre></td></tr></table></figure>
+
+<p>接着我们通过 <code>git bisect run</code> 来执行我们的脚本。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ git bisect run build/myscript.sh</span><br><span class="line">running ./build/myscrip.sh</span><br><span class="line">ERROR:  parameter <span class="string">&quot;locale&quot;</span> must be specified</span><br><span class="line">Bisecting: 841 revisions left to <span class="built_in">test</span> after this (roughly 10 steps)</span><br><span class="line">[335474691054a74d771f0e7c24d25e800e3a37b6] Report any XLogReadRecord() error <span class="keyword">in</span> XlogReadTwoPhaseData().</span><br><span class="line">running ./build/myscrip.sh</span><br><span class="line">Bisecting: 420 revisions left to <span class="built_in">test</span> after this (roughly 9 steps)</span><br><span class="line">[ba15f16107bea8a93edc505f3013cd7df4ac90fc] Add PostgreSQL::Test::Cluster::config_data()</span><br><span class="line">running ./build/myscrip.sh</span><br><span class="line">Bisecting: 210 revisions left to <span class="built_in">test</span> after this (roughly 8 steps)</span><br><span class="line">[3a46a45f6f009785b46188ed862afbccfb4cf56a] Add API of sorts <span class="keyword">for</span> transition table handling <span class="keyword">in</span> trigger.c</span><br><span class="line">running ./build/myscrip.sh</span><br><span class="line">Bisecting: 105 revisions left to <span class="built_in">test</span> after this (roughly 7 steps)</span><br><span class="line">[1c6bb380e5aba195204a9c6d0b4713bd1b3dec9c] Don<span class="string">&#x27;t call fwrite() with len == 0 when writing out relcache init file.</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">ERROR:  parameter &quot;locale&quot; must be specified</span></span><br><span class="line"><span class="string">Bisecting: 52 revisions left to test after this (roughly 6 steps)</span></span><br><span class="line"><span class="string">[eb8399cf1f3dd8ad02633e3bb84e2289d2debb44] Improve handling of SET ACCESS METHOD for ALTER MATERIALIZED VIEW</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">ERROR:  parameter &quot;locale&quot; must be specified</span></span><br><span class="line"><span class="string">Bisecting: 25 revisions left to test after this (roughly 5 steps)</span></span><br><span class="line"><span class="string">[7e74aafc4335e743199c6c68ca9dd539053db9e5] Fix default signature length for gist_ltree_ops</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">Bisecting: 12 revisions left to test after this (roughly 4 steps)</span></span><br><span class="line"><span class="string">[f512efb2d50ab78e7610f0e3801925f22ebec611] Fix header inclusion order in pg_receivewal.c</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">ERROR:  parameter &quot;locale&quot; must be specified</span></span><br><span class="line"><span class="string">Bisecting: 6 revisions left to test after this (roughly 3 steps)</span></span><br><span class="line"><span class="string">[25e777cf8e547d7423d2e1e9da71f98b9414d59e] Split ExecUpdate and ExecDelete into reusable pieces</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">ERROR:  parameter &quot;locale&quot; must be specified</span></span><br><span class="line"><span class="string">Bisecting: 2 revisions left to test after this (roughly 2 steps)</span></span><br><span class="line"><span class="string">[c91f71b9dc91ef95e1d50d6d782f477258374fc6] Fix publish_as_relid with multiple publications</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">Bisecting: 0 revisions left to test after this (roughly 1 step)</span></span><br><span class="line"><span class="string">[f2553d43060edb210b36c63187d52a632448e1d2] Add option to use ICU as global locale provider</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">ERROR:  parameter &quot;locale&quot; must be specified</span></span><br><span class="line"><span class="string">Bisecting: 0 revisions left to test after this (roughly 0 steps)</span></span><br><span class="line"><span class="string">[f6f0db4d62400ff88f523dcc4d7e25f9506bc0d8] Fix pg_tablespace_location() with in-place tablespaces</span></span><br><span class="line"><span class="string">running ./build/myscrip.sh</span></span><br><span class="line"><span class="string">f2553d43060edb210b36c63187d52a632448e1d2 is the first bad commit</span></span><br><span class="line"><span class="string">commit f2553d43060edb210b36c63187d52a632448e1d2</span></span><br><span class="line"><span class="string">Author: Peter Eisentraut &lt;peter@eisentraut.org&gt;</span></span><br><span class="line"><span class="string">Date:   Thu Mar 17 11:11:21 2022 +0100</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Add option to use ICU as global locale provider</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    This adds the option to use ICU as the default locale provider for</span></span><br><span class="line"><span class="string">    either the whole cluster or a database.  New options for initdb,</span></span><br><span class="line"><span class="string">    createdb, and CREATE DATABASE are used to select this.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Since some (legacy) code still uses the libc locale facilities</span></span><br><span class="line"><span class="string">    directly, we still need to set the libc global locale settings even if</span></span><br><span class="line"><span class="string">    ICU is otherwise selected.  So pg_database now has three</span></span><br><span class="line"><span class="string">    locale-related fields: the existing datcollate and datctype, which are</span></span><br><span class="line"><span class="string">    always set, and a new daticulocale, which is only set if ICU is</span></span><br><span class="line"><span class="string">    selected.  A similar change is made in pg_collation for consistency,</span></span><br><span class="line"><span class="string">    but in that case, only the libc-related fields or the ICU-related</span></span><br><span class="line"><span class="string">    field is set, never both.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Reviewed-by: Julien Rouhaud &lt;rjuju123@gmail.com&gt;</span></span><br><span class="line"><span class="string">    Discussion: https://www.postgresql.org/message-id/flat/5e756dd6-0e91-d778-96fd-b1bcb06c161a%402ndquadrant.com</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">[...]</span></span><br><span class="line"><span class="string">bisect run success</span></span><br></pre></td></tr></table></figure>
+
+<p>从上面的结果我们可以看到，整个过程不需要人为介入，通过 11 次查询，我们就找到了引入问题的提交，相当的方便。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://lwn.net/Articles/317154/">https://lwn.net/Articles/317154/</a><br>[2] <a href="https://git-scm.com/docs/git-bisect/#_bisect_run">https://git-scm.com/docs/git-bisect/#_bisect_run</a></p>
+<div class="just-for-fun">
+笑林广记 - 蒜治口臭
+
+<p>一口臭者问人曰：“治口臭有良方乎？”<br>答曰：“吃大蒜极好。”<br>问者讶其臭，曰：“大蒜虽臭。还臭得正路。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>GDB 基本使用</title>
     <url>/2020/01/getting-in-and-out-of-gdb/</url>
     <content><![CDATA[<p>在工作中经常使用 GDB 来调试程序，但是一直都没有系统的进行学习过，为此，我打算对其进行一个系统的学习，学习的主要材料来自 GNU GDB 文档 <a href="https://sourceware.org/gdb/current/onlinedocs/gdb/">Debugging with GDB</a>。</p>
@@ -1539,37 +1571,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Git bisect 二分查找实践</title>
-    <url>/2022/02/git-bisect-in-practice/</url>
-    <content><![CDATA[<p>最近在分析 bug 的时候接触到了 <code>git bisect</code> 这个命令，虽然之前也知道这个命令，但是由于平时用的不多所以没有深入的研究，对它的使用方法也不是很熟悉。其实这个命令使用起来还是非常简单的，本文结合实际情况简要介绍一下 <code>git bisect</code> 的使用方法。</p>
-<span id="more"></span>
-
-<h2 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h2><p><code>git bisect</code> 是一个使用二分查找来定位引入 bug 提交记录的命令。<a href="https://git-scm.com/docs/git-bisect">官方文档</a>详细的说明了其使用方法，这里有一篇通俗易懂的 <a href="https://www.metaltoad.com/blog/beginners-guide-git-bisect-process-elimination"><code>git bisect</code> 使用介绍</a>（您可能需要梯子才能打开）。</p>
-<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>我在分析 PostgreSQL <a href="https://www.postgresql.org/message-id/17409-52871dda8b5741cb%40postgresql.org">BUG #17409</a> 的问题时，尝试用 <code>git bisect</code> 来定位问题，发现它真的是太香了。Bug 的提交者明确指出在之前的版本中是执行执行相应的操作的，但是在之后的版本中就报错了，那么可以肯定是在其中某个提交中引入了 bug，这种情况非常适合 <code>git bisect</code> 来快速定位到 bug 引入的提交。</p>
-<p>由于 PotgreSQL 的版本历史记录非常清晰，我根据用户提供的版本信息找到 7966b79801 这个提交，并验证其可以正常工作，那么我们就可以以此作为起点，从这个点到目前 master 分支上最新的提交，少说也有 3k 个提交记录了，如果我们一个一个提交的验证，肯定不切实际，通过二分的方式，我们可以快速的完成这个过程。</p>
-<p>首先我们执行 <code>git bisect start</code> 开始二分查找。接着我们标记 7966b79801 这个提交为正常的，标记 19252e8ec9 为异常的（不能正常工作），这两个点就是二分查找的起点和终点。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git bisect good 7966b79801</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad 19252e8ec9</span></span><br><span class="line">Bisecting: 1902 revisions left to test after this (roughly 11 steps)</span><br><span class="line">[c30f54ad732ca5c8762bb68bbe0f51de9137dd72] Detect POLLHUP/POLLRDHUP while running queries.</span><br></pre></td></tr></table></figure>
-
-<p>在标记异常的提交之后，它将给出一个新的提交，并且估算出整个查找过程的步数，从上面看到在 3k 多个提交中定位引入问题的提交大概只需要 11 步即可完成，是不是效率贼高啊！！！</p>
-<p>现在我们来测试 c30f54ad73 这个提交，如果正常就用 good 标记，异常则用 bad 标记，重复这个过程，最后就可以找到引入 bug 的提交记录，如下所示。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 950 revisions left to test after this (roughly 10 steps)</span><br><span class="line">[24b83a5082541bdb1b333b7fcbe92f194128595c] Doc: clarify data type behavior of COALESCE and NULLIF.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 475 revisions left to test after this (roughly 9 steps)</span><br><span class="line">[65330622441d7ee08f768c4326825ae903f2595a] doc: Clarify status of SELECT INTO on reference page</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 237 revisions left to test after this (roughly 8 steps)</span><br><span class="line">[f234899353f8998bdbd265125ce4a505a312d910] remove missing reference to crypto test from patch 978f869b99</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 118 revisions left to test after this (roughly 7 steps)</span><br><span class="line">[9c83b54a9ccdb111ce693ada2309475197c19d70] Fix a recently-introduced race condition in LISTEN/NOTIFY handling.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 59 revisions left to test after this (roughly 6 steps)</span><br><span class="line">[c7aba7c14efdbd9fc1bb44b4cb83bedee0c6a6fc] Support subscripting of arbitrary types, not only arrays.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 29 revisions left to test after this (roughly 5 steps)</span><br><span class="line">[6114040711affa2b0bcf47fa2791187daf8455fb] Small code simplifications</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 14 revisions left to test after this (roughly 4 steps)</span><br><span class="line">[947789f1f5fb61daf663f26325cbe7cad8197d58] Avoid using tuple from syscache for update of pg_database.datfrozenxid</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 7 revisions left to test after this (roughly 3 steps)</span><br><span class="line">[f2a69b352de1dffc534c4835010e736018aa94de] Doc: clarify that CREATE TABLE discards redundant unique constraints.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 3 revisions left to test after this (roughly 2 steps)</span><br><span class="line">[62ee70331336161cb44733b6c3e0811696d962aa] Teach contain_leaked_vars that assignment SubscriptingRefs are leaky.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 1 revision left to test after this (roughly 1 step)</span><br><span class="line">[16c302f51235eaec05a1f85a11c1df04ef3a6785] Simplify code for getting a unicode codepoint&#x27;s canonical class.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 0 revisions left to test after this (roughly 0 steps)</span><br><span class="line">[8b069ef5dca97cd737a5fd64c420df3cd61ec1c9] Change get_constraint_index() to use pg_constraint.conindid</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">8b069ef5dca97cd737a5fd64c420df3cd61ec1c9 is the first bad commit</span><br><span class="line">commit 8b069ef5dca97cd737a5fd64c420df3cd61ec1c9</span><br><span class="line">Author: Peter Eisentraut &lt;peter@eisentraut.org&gt;</span><br><span class="line">Date:   Wed Dec 9 15:12:05 2020 +0100</span><br><span class="line"></span><br><span class="line">    Change get_constraint_index() to use pg_constraint.conindid</span><br><span class="line"></span><br><span class="line">    It was still using a scan of pg_depend instead of using the conindid</span><br><span class="line">    column that has been added since.</span><br><span class="line"></span><br><span class="line">    Since it is now just a catalog lookup wrapper and not related to</span><br><span class="line">    pg_depend, move from pg_depend.c to lsyscache.c.</span><br><span class="line"></span><br><span class="line">    Reviewed-by: Matthias van de Meent &lt;boekewurm+postgres@gmail.com&gt;</span><br><span class="line">    Reviewed-by: Tom Lane &lt;tgl@sss.pgh.pa.us&gt;</span><br><span class="line">    Reviewed-by: Michael Paquier &lt;michael@paquier.xyz&gt;</span><br><span class="line">    Discussion: https://www.postgresql.org/message-id/flat/4688d55c-9a2e-9a5a-d166-5f24fe0bf8db%40enterprisedb.com</span><br><span class="line"></span><br><span class="line"> src/backend/catalog/pg_depend.c      | 69 ------------------------------------</span><br><span class="line"> src/backend/commands/tablecmds.c     |  1 -</span><br><span class="line"> src/backend/optimizer/util/plancat.c |  1 -</span><br><span class="line"> src/backend/utils/adt/ruleutils.c    |  3 +-</span><br><span class="line"> src/backend/utils/cache/lsyscache.c  | 27 ++++++++++++++</span><br><span class="line"> src/include/catalog/dependency.h     |  2 --</span><br><span class="line"> src/include/utils/lsyscache.h        |  1 +</span><br><span class="line"> 7 files changed, 29 insertions(+), 75 deletions(-)</span><br></pre></td></tr></table></figure>
-
-<p>如上所示，经过 11 次操作我们就定位了引入 bug 的提交，并且使用起来也没有想象中那么复杂。如果您对 <code>git bisect</code> 不是很熟悉，想要找示例练手，本文的示例是一个不错的选择。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://git-scm.com/docs/git-bisect">https://git-scm.com/docs/git-bisect</a><br>[2] <a href="https://www.metaltoad.com/blog/beginners-guide-git-bisect-process-elimination">https://www.metaltoad.com/blog/beginners-guide-git-bisect-process-elimination</a></p>
-<div class="just-for-fun">
-笑林广记 - 入场
-
-<p>监生应试入场方出，一故人相遇揖之，并揖路旁猪屎。<br>生问：“此臭物，揖之何为？”<br>答曰：“他臭便臭，也从大肠（场）里出来的。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>初识 git blame</title>
     <url>/2019/12/git-blame/</url>
     <content><![CDATA[<p>最近在向 PostgreSQL 社区提交 patch 时，发现其维护者很快就定位到了代码何时由谁更改了，作为一个萌新，我也不好意思问:(，只能自己下来查找资料，经过一番搜索，发现了 <code>git blame</code> 这个命令。</p>
@@ -1593,6 +1594,37 @@ table th:nth-of-type(2) {
 
 <p>暂时先整理到此处，更多的用法可以查看<a href="https://git-scm.com/docs/git-blame">文档</a>或帮助手册 (<code>man git-blame</code>)。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://git-scm.com/docs/git-blame">https://git-scm.com/docs/git-blame</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git bisect 二分查找实践</title>
+    <url>/2022/02/git-bisect-in-practice/</url>
+    <content><![CDATA[<p>最近在分析 bug 的时候接触到了 <code>git bisect</code> 这个命令，虽然之前也知道这个命令，但是由于平时用的不多所以没有深入的研究，对它的使用方法也不是很熟悉。其实这个命令使用起来还是非常简单的，本文结合实际情况简要介绍一下 <code>git bisect</code> 的使用方法。</p>
+<span id="more"></span>
+
+<h2 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h2><p><code>git bisect</code> 是一个使用二分查找来定位引入 bug 提交记录的命令。<a href="https://git-scm.com/docs/git-bisect">官方文档</a>详细的说明了其使用方法，这里有一篇通俗易懂的 <a href="https://www.metaltoad.com/blog/beginners-guide-git-bisect-process-elimination"><code>git bisect</code> 使用介绍</a>（您可能需要梯子才能打开）。</p>
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>我在分析 PostgreSQL <a href="https://www.postgresql.org/message-id/17409-52871dda8b5741cb%40postgresql.org">BUG #17409</a> 的问题时，尝试用 <code>git bisect</code> 来定位问题，发现它真的是太香了。Bug 的提交者明确指出在之前的版本中是执行执行相应的操作的，但是在之后的版本中就报错了，那么可以肯定是在其中某个提交中引入了 bug，这种情况非常适合 <code>git bisect</code> 来快速定位到 bug 引入的提交。</p>
+<p>由于 PotgreSQL 的版本历史记录非常清晰，我根据用户提供的版本信息找到 7966b79801 这个提交，并验证其可以正常工作，那么我们就可以以此作为起点，从这个点到目前 master 分支上最新的提交，少说也有 3k 个提交记录了，如果我们一个一个提交的验证，肯定不切实际，通过二分的方式，我们可以快速的完成这个过程。</p>
+<p>首先我们执行 <code>git bisect start</code> 开始二分查找。接着我们标记 7966b79801 这个提交为正常的，标记 19252e8ec9 为异常的（不能正常工作），这两个点就是二分查找的起点和终点。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git bisect good 7966b79801</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad 19252e8ec9</span></span><br><span class="line">Bisecting: 1902 revisions left to test after this (roughly 11 steps)</span><br><span class="line">[c30f54ad732ca5c8762bb68bbe0f51de9137dd72] Detect POLLHUP/POLLRDHUP while running queries.</span><br></pre></td></tr></table></figure>
+
+<p>在标记异常的提交之后，它将给出一个新的提交，并且估算出整个查找过程的步数，从上面看到在 3k 多个提交中定位引入问题的提交大概只需要 11 步即可完成，是不是效率贼高啊！！！</p>
+<p>现在我们来测试 c30f54ad73 这个提交，如果正常就用 good 标记，异常则用 bad 标记，重复这个过程，最后就可以找到引入 bug 的提交记录，如下所示。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 950 revisions left to test after this (roughly 10 steps)</span><br><span class="line">[24b83a5082541bdb1b333b7fcbe92f194128595c] Doc: clarify data type behavior of COALESCE and NULLIF.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 475 revisions left to test after this (roughly 9 steps)</span><br><span class="line">[65330622441d7ee08f768c4326825ae903f2595a] doc: Clarify status of SELECT INTO on reference page</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 237 revisions left to test after this (roughly 8 steps)</span><br><span class="line">[f234899353f8998bdbd265125ce4a505a312d910] remove missing reference to crypto test from patch 978f869b99</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 118 revisions left to test after this (roughly 7 steps)</span><br><span class="line">[9c83b54a9ccdb111ce693ada2309475197c19d70] Fix a recently-introduced race condition in LISTEN/NOTIFY handling.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 59 revisions left to test after this (roughly 6 steps)</span><br><span class="line">[c7aba7c14efdbd9fc1bb44b4cb83bedee0c6a6fc] Support subscripting of arbitrary types, not only arrays.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">Bisecting: 29 revisions left to test after this (roughly 5 steps)</span><br><span class="line">[6114040711affa2b0bcf47fa2791187daf8455fb] Small code simplifications</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 14 revisions left to test after this (roughly 4 steps)</span><br><span class="line">[947789f1f5fb61daf663f26325cbe7cad8197d58] Avoid using tuple from syscache for update of pg_database.datfrozenxid</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 7 revisions left to test after this (roughly 3 steps)</span><br><span class="line">[f2a69b352de1dffc534c4835010e736018aa94de] Doc: clarify that CREATE TABLE discards redundant unique constraints.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 3 revisions left to test after this (roughly 2 steps)</span><br><span class="line">[62ee70331336161cb44733b6c3e0811696d962aa] Teach contain_leaked_vars that assignment SubscriptingRefs are leaky.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 1 revision left to test after this (roughly 1 step)</span><br><span class="line">[16c302f51235eaec05a1f85a11c1df04ef3a6785] Simplify code for getting a unicode codepoint&#x27;s canonical class.</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect good</span></span><br><span class="line">Bisecting: 0 revisions left to test after this (roughly 0 steps)</span><br><span class="line">[8b069ef5dca97cd737a5fd64c420df3cd61ec1c9] Change get_constraint_index() to use pg_constraint.conindid</span><br><span class="line"><span class="meta">$</span><span class="bash"> git bisect bad</span></span><br><span class="line">8b069ef5dca97cd737a5fd64c420df3cd61ec1c9 is the first bad commit</span><br><span class="line">commit 8b069ef5dca97cd737a5fd64c420df3cd61ec1c9</span><br><span class="line">Author: Peter Eisentraut &lt;peter@eisentraut.org&gt;</span><br><span class="line">Date:   Wed Dec 9 15:12:05 2020 +0100</span><br><span class="line"></span><br><span class="line">    Change get_constraint_index() to use pg_constraint.conindid</span><br><span class="line"></span><br><span class="line">    It was still using a scan of pg_depend instead of using the conindid</span><br><span class="line">    column that has been added since.</span><br><span class="line"></span><br><span class="line">    Since it is now just a catalog lookup wrapper and not related to</span><br><span class="line">    pg_depend, move from pg_depend.c to lsyscache.c.</span><br><span class="line"></span><br><span class="line">    Reviewed-by: Matthias van de Meent &lt;boekewurm+postgres@gmail.com&gt;</span><br><span class="line">    Reviewed-by: Tom Lane &lt;tgl@sss.pgh.pa.us&gt;</span><br><span class="line">    Reviewed-by: Michael Paquier &lt;michael@paquier.xyz&gt;</span><br><span class="line">    Discussion: https://www.postgresql.org/message-id/flat/4688d55c-9a2e-9a5a-d166-5f24fe0bf8db%40enterprisedb.com</span><br><span class="line"></span><br><span class="line"> src/backend/catalog/pg_depend.c      | 69 ------------------------------------</span><br><span class="line"> src/backend/commands/tablecmds.c     |  1 -</span><br><span class="line"> src/backend/optimizer/util/plancat.c |  1 -</span><br><span class="line"> src/backend/utils/adt/ruleutils.c    |  3 +-</span><br><span class="line"> src/backend/utils/cache/lsyscache.c  | 27 ++++++++++++++</span><br><span class="line"> src/include/catalog/dependency.h     |  2 --</span><br><span class="line"> src/include/utils/lsyscache.h        |  1 +</span><br><span class="line"> 7 files changed, 29 insertions(+), 75 deletions(-)</span><br></pre></td></tr></table></figure>
+
+<p>如上所示，经过 11 次操作我们就定位了引入 bug 的提交，并且使用起来也没有想象中那么复杂。如果您对 <code>git bisect</code> 不是很熟悉，想要找示例练手，本文的示例是一个不错的选择。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://git-scm.com/docs/git-bisect">https://git-scm.com/docs/git-bisect</a><br>[2] <a href="https://www.metaltoad.com/blog/beginners-guide-git-bisect-process-elimination">https://www.metaltoad.com/blog/beginners-guide-git-bisect-process-elimination</a></p>
+<div class="just-for-fun">
+笑林广记 - 入场
+
+<p>监生应试入场方出，一故人相遇揖之，并揖路旁猪屎。<br>生问：“此臭物，揖之何为？”<br>答曰：“他臭便臭，也从大肠（场）里出来的。”</p>
+</div>
 ]]></content>
       <categories>
         <category>杂项</category>
@@ -1647,6 +1679,26 @@ table th:nth-of-type(2) {
 </tr>
 </tbody></table>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://git-scm.com/docs/git-checkout">https://git-scm.com/docs/git-checkout</a><br>[2] <a href="https://public-inbox.org/git/xmqqy2zszuz7.fsf@gitster-ct.c.googlers.com/">https://public-inbox.org/git/xmqqy2zszuz7.fsf@gitster-ct.c.googlers.com/</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git 跳过 SSL 验证</title>
+    <url>/2019/08/git-skip-ssl-verify/</url>
+    <content><![CDATA[<p>有时，我们在克隆代码或者拉取代码时想要跳过 SSL 验证（至于为什么有这么奇葩的需求就不多说了，自行体会），git 提供了多种方式可供用户选择。</p>
+<p>首先，我们看来看看克隆代码时如何跳过 SSL 验证。如下，我们可以使用 <code>GIT_NO_SSL_VERIFY</code> 环境变量来设置是否采用 SSL 验证。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> GIT_SSL_NO_VERIFY=<span class="literal">true</span> git <span class="built_in">clone</span> https://github.com/xxx/xxx</span></span><br></pre></td></tr></table></figure>
+
+<p>如果是仓库已经采用 SSL 验证克隆下来，但是在随后的拉取过程中想要取消 SSL 验证，我们可以通过修改配置来完成，例如：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
+
+<p>如果您想后续的仓库都跳过 SSL 验证，可以设置全局的 <code>http.sslVerify</code>，如下所示：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config --global http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
         <category>杂项</category>
@@ -1717,26 +1769,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Git 跳过 SSL 验证</title>
-    <url>/2019/08/git-skip-ssl-verify/</url>
-    <content><![CDATA[<p>有时，我们在克隆代码或者拉取代码时想要跳过 SSL 验证（至于为什么有这么奇葩的需求就不多说了，自行体会），git 提供了多种方式可供用户选择。</p>
-<p>首先，我们看来看看克隆代码时如何跳过 SSL 验证。如下，我们可以使用 <code>GIT_NO_SSL_VERIFY</code> 环境变量来设置是否采用 SSL 验证。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> GIT_SSL_NO_VERIFY=<span class="literal">true</span> git <span class="built_in">clone</span> https://github.com/xxx/xxx</span></span><br></pre></td></tr></table></figure>
-
-<p>如果是仓库已经采用 SSL 验证克隆下来，但是在随后的拉取过程中想要取消 SSL 验证，我们可以通过修改配置来完成，例如：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
-
-<p>如果您想后续的仓库都跳过 SSL 验证，可以设置全局的 <code>http.sslVerify</code>，如下所示：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> git config --global http.sslVerify <span class="literal">false</span></span></span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>git</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Go 语言实战</title>
     <url>/2021/05/go-in-action/</url>
     <content><![CDATA[<p>最近由于需要从事 Go 语言相关的工作，为此花了约一个星期的时间将《Go 语言实战》这本书过了一遍，对 Go 语言有了一个基本的认识。这本书短小精悍，全书 200 多页，详细介绍了 Go 语言的数组、切片的底层原理，Go 语言的类型系统、并发、通道以及测试。当然部分内容也没有深入的讲解，如映射，其底层的实现介绍的不是很充分。《Go 语言实战》这本书适合有一定语言编程经验的读者。</p>
@@ -1769,43 +1801,6 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>Go</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Gtags 忽略不相关的目录</title>
-    <url>/2021/06/gtags-exclude-some-directories/</url>
-    <content><![CDATA[<p>我在 Emacs 中使用 gtags (GNU global source code tag system) 来作为代码导航的基本工具，它默认标记根目录及其子目录，但是有一些子目录其实我并不想要被标记。本文简要记录一下如何告知 gtags 忽略某些目录或文件。</p>
-<span id="more"></span>
-
-<h2 id="方法一"><a href="#方法一" class="headerlink" title="方法一"></a>方法一</h2><p>gtags 默认提供了一个配置文件，我们可以通过这个配置文件来进行定制。为了不影响其他用户，建议拷贝到各自用户的家目录下进行设置，如下所示。</p>
-<p>Linux 系统一般为 <code>/usr/local/share/gtags/gtags.conf</code>（MacOS 系统在 <code>/usr/local/etc/gtags.conf</code>），我们将其拷贝到用户家目录下，并命名为 <code>.globalrc</code>，如下所示。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">-- Linux</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/share/gtags/gtags.conf ~/.globalrc</span></span><br><span class="line">-- MacOS</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/etc/gtags.conf ~/.globalrc</span></span><br></pre></td></tr></table></figure>
-
-<p>接着，我们在该文件中搜索 <code>skip</code>，然后加上我们想要忽略的目录或文件即可，</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">common:\</span><br><span class="line">    :skip=Debug/,HTML/,HTML.pub/,tags,TAGS,ID,y.tab.c,y.tab.h,gtags.files,cscope.files,cscope.out,cscope.po.out,cscope.in.out,SCCS/,RCS/,CVS/,CVSROOT/,&#123;arch&#125;/,autom4te.cache/,*.orig,*.rej,*.bak,*~,#*#,*.swp,*.tmp,*_flymake.*,*_flymake,*.o,*.a,*.so,*.lo,*.zip,*.gz,*.bz2,*.xz,*.lzh,*.Z,*.tgz,*.min.js,*min.css:</span><br></pre></td></tr></table></figure>
-
-<p>该项使用逗号作为分隔符，支持正则表达式。</p>
-<h2 id="方法二"><a href="#方法二" class="headerlink" title="方法二"></a>方法二</h2><p>上述方法稍微复杂，针对不同的项目，配置起来比较繁琐，最近在看到 <a href="http://peter.eisentraut.org/">Peter Eisentraut</a> 关于 <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">PostgreSQL 中使用 GNU Global 的文章</a>之后，才发现原来还可以这样优雅的解决。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ git ls-files &gt; gtags.files  <span class="comment"># Git 托管的源码目录</span></span><br><span class="line">$ gtags</span><br></pre></td></tr></table></figure>
-
-<p>我们利用 git 的特性来获取到所有的文件，然后将其保存到 <code>gtags.files</code> 文件中，随后在执行 <code>gtags</code> 命令来生成符号信息。这种方式也存在一些缺点：</p>
-<ol>
-<li>它不能为自动生成的文件提供导航；</li>
-<li>每次拉取新代码时，都需要重复执行 <code>git ls-files &gt; gtags.files &amp;&amp; gtags</code> 命令；</li>
-<li>新增的文件（尚未纳入 git 托管）同样不能提供导航。</li>
-</ol>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories">https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories</a><br>[2] <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql</a></p>
-<div class="just-for-fun">
-笑林广记 - 帝怕妒妇
-
-<p>房夫人性妒悍，玄龄惧之，不敢置一妾。<br>太宗命后召夫人，告以媵妾之流，今有定制，帝将有美女之赐。<br>夫人执意不回，帝遣斟以恐之，曰：“若然，是抗旨矣，当饮此鸠。”<br>夫人一举而尽，略无留难。曰：“我见尚怕，何况于玄龄？”</p>
-</div>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>gtags</tag>
       </tags>
   </entry>
   <entry>
@@ -2032,6 +2027,43 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>Gtags 忽略不相关的目录</title>
+    <url>/2021/06/gtags-exclude-some-directories/</url>
+    <content><![CDATA[<p>我在 Emacs 中使用 gtags (GNU global source code tag system) 来作为代码导航的基本工具，它默认标记根目录及其子目录，但是有一些子目录其实我并不想要被标记。本文简要记录一下如何告知 gtags 忽略某些目录或文件。</p>
+<span id="more"></span>
+
+<h2 id="方法一"><a href="#方法一" class="headerlink" title="方法一"></a>方法一</h2><p>gtags 默认提供了一个配置文件，我们可以通过这个配置文件来进行定制。为了不影响其他用户，建议拷贝到各自用户的家目录下进行设置，如下所示。</p>
+<p>Linux 系统一般为 <code>/usr/local/share/gtags/gtags.conf</code>（MacOS 系统在 <code>/usr/local/etc/gtags.conf</code>），我们将其拷贝到用户家目录下，并命名为 <code>.globalrc</code>，如下所示。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">-- Linux</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/share/gtags/gtags.conf ~/.globalrc</span></span><br><span class="line">-- MacOS</span><br><span class="line"><span class="meta">$</span><span class="bash"> cp /usr/<span class="built_in">local</span>/etc/gtags.conf ~/.globalrc</span></span><br></pre></td></tr></table></figure>
+
+<p>接着，我们在该文件中搜索 <code>skip</code>，然后加上我们想要忽略的目录或文件即可，</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">common:\</span><br><span class="line">    :skip=Debug/,HTML/,HTML.pub/,tags,TAGS,ID,y.tab.c,y.tab.h,gtags.files,cscope.files,cscope.out,cscope.po.out,cscope.in.out,SCCS/,RCS/,CVS/,CVSROOT/,&#123;arch&#125;/,autom4te.cache/,*.orig,*.rej,*.bak,*~,#*#,*.swp,*.tmp,*_flymake.*,*_flymake,*.o,*.a,*.so,*.lo,*.zip,*.gz,*.bz2,*.xz,*.lzh,*.Z,*.tgz,*.min.js,*min.css:</span><br></pre></td></tr></table></figure>
+
+<p>该项使用逗号作为分隔符，支持正则表达式。</p>
+<h2 id="方法二"><a href="#方法二" class="headerlink" title="方法二"></a>方法二</h2><p>上述方法稍微复杂，针对不同的项目，配置起来比较繁琐，最近在看到 <a href="http://peter.eisentraut.org/">Peter Eisentraut</a> 关于 <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">PostgreSQL 中使用 GNU Global 的文章</a>之后，才发现原来还可以这样优雅的解决。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ git ls-files &gt; gtags.files  <span class="comment"># Git 托管的源码目录</span></span><br><span class="line">$ gtags</span><br></pre></td></tr></table></figure>
+
+<p>我们利用 git 的特性来获取到所有的文件，然后将其保存到 <code>gtags.files</code> 文件中，随后在执行 <code>gtags</code> 命令来生成符号信息。这种方式也存在一些缺点：</p>
+<ol>
+<li>它不能为自动生成的文件提供导航；</li>
+<li>每次拉取新代码时，都需要重复执行 <code>git ls-files &gt; gtags.files &amp;&amp; gtags</code> 命令；</li>
+<li>新增的文件（尚未纳入 git 托管）同样不能提供导航。</li>
+</ol>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories">https://stackoverflow.com/questions/42315741/how-gtags-exclude-some-specific-subdirectories</a><br>[2] <a href="http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql">http://peter.eisentraut.org/blog/2016/07/20/using-gnu-global-with-postgresql</a></p>
+<div class="just-for-fun">
+笑林广记 - 帝怕妒妇
+
+<p>房夫人性妒悍，玄龄惧之，不敢置一妾。<br>太宗命后召夫人，告以媵妾之流，今有定制，帝将有美女之赐。<br>夫人执意不回，帝遣斟以恐之，曰：“若然，是抗旨矣，当饮此鸠。”<br>夫人一举而尽，略无留难。曰：“我见尚怕，何况于玄龄？”</p>
+</div>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>gtags</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hello World</title>
     <url>/2018/08/hello-world/</url>
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
@@ -2112,6 +2144,108 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>Eclipse</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>【译】PostgreSQL 中的 JOIN 策略及其性能</title>
+    <url>/2021/07/join-stragegies-and-performance-in-postgresql/</url>
+    <content><![CDATA[<img src="/2021/07/join-stragegies-and-performance-in-postgresql/hashjoint.png" class="">
+
+<p>在 PostgreSQL 数据库中有三种 JOIN（连接）策略，它们的工作方式截然不同。如果 PostgreSQL 选择了错误的策略，查询性能会受到很大的影响。这篇文章解释了这些连接策略，如何通过索引来支持它们，它们存在什么问题，以及如何调整连接从而获得更好的性能。</p>
+<span id="more"></span>
+
+<h2 id="术语"><a href="#术语" class="headerlink" title="术语"></a>术语</h2><h3 id="Relation（关系表）"><a href="#Relation（关系表）" class="headerlink" title="Relation（关系表）"></a>Relation（关系表）</h3><p>一个连接将组合来自两个关系表的数据，这些关系表可以是一个基表，也可以是任何计划节点的结果。例如，类似下面的连接：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> ...</span><br><span class="line"><span class="keyword">FROM</span> a</span><br><span class="line">   <span class="keyword">JOIN</span> (b <span class="keyword">LEFT</span> <span class="keyword">JOIN</span> c <span class="keyword">ON</span> ...)</span><br><span class="line">      <span class="keyword">ON</span> ...</span><br></pre></td></tr></table></figure>
+
+<p>基表 <code>a</code> 将和 <code>b</code> 与 <code>c</code> 的连接结果进行连接。</p>
+<h3 id="Inner-和-outer-关系表"><a href="#Inner-和-outer-关系表" class="headerlink" title="Inner 和 outer 关系表"></a>Inner 和 outer 关系表</h3><p>任何连接的执行计划都类似于下面的样子：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">EXPLAIN (COSTS OFF)</span><br><span class="line">SELECT * FROM a JOIN b USING (id);</span><br><span class="line"></span><br><span class="line">         QUERY PLAN</span><br><span class="line">----------------------------</span><br><span class="line"> Hash Join</span><br><span class="line">   Hash Cond: (a.id = b.id)</span><br><span class="line">   -&gt;  Seq Scan on a</span><br><span class="line">   -&gt;  Hash</span><br><span class="line">         -&gt;  Seq Scan on b</span><br><span class="line">(5 rows)</span><br></pre></td></tr></table></figure>
+
+<p>我们把连接关系的上层（在这种情况下是对 <code>a</code> 的顺序扫描）称为连接的外层关系，我们把下层关系（从 <code>b</code> 计算的散列）称为内层关系。</p>
+<h3 id="连接条件以及连接键"><a href="#连接条件以及连接键" class="headerlink" title="连接条件以及连接键"></a>连接条件以及连接键</h3><p>两个关系的笛卡尔乘积或交叉连接是指把一个关系的每一条记录与另一个关系的每一条记录结合起来。连接条件是一个过滤器，它排除了这些组合中的一些。有几种写连接条件的方法，但都可以转化为：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">a &lt;join type&gt; JOIN b ON &lt;join condition&gt;</span><br></pre></td></tr></table></figure>
+
+<p>如果连接条件的形式为：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">a.col1 &lt;operator&gt; b.col2 [AND ...]</span><br></pre></td></tr></table></figure>
+
+<p>那么 <code>a.clo1</code> 和 <code>b.col2</code> 被称为连接键。</p>
+<p>请注意，对于内连接来说，连接条件和 <code>WHERE</code> 条件之间没有区别，但这对于外连接来说并不成立。</p>
+<h2 id="嵌套循环连接策略"><a href="#嵌套循环连接策略" class="headerlink" title="嵌套循环连接策略"></a>嵌套循环连接策略</h2><p>这是最简单和最通用的连接策略。PostgreSQL 按顺序扫描外部关系，并为每个结果行扫描内部关系以查找匹配行。</p>
+<h3 id="有助于嵌套循环连接的索引"><a href="#有助于嵌套循环连接的索引" class="headerlink" title="有助于嵌套循环连接的索引"></a>有助于嵌套循环连接的索引</h3><p>由于按顺序扫描外部关系，因此外部关系上的任何索引都无济于事。但是内部关系的连接键上的索引可以大大加快嵌套循环连接的速度。</p>
+<h3 id="嵌套循环连接策略的用例"><a href="#嵌套循环连接策略的用例" class="headerlink" title="嵌套循环连接策略的用例"></a>嵌套循环连接策略的用例</h3><p>如果外部关系很小，嵌套循环连接就特别有效，因为这样内部循环就不会被频繁执行。这是在具有规范化数据模型的 OLTP 工作负载中使用的典型的连接策略，它的效率很高。如果外层关系很大，嵌套的循环连接通常是非常低效的，即使它们被内部关系的索引所支持。</p>
+<p>除此之外，如果没有连接条件使用 <code>=</code> 操作符，它是唯一可以使用的连接策略。因此，在没有其他策略可以使用的情况下，它也可以作为一种后备策略。</p>
+<h2 id="Hash-连接策略"><a href="#Hash-连接策略" class="headerlink" title="Hash 连接策略"></a>Hash 连接策略</h2><p>首先，PostgreSQL 按顺序扫描内部关系并建立一个哈希表，其中哈希键由所有使用 <code>=</code> 操作符的连接键组成。然后，它按顺序扫描外部关系，并为找到的每一条记录探测哈希，以找到匹配的连接键。</p>
+<p>这有点类似于一个嵌套的循环连接。建立哈希表是一个额外的启动工作，但是探测哈希表要比扫描内部关系快得多。</p>
+<h3 id="有助于-Hash-连接的索引"><a href="#有助于-Hash-连接的索引" class="headerlink" title="有助于 Hash 连接的索引"></a>有助于 Hash 连接的索引</h3><p>由于我们按顺序扫描两个关系，因此没有索引对哈希连接有帮助。</p>
+<h3 id="Hash-连接策略的用例"><a href="#Hash-连接策略的用例" class="headerlink" title="Hash 连接策略的用例"></a>Hash 连接策略的用例</h3><p>如果涉及的关系都不小，但较小的表的哈希表适合在 <a href="https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-WORK-MEM"><code>work_mem</code></a> 中，那么哈希连接是最好的。这是因为，否则 PostgreSQL 会分批建立哈希表，并将其存储在临时磁盘文件中，这将损害性能。在这种情况下，优化器通常会选择一个不同的连接策略，比如合并(Merge)连接。</p>
+<p>只有当连接条件中的运算符是 <code>=</code> 时，在哈希表中查找数值才会起作用，所以你至少需要一个带有该运算符的连接条件。</p>
+<h2 id="合并连接策略"><a href="#合并连接策略" class="headerlink" title="合并连接策略"></a>合并连接策略</h2><p>在一个合并连接中，PostgreSQL 使用 <code>=</code> 运算符来选择所有的连接条件。然后它通过连接键对两个表进行排序（这意味着数据类型必须是可排序的）。然后在两个排序的列表中进行迭代，找到匹配的条目。</p>
+<h3 id="有助于合并连接的索引"><a href="#有助于合并连接的索引" class="headerlink" title="有助于合并连接的索引"></a>有助于合并连接的索引</h3><p>在排序键上的索引可以加速排序，所以在两个关系的连接键上的索引可以加速合并连接的速度。然而，显式排序通常更便宜，除非可以使用仅索引扫描。</p>
+<h3 id="合并连接策略的用例"><a href="#合并连接策略的用例" class="headerlink" title="合并连接策略的用例"></a>合并连接策略的用例</h3><p>如果涉及的关系对于适合 <code>work_mem</code> 的散列来说都太大了，优化器通常会选择合并连接。所以这是连接真正大表的最佳策略。</p>
+<p>像散列连接一样，只有当至少有一个带有 <code>=</code> 操作符的连接条件时，合并连接才是可行的。</p>
+<h2 id="PostgreSQL-连接策略汇总表"><a href="#PostgreSQL-连接策略汇总表" class="headerlink" title="PostgreSQL 连接策略汇总表"></a>PostgreSQL 连接策略汇总表</h2><table>
+<thead>
+<tr>
+<th></th>
+<th>嵌套循环连接</th>
+<th>Hash 连接</th>
+<th>合并连接</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>算法</td>
+<td>对于每个外部关系行，扫描内部关系</td>
+<td>从内部关系构建哈希，扫描外部关系，探测哈希</td>
+<td>对关系进行排序并合并行</td>
+</tr>
+<tr>
+<td>有帮助的索引</td>
+<td>内部关系的连接键上的索引</td>
+<td>无</td>
+<td>两个关系的连接键上的索引</td>
+</tr>
+<tr>
+<td>适合的条件</td>
+<td>外部关系很小</td>
+<td>Hash 适合 work_mem</td>
+<td>两个表都很大</td>
+</tr>
+</tbody></table>
+<h2 id="对查询性能的影响"><a href="#对查询性能的影响" class="headerlink" title="对查询性能的影响"></a>对查询性能的影响</h2><p>选择错误的连接策略会导致性能不佳：</p>
+<ul>
+<li>如果优化器低估了行数，它可能会错误地选择嵌套循环连接。然后它会比预期的更频繁地扫描内部关系，从而导致性能不佳。</li>
+<li>如果优化器高估了行数，它可能会错误地选择散列或合并连接。然后它必须完全扫描这两个关系，这可能比使用内部关系上的索引的嵌套循环连接更糟糕。</li>
+</ul>
+<p>在这两种情况下，错误的行计数估计都是问题的原因。因此，虽然连接可能是我们花费大部分执行时间的地方，但原因是之前发生的错误估计。</p>
+<h2 id="如何让-PostgreSQL-选择正确的连接策略"><a href="#如何让-PostgreSQL-选择正确的连接策略" class="headerlink" title="如何让 PostgreSQL 选择正确的连接策略"></a>如何让 PostgreSQL 选择正确的连接策略</h2><p>找出最好的连接策略是什么（也许 PostgreSQL 无论如何都在做正确的事情）。您可以使用 <code>SET</code> 命令临时禁用不同的连接策略，该命令会更改当前数据库会话中的参数：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> enable_hashjoin <span class="operator">=</span> off;</span><br><span class="line"><span class="keyword">SET</span> enable_mergejoin <span class="operator">=</span> off;</span><br><span class="line"><span class="keyword">SET</span> enable_nestloop <span class="operator">=</span> off;</span><br></pre></td></tr></table></figure>
+
+<p>请注意，您不能真正禁用嵌套循环连接，只能阻止 PostgreSQL 使用它们。如果没有带有 <code>=</code> 运算符的连接条件，则嵌套循环连接是唯一的方法。</p>
+<p>调优查询通常不是一项简单直接的任务。但是，这里有一些指导方针和想法：</p>
+<ul>
+<li>如果坏的连接策略是由于错误的估计而选择的，那么试着改善这个估计。对表进行分析，也许增加 <code>default_statistics_target</code>，看看是否会有不同。试着用更简单的 <code>WHERE</code> 条件重写查询，使优化器的任务更容易。</li>
+<li>尝试增加 <code>work_mem</code> 并查看是否可以获得更便宜的哈希连接。</li>
+<li>配置告诉 PostgreSQL 你的硬件和资源的参数：<code>random_page_cost</code>、<code>effective_cache_size</code> 和 <code>effective_io_concurrency</code>。这将允许它正确定价索引扫描。</li>
+<li>您可以使用仅索引扫描加速嵌套循环和合并连接。为此，您必须将所有必需的列添加到索引中（最好使用 <code>INCLUDE</code> 子句），并确保经常清理表。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>了解连接策略对于想要了解执行计划和调整查询的任何人来说都是至关重要的。查询调优的艺术无法在一篇文章中传达，但我希望我可以在这里收集一些相关信息。</p>
+<p>如果您想阅读有关使用联接调整查询的更多信息，请阅读我们有关该主题的其他一些文章，例如<a href="https://www.cybertec-postgresql.com/en/next-stop-joining-1-million-tables/">连接 100 万个表</a>或<a href="https://www.cybertec-postgresql.com/en/postgresql-speeding-up-group-by-and-joins/">加速 GROUP BY 和连接</a>。</p>
+<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><ul>
+<li>本文翻译自 Laurenz Albe 的 <a href="https://www.cybertec-postgresql.com/en/join-strategies-and-performance-in-postgresql/">JOIN STRATEGIES AND PERFORMANCE IN POSTGRESQL</a>。</li>
+<li>Laurenz Albe 是 CYBERTEC 的高级顾问和支持工程师。自 2006 年以来，他一直在与 PostgreSQL 合作并为之做出贡献。</li>
+</ul>
+<div class="just-for-fun">
+笑林广记 - 贪官
+
+<p>有农夫种茄不活，求计于老圃。<br>圃曰：“此不难，每茄树下埋钱一文即活。”<br>问其何故，答曰：“有钱者生，无钱者死。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>翻译</tag>
       </tags>
   </entry>
   <entry>
@@ -2220,108 +2354,6 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>LaTeX</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>【译】PostgreSQL 中的 JOIN 策略及其性能</title>
-    <url>/2021/07/join-stragegies-and-performance-in-postgresql/</url>
-    <content><![CDATA[<img src="/2021/07/join-stragegies-and-performance-in-postgresql/hashjoint.png" class="">
-
-<p>在 PostgreSQL 数据库中有三种 JOIN（连接）策略，它们的工作方式截然不同。如果 PostgreSQL 选择了错误的策略，查询性能会受到很大的影响。这篇文章解释了这些连接策略，如何通过索引来支持它们，它们存在什么问题，以及如何调整连接从而获得更好的性能。</p>
-<span id="more"></span>
-
-<h2 id="术语"><a href="#术语" class="headerlink" title="术语"></a>术语</h2><h3 id="Relation（关系表）"><a href="#Relation（关系表）" class="headerlink" title="Relation（关系表）"></a>Relation（关系表）</h3><p>一个连接将组合来自两个关系表的数据，这些关系表可以是一个基表，也可以是任何计划节点的结果。例如，类似下面的连接：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> ...</span><br><span class="line"><span class="keyword">FROM</span> a</span><br><span class="line">   <span class="keyword">JOIN</span> (b <span class="keyword">LEFT</span> <span class="keyword">JOIN</span> c <span class="keyword">ON</span> ...)</span><br><span class="line">      <span class="keyword">ON</span> ...</span><br></pre></td></tr></table></figure>
-
-<p>基表 <code>a</code> 将和 <code>b</code> 与 <code>c</code> 的连接结果进行连接。</p>
-<h3 id="Inner-和-outer-关系表"><a href="#Inner-和-outer-关系表" class="headerlink" title="Inner 和 outer 关系表"></a>Inner 和 outer 关系表</h3><p>任何连接的执行计划都类似于下面的样子：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">EXPLAIN (COSTS OFF)</span><br><span class="line">SELECT * FROM a JOIN b USING (id);</span><br><span class="line"></span><br><span class="line">         QUERY PLAN</span><br><span class="line">----------------------------</span><br><span class="line"> Hash Join</span><br><span class="line">   Hash Cond: (a.id = b.id)</span><br><span class="line">   -&gt;  Seq Scan on a</span><br><span class="line">   -&gt;  Hash</span><br><span class="line">         -&gt;  Seq Scan on b</span><br><span class="line">(5 rows)</span><br></pre></td></tr></table></figure>
-
-<p>我们把连接关系的上层（在这种情况下是对 <code>a</code> 的顺序扫描）称为连接的外层关系，我们把下层关系（从 <code>b</code> 计算的散列）称为内层关系。</p>
-<h3 id="连接条件以及连接键"><a href="#连接条件以及连接键" class="headerlink" title="连接条件以及连接键"></a>连接条件以及连接键</h3><p>两个关系的笛卡尔乘积或交叉连接是指把一个关系的每一条记录与另一个关系的每一条记录结合起来。连接条件是一个过滤器，它排除了这些组合中的一些。有几种写连接条件的方法，但都可以转化为：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">a &lt;join type&gt; JOIN b ON &lt;join condition&gt;</span><br></pre></td></tr></table></figure>
-
-<p>如果连接条件的形式为：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">a.col1 &lt;operator&gt; b.col2 [AND ...]</span><br></pre></td></tr></table></figure>
-
-<p>那么 <code>a.clo1</code> 和 <code>b.col2</code> 被称为连接键。</p>
-<p>请注意，对于内连接来说，连接条件和 <code>WHERE</code> 条件之间没有区别，但这对于外连接来说并不成立。</p>
-<h2 id="嵌套循环连接策略"><a href="#嵌套循环连接策略" class="headerlink" title="嵌套循环连接策略"></a>嵌套循环连接策略</h2><p>这是最简单和最通用的连接策略。PostgreSQL 按顺序扫描外部关系，并为每个结果行扫描内部关系以查找匹配行。</p>
-<h3 id="有助于嵌套循环连接的索引"><a href="#有助于嵌套循环连接的索引" class="headerlink" title="有助于嵌套循环连接的索引"></a>有助于嵌套循环连接的索引</h3><p>由于按顺序扫描外部关系，因此外部关系上的任何索引都无济于事。但是内部关系的连接键上的索引可以大大加快嵌套循环连接的速度。</p>
-<h3 id="嵌套循环连接策略的用例"><a href="#嵌套循环连接策略的用例" class="headerlink" title="嵌套循环连接策略的用例"></a>嵌套循环连接策略的用例</h3><p>如果外部关系很小，嵌套循环连接就特别有效，因为这样内部循环就不会被频繁执行。这是在具有规范化数据模型的 OLTP 工作负载中使用的典型的连接策略，它的效率很高。如果外层关系很大，嵌套的循环连接通常是非常低效的，即使它们被内部关系的索引所支持。</p>
-<p>除此之外，如果没有连接条件使用 <code>=</code> 操作符，它是唯一可以使用的连接策略。因此，在没有其他策略可以使用的情况下，它也可以作为一种后备策略。</p>
-<h2 id="Hash-连接策略"><a href="#Hash-连接策略" class="headerlink" title="Hash 连接策略"></a>Hash 连接策略</h2><p>首先，PostgreSQL 按顺序扫描内部关系并建立一个哈希表，其中哈希键由所有使用 <code>=</code> 操作符的连接键组成。然后，它按顺序扫描外部关系，并为找到的每一条记录探测哈希，以找到匹配的连接键。</p>
-<p>这有点类似于一个嵌套的循环连接。建立哈希表是一个额外的启动工作，但是探测哈希表要比扫描内部关系快得多。</p>
-<h3 id="有助于-Hash-连接的索引"><a href="#有助于-Hash-连接的索引" class="headerlink" title="有助于 Hash 连接的索引"></a>有助于 Hash 连接的索引</h3><p>由于我们按顺序扫描两个关系，因此没有索引对哈希连接有帮助。</p>
-<h3 id="Hash-连接策略的用例"><a href="#Hash-连接策略的用例" class="headerlink" title="Hash 连接策略的用例"></a>Hash 连接策略的用例</h3><p>如果涉及的关系都不小，但较小的表的哈希表适合在 <a href="https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-WORK-MEM"><code>work_mem</code></a> 中，那么哈希连接是最好的。这是因为，否则 PostgreSQL 会分批建立哈希表，并将其存储在临时磁盘文件中，这将损害性能。在这种情况下，优化器通常会选择一个不同的连接策略，比如合并(Merge)连接。</p>
-<p>只有当连接条件中的运算符是 <code>=</code> 时，在哈希表中查找数值才会起作用，所以你至少需要一个带有该运算符的连接条件。</p>
-<h2 id="合并连接策略"><a href="#合并连接策略" class="headerlink" title="合并连接策略"></a>合并连接策略</h2><p>在一个合并连接中，PostgreSQL 使用 <code>=</code> 运算符来选择所有的连接条件。然后它通过连接键对两个表进行排序（这意味着数据类型必须是可排序的）。然后在两个排序的列表中进行迭代，找到匹配的条目。</p>
-<h3 id="有助于合并连接的索引"><a href="#有助于合并连接的索引" class="headerlink" title="有助于合并连接的索引"></a>有助于合并连接的索引</h3><p>在排序键上的索引可以加速排序，所以在两个关系的连接键上的索引可以加速合并连接的速度。然而，显式排序通常更便宜，除非可以使用仅索引扫描。</p>
-<h3 id="合并连接策略的用例"><a href="#合并连接策略的用例" class="headerlink" title="合并连接策略的用例"></a>合并连接策略的用例</h3><p>如果涉及的关系对于适合 <code>work_mem</code> 的散列来说都太大了，优化器通常会选择合并连接。所以这是连接真正大表的最佳策略。</p>
-<p>像散列连接一样，只有当至少有一个带有 <code>=</code> 操作符的连接条件时，合并连接才是可行的。</p>
-<h2 id="PostgreSQL-连接策略汇总表"><a href="#PostgreSQL-连接策略汇总表" class="headerlink" title="PostgreSQL 连接策略汇总表"></a>PostgreSQL 连接策略汇总表</h2><table>
-<thead>
-<tr>
-<th></th>
-<th>嵌套循环连接</th>
-<th>Hash 连接</th>
-<th>合并连接</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>算法</td>
-<td>对于每个外部关系行，扫描内部关系</td>
-<td>从内部关系构建哈希，扫描外部关系，探测哈希</td>
-<td>对关系进行排序并合并行</td>
-</tr>
-<tr>
-<td>有帮助的索引</td>
-<td>内部关系的连接键上的索引</td>
-<td>无</td>
-<td>两个关系的连接键上的索引</td>
-</tr>
-<tr>
-<td>适合的条件</td>
-<td>外部关系很小</td>
-<td>Hash 适合 work_mem</td>
-<td>两个表都很大</td>
-</tr>
-</tbody></table>
-<h2 id="对查询性能的影响"><a href="#对查询性能的影响" class="headerlink" title="对查询性能的影响"></a>对查询性能的影响</h2><p>选择错误的连接策略会导致性能不佳：</p>
-<ul>
-<li>如果优化器低估了行数，它可能会错误地选择嵌套循环连接。然后它会比预期的更频繁地扫描内部关系，从而导致性能不佳。</li>
-<li>如果优化器高估了行数，它可能会错误地选择散列或合并连接。然后它必须完全扫描这两个关系，这可能比使用内部关系上的索引的嵌套循环连接更糟糕。</li>
-</ul>
-<p>在这两种情况下，错误的行计数估计都是问题的原因。因此，虽然连接可能是我们花费大部分执行时间的地方，但原因是之前发生的错误估计。</p>
-<h2 id="如何让-PostgreSQL-选择正确的连接策略"><a href="#如何让-PostgreSQL-选择正确的连接策略" class="headerlink" title="如何让 PostgreSQL 选择正确的连接策略"></a>如何让 PostgreSQL 选择正确的连接策略</h2><p>找出最好的连接策略是什么（也许 PostgreSQL 无论如何都在做正确的事情）。您可以使用 <code>SET</code> 命令临时禁用不同的连接策略，该命令会更改当前数据库会话中的参数：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> enable_hashjoin <span class="operator">=</span> off;</span><br><span class="line"><span class="keyword">SET</span> enable_mergejoin <span class="operator">=</span> off;</span><br><span class="line"><span class="keyword">SET</span> enable_nestloop <span class="operator">=</span> off;</span><br></pre></td></tr></table></figure>
-
-<p>请注意，您不能真正禁用嵌套循环连接，只能阻止 PostgreSQL 使用它们。如果没有带有 <code>=</code> 运算符的连接条件，则嵌套循环连接是唯一的方法。</p>
-<p>调优查询通常不是一项简单直接的任务。但是，这里有一些指导方针和想法：</p>
-<ul>
-<li>如果坏的连接策略是由于错误的估计而选择的，那么试着改善这个估计。对表进行分析，也许增加 <code>default_statistics_target</code>，看看是否会有不同。试着用更简单的 <code>WHERE</code> 条件重写查询，使优化器的任务更容易。</li>
-<li>尝试增加 <code>work_mem</code> 并查看是否可以获得更便宜的哈希连接。</li>
-<li>配置告诉 PostgreSQL 你的硬件和资源的参数：<code>random_page_cost</code>、<code>effective_cache_size</code> 和 <code>effective_io_concurrency</code>。这将允许它正确定价索引扫描。</li>
-<li>您可以使用仅索引扫描加速嵌套循环和合并连接。为此，您必须将所有必需的列添加到索引中（最好使用 <code>INCLUDE</code> 子句），并确保经常清理表。</li>
-</ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>了解连接策略对于想要了解执行计划和调整查询的任何人来说都是至关重要的。查询调优的艺术无法在一篇文章中传达，但我希望我可以在这里收集一些相关信息。</p>
-<p>如果您想阅读有关使用联接调整查询的更多信息，请阅读我们有关该主题的其他一些文章，例如<a href="https://www.cybertec-postgresql.com/en/next-stop-joining-1-million-tables/">连接 100 万个表</a>或<a href="https://www.cybertec-postgresql.com/en/postgresql-speeding-up-group-by-and-joins/">加速 GROUP BY 和连接</a>。</p>
-<h2 id="译者著"><a href="#译者著" class="headerlink" title="译者著"></a>译者著</h2><ul>
-<li>本文翻译自 Laurenz Albe 的 <a href="https://www.cybertec-postgresql.com/en/join-strategies-and-performance-in-postgresql/">JOIN STRATEGIES AND PERFORMANCE IN POSTGRESQL</a>。</li>
-<li>Laurenz Albe 是 CYBERTEC 的高级顾问和支持工程师。自 2006 年以来，他一直在与 PostgreSQL 合作并为之做出贡献。</li>
-</ul>
-<div class="just-for-fun">
-笑林广记 - 贪官
-
-<p>有农夫种茄不活，求计于老圃。<br>圃曰：“此不难，每茄树下埋钱一文即活。”<br>问其何故，答曰：“有钱者生，无钱者死。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>翻译</tag>
       </tags>
   </entry>
   <entry>
@@ -2973,53 +3005,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 13 - backtrace 功能预览</title>
-    <url>/2020/08/postgresql-backtrace/</url>
-    <content><![CDATA[<p>目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。</p>
-<img src="/2020/08/postgresql-backtrace/backtrace.png" class="" title="Backtrace 提交记录">
-
-<p>本文将对该功能进行简要介绍。</p>
-<span id="more"></span>
-
-<h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>PostgreSQL 13 数据库提供了一个参数 <code>backtrace_functions</code> 来控制堆栈信息的生成，该参数是包含C函数名称的逗号分隔列表。如果出现错误，并且该错误是由 <code>backtrace_functions</code> 中的 C 函数引发的，那么将会把堆栈信息记录到服务器日志文件中。这个选项可以方便我们调试特定区域的源代码。</p>
-<p>目前并非所有平台都支持 backtrace 功能，并且其堆栈信息的质量也取决于编译选项。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SET backtrace_functions TO &#x27;ProcessUtility,ExecutorStart&#x27;;</span><br></pre></td></tr></table></figure>
-
-<p>该参数仅超级用户可以设置，它可以在 postgresql.conf 中进行全局设置，也可以针对某个会话进行设置。</p>
-<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>在这里我们通过创建一个不存在的类型来演示如何使用 backtrace 功能。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到，我们输入的数据类型不存在，下面是服务器端的日志信息。总的来说信息是很有限的，我们无法得知更多的细节。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:03:35.857 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:03:35.857 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
-
-<p>现在我们来试试 backtrace 大法。首先我们可以通过搜索源码的方法确定当前错误是来自那个内部的 C 函数。这里我们确定它是由 <code>typenameType()</code> 函数抱出来的。那么我们可以按如下方式进行操作。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# SET backtrace_functions TO &#x27;typenameType&#x27;;</span><br><span class="line">SET</span><br><span class="line">postgres=# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
-
-<p>虽然在用户看来并没有什么区别，但是服务器日志里面多出了一下内容：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:09:25.079 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] BACKTRACE:</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(typenameType+0xb9) [0x563456c5f509]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x1dcbbc) [0x563456c60bbc]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(transformCreateStmt+0x4da) [0x563456c6412a]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d88c8) [0x563456e5c8c8]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(standard_ProcessUtility+0x230) [0x563456e5b7e0]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5012) [0x563456e59012]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5a93) [0x563456e59a93]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PortalRun+0x161) [0x563456e5a611]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d2017) [0x563456e56017]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostgresMain+0x1ede) [0x563456e5842e]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x355cda) [0x563456dd9cda]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostmasterMain+0xeff) [0x563456ddadef]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(main+0x4a4) [0x563456b45e94]</span><br><span class="line">        /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xe7) [0x7f5502994b97]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(_start+0x2a) [0x563456b45f5a]</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
-
-<p>从上面的 backtrace 可以看到整个流程是如何一步一步走到 <code>typenameType()</code> 函数的。Backtrace 的每一行都包含函数的名称，函数内的偏移位置，以及栈帧的返回地址。在某些栈帧上，函数名称并没有出现，取而代之的是一个地址，这些函数是静态函数，它们的名字不会被导出，不过我们也可能通过它们的地址来获取其对应的函数名称。例如，<code>typenameType()</code> 函数的上层函数只是一个地址，我们并不知道其对应的函数是什么，这时我们可以使用下面的命令来进行转换：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line 0x1dcbbc -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000001dcbbc</span><br><span class="line">transformColumnDefinition</span><br><span class="line">parse_utilcmd.c:?</span><br></pre></td></tr></table></figure>
-
-<p>可以看到 <code>0x1dcbbc</code> 这个地址对应的是 <code>transformColumnDefinition()</code> 函数，它位于 <code>parse_utilcmd.c</code> 文件中。由于这里是采用的 <code>-O2</code> 优化，没能查看到更多的信息，如果我们使用 <code>-O0</code>，那么其查询的信息将更为丰富，如下所示：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line +0x2525e6 -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000002525e6</span><br><span class="line">transformColumnDefinition</span><br><span class="line">/home/japin/Codes/postgresql/Debug/../src/backend/parser/parse_utilcmd.c:568</span><br></pre></td></tr></table></figure>
-
-<p>上面两次查看的地址不一致是因为重新编译生成的文件不同导致的。</p>
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>现在我们对于 backtrace 的功能有了基本的了解，接下来我们来看看它是如何实现的。</p>
-<p>该功能是通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 这两个简单的函数来生成堆栈信息，<code>backtrace()</code> 函数仅返回所有栈帧的返回地址，接着调用 <code>backtrace_symbols()</code> 函数来将这些地址转换为描述这个函数的字符串，PostgreSQL backtrace功能的其核心代码主要集中在 <code>set_backtrace()</code> 函数中，如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Compute backtrace data and add it to the supplied ErrorData.  num_skip</span></span><br><span class="line"><span class="comment"> * specifies how many inner frames to skip.  Use this to avoid showing the</span></span><br><span class="line"><span class="comment"> * internal backtrace support functions in the backtrace.  This requires that</span></span><br><span class="line"><span class="comment"> * this and related functions are not inlined.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">set_backtrace</span><span class="params">(ErrorData *edata, <span class="keyword">int</span> num_skip)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	StringInfoData errtrace;</span><br><span class="line"></span><br><span class="line">	initStringInfo(&amp;errtrace);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> HAVE_BACKTRACE_SYMBOLS</span></span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">void</span>	   *buf[<span class="number">100</span>];</span><br><span class="line">		<span class="keyword">int</span>			nframes;</span><br><span class="line">		<span class="keyword">char</span>	  **strfrms;</span><br><span class="line"></span><br><span class="line">		nframes = backtrace(buf, lengthof(buf));</span><br><span class="line">		strfrms = backtrace_symbols(buf, nframes);</span><br><span class="line">		<span class="keyword">if</span> (strfrms == <span class="literal">NULL</span>)</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = num_skip; i &lt; nframes; i++)</span><br><span class="line">			appendStringInfo(&amp;errtrace, <span class="string">&quot;\n%s&quot;</span>, strfrms[i]);</span><br><span class="line">		<span class="built_in">free</span>(strfrms);</span><br><span class="line">	&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	appendStringInfoString(&amp;errtrace,</span><br><span class="line">						   <span class="string">&quot;backtrace generation is not supported by this installation&quot;</span>);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	edata-&gt;backtrace = errtrace.data;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>set_backtrace()</code> 函数通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 函数来获取堆栈信息，并将其添加到 <code>edata-&gt;backtrace</code> 字段中（方便后续处理），<code>num_skip</code> 参数指定了需要跳过的内部栈的数量，这是由于我们报错的地方实际上并不是 <code>set_backtrace()</code> 函数位置，而是在调用该函数的位置（可能是一层或多层），因此，我们需要定位到真实报错的地方，从这个地方开始输出堆栈信息。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html">https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html</a><br>[2] <a href="https://www.postgresql.org/docs/devel/runtime-config-developer.html">https://www.postgresql.org/docs/devel/runtime-config-developer.html</a><br>[3] <a href="https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190">https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 15 特性 - 基础备份存储位置</title>
     <url>/2022/01/postgresql-basebackup-target/</url>
     <content><![CDATA[<p>最近 Robert Haas 提交了一个关于 pg_basebackup 指定备份存储位置的功能，详细信息如下：</p>
@@ -3140,6 +3125,53 @@ Date:   Tue Nov 16 15:20:50 2021 -0500
         <tag>PostgreSQL</tag>
         <tag>PG15</tag>
         <tag>pg_basebackup</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 13 - backtrace 功能预览</title>
+    <url>/2020/08/postgresql-backtrace/</url>
+    <content><![CDATA[<p>目前在 Greenplum、MySQL 数据库中均支持 backtrace 功能，现在 PostgreSQL 13-devel 版本中也新增了这个功能，我们可以在服务器日志中记录堆栈信息。</p>
+<img src="/2020/08/postgresql-backtrace/backtrace.png" class="" title="Backtrace 提交记录">
+
+<p>本文将对该功能进行简要介绍。</p>
+<span id="more"></span>
+
+<h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p>PostgreSQL 13 数据库提供了一个参数 <code>backtrace_functions</code> 来控制堆栈信息的生成，该参数是包含C函数名称的逗号分隔列表。如果出现错误，并且该错误是由 <code>backtrace_functions</code> 中的 C 函数引发的，那么将会把堆栈信息记录到服务器日志文件中。这个选项可以方便我们调试特定区域的源代码。</p>
+<p>目前并非所有平台都支持 backtrace 功能，并且其堆栈信息的质量也取决于编译选项。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SET backtrace_functions TO &#x27;ProcessUtility,ExecutorStart&#x27;;</span><br></pre></td></tr></table></figure>
+
+<p>该参数仅超级用户可以设置，它可以在 postgresql.conf 中进行全局设置，也可以针对某个会话进行设置。</p>
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>在这里我们通过创建一个不存在的类型来演示如何使用 backtrace 功能。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，我们输入的数据类型不存在，下面是服务器端的日志信息。总的来说信息是很有限的，我们无法得知更多的细节。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:03:35.857 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:03:35.857 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
+
+<p>现在我们来试试 backtrace 大法。首先我们可以通过搜索源码的方法确定当前错误是来自那个内部的 C 函数。这里我们确定它是由 <code>typenameType()</code> 函数抱出来的。那么我们可以按如下方式进行操作。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# SET backtrace_functions TO &#x27;typenameType&#x27;;</span><br><span class="line">SET</span><br><span class="line">postgres=# CREATE TABLE foo(id invalidtype);</span><br><span class="line">ERROR:  type &quot;invalidtype&quot; does not exist</span><br><span class="line">LINE 1: CREATE TABLE foo(id invalidtype);</span><br><span class="line">                            ^</span><br></pre></td></tr></table></figure>
+
+<p>虽然在用户看来并没有什么区别，但是服务器日志里面多出了一下内容：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2020-08-15 18:09:25.079 CST [1666] ERROR:  type &quot;invalidtype&quot; does not exist at character 21</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] BACKTRACE:</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(typenameType+0xb9) [0x563456c5f509]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x1dcbbc) [0x563456c60bbc]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(transformCreateStmt+0x4da) [0x563456c6412a]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d88c8) [0x563456e5c8c8]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(standard_ProcessUtility+0x230) [0x563456e5b7e0]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5012) [0x563456e59012]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d5a93) [0x563456e59a93]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PortalRun+0x161) [0x563456e5a611]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x3d2017) [0x563456e56017]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostgresMain+0x1ede) [0x563456e5842e]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(+0x355cda) [0x563456dd9cda]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(PostmasterMain+0xeff) [0x563456ddadef]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(main+0x4a4) [0x563456b45e94]</span><br><span class="line">        /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xe7) [0x7f5502994b97]</span><br><span class="line">        postgres: japin postgres [local] CREATE TABLE(_start+0x2a) [0x563456b45f5a]</span><br><span class="line">2020-08-15 18:09:25.079 CST [1666] STATEMENT:  CREATE TABLE foo(id invalidtype);</span><br></pre></td></tr></table></figure>
+
+<p>从上面的 backtrace 可以看到整个流程是如何一步一步走到 <code>typenameType()</code> 函数的。Backtrace 的每一行都包含函数的名称，函数内的偏移位置，以及栈帧的返回地址。在某些栈帧上，函数名称并没有出现，取而代之的是一个地址，这些函数是静态函数，它们的名字不会被导出，不过我们也可能通过它们的地址来获取其对应的函数名称。例如，<code>typenameType()</code> 函数的上层函数只是一个地址，我们并不知道其对应的函数是什么，这时我们可以使用下面的命令来进行转换：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line 0x1dcbbc -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000001dcbbc</span><br><span class="line">transformColumnDefinition</span><br><span class="line">parse_utilcmd.c:?</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 <code>0x1dcbbc</code> 这个地址对应的是 <code>transformColumnDefinition()</code> 函数，它位于 <code>parse_utilcmd.c</code> 文件中。由于这里是采用的 <code>-O2</code> 优化，没能查看到更多的信息，如果我们使用 <code>-O0</code>，那么其查询的信息将更为丰富，如下所示：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> addr2line +0x2525e6 -a -f -e `<span class="built_in">which</span> postgres`</span></span><br><span class="line">0x00000000002525e6</span><br><span class="line">transformColumnDefinition</span><br><span class="line">/home/japin/Codes/postgresql/Debug/../src/backend/parser/parse_utilcmd.c:568</span><br></pre></td></tr></table></figure>
+
+<p>上面两次查看的地址不一致是因为重新编译生成的文件不同导致的。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>现在我们对于 backtrace 的功能有了基本的了解，接下来我们来看看它是如何实现的。</p>
+<p>该功能是通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 这两个简单的函数来生成堆栈信息，<code>backtrace()</code> 函数仅返回所有栈帧的返回地址，接着调用 <code>backtrace_symbols()</code> 函数来将这些地址转换为描述这个函数的字符串，PostgreSQL backtrace功能的其核心代码主要集中在 <code>set_backtrace()</code> 函数中，如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Compute backtrace data and add it to the supplied ErrorData.  num_skip</span></span><br><span class="line"><span class="comment"> * specifies how many inner frames to skip.  Use this to avoid showing the</span></span><br><span class="line"><span class="comment"> * internal backtrace support functions in the backtrace.  This requires that</span></span><br><span class="line"><span class="comment"> * this and related functions are not inlined.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">set_backtrace</span><span class="params">(ErrorData *edata, <span class="keyword">int</span> num_skip)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	StringInfoData errtrace;</span><br><span class="line"></span><br><span class="line">	initStringInfo(&amp;errtrace);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> HAVE_BACKTRACE_SYMBOLS</span></span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">void</span>	   *buf[<span class="number">100</span>];</span><br><span class="line">		<span class="keyword">int</span>			nframes;</span><br><span class="line">		<span class="keyword">char</span>	  **strfrms;</span><br><span class="line"></span><br><span class="line">		nframes = backtrace(buf, lengthof(buf));</span><br><span class="line">		strfrms = backtrace_symbols(buf, nframes);</span><br><span class="line">		<span class="keyword">if</span> (strfrms == <span class="literal">NULL</span>)</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = num_skip; i &lt; nframes; i++)</span><br><span class="line">			appendStringInfo(&amp;errtrace, <span class="string">&quot;\n%s&quot;</span>, strfrms[i]);</span><br><span class="line">		<span class="built_in">free</span>(strfrms);</span><br><span class="line">	&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	appendStringInfoString(&amp;errtrace,</span><br><span class="line">						   <span class="string">&quot;backtrace generation is not supported by this installation&quot;</span>);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	edata-&gt;backtrace = errtrace.data;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>set_backtrace()</code> 函数通过 <code>backtrace()</code> 和 <code>backtrace_symbols()</code> 函数来获取堆栈信息，并将其添加到 <code>edata-&gt;backtrace</code> 字段中（方便后续处理），<code>num_skip</code> 参数指定了需要跳过的内部栈的数量，这是由于我们报错的地方实际上并不是 <code>set_backtrace()</code> 函数位置，而是在调用该函数的位置（可能是一层或多层），因此，我们需要定位到真实报错的地方，从这个地方开始输出堆栈信息。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html">https://amitdkhan-pg.blogspot.com/2020/07/backtraces-in-postgresql.html</a><br>[2] <a href="https://www.postgresql.org/docs/devel/runtime-config-developer.html">https://www.postgresql.org/docs/devel/runtime-config-developer.html</a><br>[3] <a href="https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190">https://github.com/postgres/postgres/commit/71a8a4f6e36547bb060dbcc961ea9b57420f7190</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -5875,6 +5907,92 @@ Date:   Mon Jan 17 10:16:53 2022 +0900
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 子事务日志管理器</title>
+    <url>/2022/09/postgresql-subtrans/</url>
+    <content><![CDATA[<p>本文简要记录一下 PostgreSQL 中有关子事务相关的处理，PostgreSQL 中子事务（<code>pg_subtrans</code>）的管理与事务管理（<code>pg_xact</code>）类似，它存储了每个事务的父事务 ID。它是实现嵌套事务的基本组成部分。主事务（即顶层事务）的父事务 ID 为 <code>InvalidTransactionId</code>，每个子事务都有其直接的父事务 ID。因此，我们可以通过子事务遍历很容易找到父事务 ID，反之则不然。</p>
+<p><code>pg_subtrans</code> 只记录当前已打开的事务，因此无需为崩溃或重启持久化数据。在重启时，PostgreSQL 会将当前获取的页面清零。</p>
+<span id="more"></span>
+
+<h2 id="页面布局"><a href="#页面布局" class="headerlink" title="页面布局"></a>页面布局</h2><p>PostgreSQL 将 <code>pg_subtrans</code> 目录下的文件视为一个 hash 表，可以通过事务的 ID 快速获取其直接的父事务 ID，通过这种方式一直往上遍历可以获取到主事务 ID。</p>
+<p>PostgreSQL 将子事务信息按页面进行分块，并且 32 个页面组成一个段文件（即磁盘文件）。由于事务 ID 是 32 位无符号数，因此每个页面可以存储 <code>BLKSZ / sizeof(TransactionId)</code> 个事务的信息。如下图所示，我们采用 8K 的页面，则每个页面可以存储 <code>8192 / 4 = 2048</code> 个事务的信息。例如当前事务 ID 为 741，则我们可以通过 <code>741 * 4 = 0x00000b94</code> 得到其父事务 ID 为 <code>0x000002e4 = 740</code>，同样地，我们可以得到 740 的父事务 ID 为 739，而 739 的父事务 ID 为 0，即 739 是一个主事务，其关系为 <code>741 -&gt; 740 -&gt; 739</code>。</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-layout.png" class="">
+
+<p>上面的计算中我们忽略了页面编号的计算，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L51">子事务管理器提供了 <code>TransactionIdToPage</code> 和 <code>TransactionIdToEntry</code> 宏来帮助计算页面号和页面偏移量</a>，其定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* We need four bytes per xact. */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SUBTRANS_XACTS_PER_PAGE (BLCKSZ / sizeof(TransactionId))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToPage(xid) ((xid) / (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToEntry(xid) ((xid) % (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="代码逻辑"><a href="#代码逻辑" class="headerlink" title="代码逻辑"></a>代码逻辑</h2><p>PostgreSQL 使用子事务来实现 <a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 功能，内部则使用<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L183"><code>TransactionStateData</code></a> 结构来描述事务的状态。下面将结合实际情况分析一下子事务的工作原理。首先，使用下面的命令创建示例表。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(id <span class="type">int</span>, info text);</span><br></pre></td></tr></table></figure>
+
+<p>当我们使用 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 开启事务时，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L3665"><code>BeginTransactionBlock()</code></a> 函数将 <code>TransactionState-&gt;blockState</code> 设置为 <code>TBLOCK_BEGIN</code> 用以表明我们正式进入一个事务块，当执行完 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 时，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/tcop/postgres.c#L2714"><code>finish_xact_command()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数切换 <code>TransactionState-&gt;blockState</code> 状态为 <code>TBLOCK_INPROCESS</code> 以表明我们事务块正在运行中。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; BeginTransactionBlock  (TBLOCK_STARTED =&gt; TBLOCK_BEGIN)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand  (TBLOCK_START =&gt; TBLOCK_INPROCESS)</span><br></pre></td></tr></table></figure>
+
+<p>现在我们在执行下面的语句插入一条记录。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;A&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>由于这是当前事务中的第一次修改，因此，<a href="https://github.com/postgres/postgres/blob/REL_14_5//src/backend/access/heap/heapam.c#L2069"><code>heap_insert()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L431"><code>GetCurrentTransactionId()</code></a> 来获取一个事务 ID，如果当前事务已经分配了事务 ID，则直接返回，否则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L560"><code>AssignTransactionId()</code></a> 分配一个新的事务 ID（需要在 <code>XidGenLock</code> 获得 <code>LW_EXCLUSIVE</code> 锁），并保存到 <code>TransactionState-&gt;fullTransactionId</code> 中。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我们通过 <code>SAVEPOINT s1</code> 创建一个子事务（保存点），函数 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 将t通过 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L5142"><code>PushTransactoin()</code></a> 函数新建一个子事务状态对象，并将当前的事务对象压栈，随后，将新建的子事务对象设置为当前事务对象。当执行完 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 函数之后，其事务状态信息如下图所示：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint1.png" class="">
+
+<p><strong>注意：</strong> PostgreSQL 一个事务最大支持 <code>2^32 - 1</code> 个子事务。</p>
+<p>紧接着，<code>SAVEPOINT s1</code> 语句完成需要调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数提交，由于当前需要开启子事务，因此 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4799"><code>StartSubTransaction()</code></a> 函数进入到子事务状态。最后，事务状态信息如下图所示：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint2.png" class="">
+
+<p><a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 语句的执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; DefineSavepoint</span><br><span class="line">  |                                    +-&gt; PushTransaction</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; StartSubtransaction</span><br></pre></td></tr></table></figure>
+
+<p>现在，我们下面的语句在子事务中插入一条记录新的记录。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;B&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>其整体的执行流程与主事务的大致相同，不同在于获取事务 ID 之后的处理方式。当前事务状态的父事务不为空，因此，该事务为子事务，在调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/varsup.c#L37"><code>GetNewTransactionId()</code></a> 获得事务 ID 之后，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数在 <code>pg_subtrans</code> 中记录父事务的事务 ID。当执行完插入后，事务状态信息如下图所示（更新了子事务状态的 <code>FullTransactionId</code> 字段）：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint3.png" class="">
+
+<p>其执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  |                                                     +-&gt; SubTransSetParent  (update pg_subtrans information)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
+
+<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数为每个子事务记录其直接父事务的事务 ID，其代码如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Record the parent of a subtransaction in the subtrans log.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">SubTransSetParent</span><span class="params">(TransactionId xid, TransactionId parent)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span>			pageno = TransactionIdToPage(xid);</span><br><span class="line">	<span class="keyword">int</span>			entryno = TransactionIdToEntry(xid);</span><br><span class="line">	<span class="keyword">int</span>			slotno;</span><br><span class="line">	TransactionId *ptr;</span><br><span class="line"></span><br><span class="line">	Assert(TransactionIdIsValid(parent));</span><br><span class="line">	Assert(TransactionIdFollows(xid, parent));</span><br><span class="line"></span><br><span class="line">	LWLockAcquire(SubtransSLRULock, LW_EXCLUSIVE);</span><br><span class="line"></span><br><span class="line">	slotno = SimpleLruReadPage(SubTransCtl, pageno, <span class="literal">true</span>, xid);</span><br><span class="line">	ptr = (TransactionId *) SubTransCtl-&gt;shared-&gt;page_buffer[slotno];</span><br><span class="line">	ptr += entryno;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * It&#x27;s possible we&#x27;ll try to set the parent xid multiple times but we</span></span><br><span class="line"><span class="comment">	 * shouldn&#x27;t ever be changing the xid from one valid xid to another valid</span></span><br><span class="line"><span class="comment">	 * xid, which would corrupt the data structure.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (*ptr != parent)</span><br><span class="line">	&#123;</span><br><span class="line">		Assert(*ptr == InvalidTransactionId);</span><br><span class="line">		*ptr = parent;</span><br><span class="line">		SubTransCtl-&gt;shared-&gt;page_dirty[slotno] = <span class="literal">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	LWLockRelease(SubtransSLRULock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>它根据子事务的 ID 获取到对应的页面编号和页内偏移，随后读取相应的页面并将父事务 ID 写入，此时的信息仅在共享内存中，通过 <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html"><code>CHECKPOINT</code></a> 可以将其刷盘。</p>
+<p>最后，我们来看看事务的提交过程，当我们执行 <a href="https://www.postgresql.org/docs/14/sql-commit.html"><code>COMMIT</code></a> 时，其执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommitSubTransaction</span><br><span class="line">                    +-&gt; PopTransaction</span><br><span class="line">              +-&gt; CommitTransaction</span><br></pre></td></tr></table></figure>
+
+<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将循环执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4842"><code>CommitSubTransaction()</code></a> 函数来提交子事务；随后，如果是需要提交主事务，则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CommitTransaction()</code></a> 函数进行提交（这里面涉及到了 WAL 日志以及 CLOG 相关的更新，感兴趣的朋友可以去看看）主事务。</p>
+<p>如果我们执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CHECKPOINT</code></a>，那么我们在 <code>$PGDATA/pg_subtrans</code> 目录下可以看到上述子事务的相关信息。</p>
+<!--
+$ hexdump -C 0000
+00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00000b80  00 00 00 00 00 00 00 00  d7 02 00 00 00 00 00 00  |................|
+00000b90  e3 02 00 00 e4 02 00 00  00 00 00 00 00 00 00 00  |................|
+00000ba0  00 00 00 00 00 00 00 00  e9 02 00 00 00 00 00 00  |................|
+00000bb0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+00000bc0  00 00 00 00 00 00 00 00  ee 02 00 00 00 00 00 00  |................|
+00000bd0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00002000
+-->
+
+<img src="/2022/09/postgresql-subtrans/subtrans-page-dump.png" class="">
+
+<p><code>0x00000bc8</code> 对应的事务 ID 为 <code>int(0xbc8) / 4 = 754</code>，而他的父事务 ID 为 <code>0x02ee = 750</code>，750 事务在 0 号页面的 <code>hex(750 * 4) = 0xbb8</code>，全为 0，因此，事务 750 是主事务，这与上面的实际情况一致。</p>
+<p>到此，关于 PostgreSQL 的子事务基本上就了解的差不多了，这部分内容其实相对还是比较简单的，<code>pg_xact</code> 的内容就要比 <code>pg_subtrans</code> 稍微复杂一些。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/14/sql-begin.html">https://www.postgresql.org/docs/14/sql-begin.html</a><br>[2] <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html">https://www.postgresql.org/docs/14/sql-checkpoint.html</a><br>[3] <a href="https://www.postgresql.org/docs/14/sql-commit.html">https://www.postgresql.org/docs/14/sql-commit.html</a><br>[4] <a href="https://www.postgresql.org/docs/14/sql-savepoint.html">https://www.postgresql.org/docs/14/sql-savepoint.html</a><br>[5] <a href="https://github.com/postgres/postgres/tree/REL_14_5">https://github.com/postgres/postgres/tree/REL_14_5</a></p>
+<div class="just-for-fun">
+笑林广记 - 薑字塔
+
+<p>一富翁问“薑”字如何写，对以草字头，次一字，次田字，又一字，又田字，又一字。<br>其人写草壹田壹田壹，写讫玩之，骂曰：“天杀的，如何诳我，分明作耍我造成一座塔了。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>Database</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 12 流复制配置</title>
     <url>/2020/02/postgresql-stream-replication/</url>
     <content><![CDATA[<p>PostgreSQL 12 的流复制与之前的版本有所不同，主要有以下几点区别：</p>
@@ -6054,92 +6172,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 子事务日志管理器</title>
-    <url>/2022/09/postgresql-subtrans/</url>
-    <content><![CDATA[<p>本文简要记录一下 PostgreSQL 中有关子事务相关的处理，PostgreSQL 中子事务（<code>pg_subtrans</code>）的管理与事务管理（<code>pg_xact</code>）类似，它存储了每个事务的父事务 ID。它是实现嵌套事务的基本组成部分。主事务（即顶层事务）的父事务 ID 为 <code>InvalidTransactionId</code>，每个子事务都有其直接的父事务 ID。因此，我们可以通过子事务遍历很容易找到父事务 ID，反之则不然。</p>
-<p><code>pg_subtrans</code> 只记录当前已打开的事务，因此无需为崩溃或重启持久化数据。在重启时，PostgreSQL 会将当前获取的页面清零。</p>
-<span id="more"></span>
-
-<h2 id="页面布局"><a href="#页面布局" class="headerlink" title="页面布局"></a>页面布局</h2><p>PostgreSQL 将 <code>pg_subtrans</code> 目录下的文件视为一个 hash 表，可以通过事务的 ID 快速获取其直接的父事务 ID，通过这种方式一直往上遍历可以获取到主事务 ID。</p>
-<p>PostgreSQL 将子事务信息按页面进行分块，并且 32 个页面组成一个段文件（即磁盘文件）。由于事务 ID 是 32 位无符号数，因此每个页面可以存储 <code>BLKSZ / sizeof(TransactionId)</code> 个事务的信息。如下图所示，我们采用 8K 的页面，则每个页面可以存储 <code>8192 / 4 = 2048</code> 个事务的信息。例如当前事务 ID 为 741，则我们可以通过 <code>741 * 4 = 0x00000b94</code> 得到其父事务 ID 为 <code>0x000002e4 = 740</code>，同样地，我们可以得到 740 的父事务 ID 为 739，而 739 的父事务 ID 为 0，即 739 是一个主事务，其关系为 <code>741 -&gt; 740 -&gt; 739</code>。</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-layout.png" class="">
-
-<p>上面的计算中我们忽略了页面编号的计算，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L51">子事务管理器提供了 <code>TransactionIdToPage</code> 和 <code>TransactionIdToEntry</code> 宏来帮助计算页面号和页面偏移量</a>，其定义如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* We need four bytes per xact. */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SUBTRANS_XACTS_PER_PAGE (BLCKSZ / sizeof(TransactionId))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToPage(xid) ((xid) / (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToEntry(xid) ((xid) % (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="代码逻辑"><a href="#代码逻辑" class="headerlink" title="代码逻辑"></a>代码逻辑</h2><p>PostgreSQL 使用子事务来实现 <a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 功能，内部则使用<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L183"><code>TransactionStateData</code></a> 结构来描述事务的状态。下面将结合实际情况分析一下子事务的工作原理。首先，使用下面的命令创建示例表。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(id <span class="type">int</span>, info text);</span><br></pre></td></tr></table></figure>
-
-<p>当我们使用 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 开启事务时，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L3665"><code>BeginTransactionBlock()</code></a> 函数将 <code>TransactionState-&gt;blockState</code> 设置为 <code>TBLOCK_BEGIN</code> 用以表明我们正式进入一个事务块，当执行完 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 时，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/tcop/postgres.c#L2714"><code>finish_xact_command()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数切换 <code>TransactionState-&gt;blockState</code> 状态为 <code>TBLOCK_INPROCESS</code> 以表明我们事务块正在运行中。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; BeginTransactionBlock  (TBLOCK_STARTED =&gt; TBLOCK_BEGIN)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand  (TBLOCK_START =&gt; TBLOCK_INPROCESS)</span><br></pre></td></tr></table></figure>
-
-<p>现在我们在执行下面的语句插入一条记录。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;A&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>由于这是当前事务中的第一次修改，因此，<a href="https://github.com/postgres/postgres/blob/REL_14_5//src/backend/access/heap/heapam.c#L2069"><code>heap_insert()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L431"><code>GetCurrentTransactionId()</code></a> 来获取一个事务 ID，如果当前事务已经分配了事务 ID，则直接返回，否则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L560"><code>AssignTransactionId()</code></a> 分配一个新的事务 ID（需要在 <code>XidGenLock</code> 获得 <code>LW_EXCLUSIVE</code> 锁），并保存到 <code>TransactionState-&gt;fullTransactionId</code> 中。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
-
-<p>接下来，我们通过 <code>SAVEPOINT s1</code> 创建一个子事务（保存点），函数 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 将t通过 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L5142"><code>PushTransactoin()</code></a> 函数新建一个子事务状态对象，并将当前的事务对象压栈，随后，将新建的子事务对象设置为当前事务对象。当执行完 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 函数之后，其事务状态信息如下图所示：</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-savepoint1.png" class="">
-
-<p><strong>注意：</strong> PostgreSQL 一个事务最大支持 <code>2^32 - 1</code> 个子事务。</p>
-<p>紧接着，<code>SAVEPOINT s1</code> 语句完成需要调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数提交，由于当前需要开启子事务，因此 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4799"><code>StartSubTransaction()</code></a> 函数进入到子事务状态。最后，事务状态信息如下图所示：</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-savepoint2.png" class="">
-
-<p><a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 语句的执行流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; DefineSavepoint</span><br><span class="line">  |                                    +-&gt; PushTransaction</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; StartSubtransaction</span><br></pre></td></tr></table></figure>
-
-<p>现在，我们下面的语句在子事务中插入一条记录新的记录。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;B&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>其整体的执行流程与主事务的大致相同，不同在于获取事务 ID 之后的处理方式。当前事务状态的父事务不为空，因此，该事务为子事务，在调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/varsup.c#L37"><code>GetNewTransactionId()</code></a> 获得事务 ID 之后，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数在 <code>pg_subtrans</code> 中记录父事务的事务 ID。当执行完插入后，事务状态信息如下图所示（更新了子事务状态的 <code>FullTransactionId</code> 字段）：</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-savepoint3.png" class="">
-
-<p>其执行流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  |                                                     +-&gt; SubTransSetParent  (update pg_subtrans information)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
-
-<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数为每个子事务记录其直接父事务的事务 ID，其代码如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Record the parent of a subtransaction in the subtrans log.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">SubTransSetParent</span><span class="params">(TransactionId xid, TransactionId parent)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span>			pageno = TransactionIdToPage(xid);</span><br><span class="line">	<span class="keyword">int</span>			entryno = TransactionIdToEntry(xid);</span><br><span class="line">	<span class="keyword">int</span>			slotno;</span><br><span class="line">	TransactionId *ptr;</span><br><span class="line"></span><br><span class="line">	Assert(TransactionIdIsValid(parent));</span><br><span class="line">	Assert(TransactionIdFollows(xid, parent));</span><br><span class="line"></span><br><span class="line">	LWLockAcquire(SubtransSLRULock, LW_EXCLUSIVE);</span><br><span class="line"></span><br><span class="line">	slotno = SimpleLruReadPage(SubTransCtl, pageno, <span class="literal">true</span>, xid);</span><br><span class="line">	ptr = (TransactionId *) SubTransCtl-&gt;shared-&gt;page_buffer[slotno];</span><br><span class="line">	ptr += entryno;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * It&#x27;s possible we&#x27;ll try to set the parent xid multiple times but we</span></span><br><span class="line"><span class="comment">	 * shouldn&#x27;t ever be changing the xid from one valid xid to another valid</span></span><br><span class="line"><span class="comment">	 * xid, which would corrupt the data structure.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (*ptr != parent)</span><br><span class="line">	&#123;</span><br><span class="line">		Assert(*ptr == InvalidTransactionId);</span><br><span class="line">		*ptr = parent;</span><br><span class="line">		SubTransCtl-&gt;shared-&gt;page_dirty[slotno] = <span class="literal">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	LWLockRelease(SubtransSLRULock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>它根据子事务的 ID 获取到对应的页面编号和页内偏移，随后读取相应的页面并将父事务 ID 写入，此时的信息仅在共享内存中，通过 <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html"><code>CHECKPOINT</code></a> 可以将其刷盘。</p>
-<p>最后，我们来看看事务的提交过程，当我们执行 <a href="https://www.postgresql.org/docs/14/sql-commit.html"><code>COMMIT</code></a> 时，其执行流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommitSubTransaction</span><br><span class="line">                    +-&gt; PopTransaction</span><br><span class="line">              +-&gt; CommitTransaction</span><br></pre></td></tr></table></figure>
-
-<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将循环执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4842"><code>CommitSubTransaction()</code></a> 函数来提交子事务；随后，如果是需要提交主事务，则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CommitTransaction()</code></a> 函数进行提交（这里面涉及到了 WAL 日志以及 CLOG 相关的更新，感兴趣的朋友可以去看看）主事务。</p>
-<p>如果我们执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CHECKPOINT</code></a>，那么我们在 <code>$PGDATA/pg_subtrans</code> 目录下可以看到上述子事务的相关信息。</p>
-<!--
-$ hexdump -C 0000
-00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-*
-00000b80  00 00 00 00 00 00 00 00  d7 02 00 00 00 00 00 00  |................|
-00000b90  e3 02 00 00 e4 02 00 00  00 00 00 00 00 00 00 00  |................|
-00000ba0  00 00 00 00 00 00 00 00  e9 02 00 00 00 00 00 00  |................|
-00000bb0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-00000bc0  00 00 00 00 00 00 00 00  ee 02 00 00 00 00 00 00  |................|
-00000bd0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-*
-00002000
--->
-
-<img src="/2022/09/postgresql-subtrans/subtrans-page-dump.png" class="">
-
-<p><code>0x00000bc8</code> 对应的事务 ID 为 <code>int(0xbc8) / 4 = 754</code>，而他的父事务 ID 为 <code>0x02ee = 750</code>，750 事务在 0 号页面的 <code>hex(750 * 4) = 0xbb8</code>，全为 0，因此，事务 750 是主事务，这与上面的实际情况一致。</p>
-<p>到此，关于 PostgreSQL 的子事务基本上就了解的差不多了，这部分内容其实相对还是比较简单的，<code>pg_xact</code> 的内容就要比 <code>pg_subtrans</code> 稍微复杂一些。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/14/sql-begin.html">https://www.postgresql.org/docs/14/sql-begin.html</a><br>[2] <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html">https://www.postgresql.org/docs/14/sql-checkpoint.html</a><br>[3] <a href="https://www.postgresql.org/docs/14/sql-commit.html">https://www.postgresql.org/docs/14/sql-commit.html</a><br>[4] <a href="https://www.postgresql.org/docs/14/sql-savepoint.html">https://www.postgresql.org/docs/14/sql-savepoint.html</a><br>[5] <a href="https://github.com/postgres/postgres/tree/REL_14_5">https://github.com/postgres/postgres/tree/REL_14_5</a></p>
-<div class="just-for-fun">
-笑林广记 - 薑字塔
-
-<p>一富翁问“薑”字如何写，对以草字头，次一字，次田字，又一字，又田字，又一字。<br>其人写草壹田壹田壹，写讫玩之，骂曰：“天杀的，如何诳我，分明作耍我造成一座塔了。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>Database</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 自定义系统函数</title>
     <url>/2019/11/postgresql-system-function/</url>
     <content><![CDATA[<p>本文主要介绍如何实现一个系统函数，类似于 <code>pg_backend_pid()</code> 的系统函数。PostgreSQL 所有的系统函数都记录在 <code>pg_proc</code> 系统表中。</p>
@@ -6296,6 +6328,43 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 文本搜索字典导致奔溃</title>
+    <url>/2022/08/postgresql-text-search-dictionary-crashed/</url>
+    <content><![CDATA[<p>今天朋友在群里发了一个关于文本搜索字典导致崩溃的问题，如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> TEXT <span class="keyword">SEARCH</span> TEMPLATE public.my_ts_template(</span><br><span class="line">  init <span class="operator">=</span> varchar_support,</span><br><span class="line">  lexize <span class="operator">=</span> dispell_lexize</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> TEXT <span class="keyword">SEARCH</span> DICTIONARY public.my_ts_dict(</span><br><span class="line">  template <span class="operator">=</span> public.my_ts_template</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>在执行第二条语句时将出现如下错误信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">server closed the connection unexpectedly</span><br><span class="line">        This probably means the server terminated abnormally</span><br><span class="line">        before or while processing the request.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br></pre></td></tr></table></figure>
+
+<p>从上面的信息可以得知后端进程奔溃了（这个问题就目前的状况来看是不会修正的）。</p>
+<span id="more"></span>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>通过 GDB 我们可以看到崩溃时的堆栈信息如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#0  0x00005605671bce72 in varchar_support (fcinfo=0x7ffd0c87a070)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/utils/adt/varchar.c:565</span><br><span class="line">#1  0x0000560567205842 in FunctionCall1Coll (flinfo=0x7ffd0c87a0d0, collation=0, arg1=0)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/utils/fmgr/fmgr.c:1124</span><br><span class="line">#2  0x000056056720675d in OidFunctionCall1Coll (functionId=3097, collation=0, arg1=0)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/utils/fmgr/fmgr.c:1402</span><br><span class="line">#3  0x0000560566d650ad in verify_dictoptions (tmplId=24576, dictoptions=0x0)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/commands/tsearchcmds.c:381</span><br><span class="line">#4  0x0000560566d652d1 in DefineTSDictionary (names=0x5605678ad4d8, parameters=0x5605678ad720)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/commands/tsearchcmds.c:442</span><br><span class="line">#5  0x0000560567042a96 in ProcessUtilitySlow (pstate=0x5605678cd940, pstmt=0x5605678adae8,</span><br><span class="line">    queryString=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;, context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/utility.c:1430</span><br><span class="line">#6  0x0000560567041e84 in standard_ProcessUtility (pstmt=0x5605678adae8,</span><br><span class="line">    queryString=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;, readOnlyTree=false, context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x5605678adbd8,</span><br><span class="line">    qc=0x7ffd0c87aa40) at /home/japin/Codes/postgresql/build/../src/backend/tcop/utility.c:1074</span><br><span class="line">#7  0x0000560567040dfe in ProcessUtility (pstmt=0x5605678adae8,</span><br><span class="line">    queryString=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;, readOnlyTree=false, context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x5605678adbd8,</span><br><span class="line">    qc=0x7ffd0c87aa40) at /home/japin/Codes/postgresql/build/../src/backend/tcop/utility.c:530</span><br><span class="line">#8  0x000056056703f905 in PortalRunUtility (portal=0x56056791eed0, pstmt=0x5605678adae8, isTopLevel=true,</span><br><span class="line">    setHoldSnapshot=false, dest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/pquery.c:1158</span><br><span class="line">#9  0x000056056703fb77 in PortalRunMulti (portal=0x56056791eed0, isTopLevel=true, setHoldSnapshot=false,</span><br><span class="line">    dest=0x5605678adbd8, altdest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/pquery.c:1315</span><br><span class="line">#10 0x000056056703eff5 in PortalRun (portal=0x56056791eed0, count=9223372036854775807, isTopLevel=true,</span><br><span class="line">    run_once=true, dest=0x5605678adbd8, altdest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/pquery.c:791</span><br><span class="line">#11 0x0000560567038332 in exec_simple_query (</span><br><span class="line">    query_string=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;) at /home/japin/Codes/postgresql/build/../src/backend/tcop/postgres.c:1243</span><br><span class="line">#12 0x000056056703ce29 in PostgresMain (dbname=0x5605678a7168 &quot;postgres&quot;, username=0x5605678d8d18 &quot;japin&quot;)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/postgres.c:4505</span><br><span class="line">#13 0x0000560566f64bd0 in BackendRun (port=0x5605678d4c60)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:4491</span><br><span class="line">#14 0x0000560566f644be in BackendStartup (port=0x5605678d4c60)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:4219</span><br><span class="line">#15 0x0000560566f60730 in ServerLoop ()</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:1809</span><br><span class="line">#16 0x0000560566f5fee1 in PostmasterMain (argc=1, argv=0x5605678a5120)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:1481</span><br><span class="line">#17 0x0000560566e234d2 in main (argc=1, argv=0x5605678a5120)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/main/main.c:197</span><br></pre></td></tr></table></figure>
+
+<p>从上面的堆栈中，我们可以得知在 <code>DefineTSDictionary()</code> 函数中 <code>dictoptions</code> 变量为 <code>NIL</code>（即空链表），在传入到 <code>varchar_support()</code> 函数中时并没有检查空值，从而导致崩溃。</p>
+<p>问题是找到了，但是这个问题并没有得到认同，Tom Lane 指出 <code>varchar_support()</code> 并不是有效的 <code>init</code> 参数。随后，我又重新查看了<a href="https://www.postgresql.org/docs/devel/sql-createtstemplate.html">文档</a>，发现这个点在文档里面有说明。</p>
+<blockquote>
+<p>You must be a superuser to use CREATE TEXT SEARCH TEMPLATE. This restriction is made because an erroneous text search template definition could confuse or even crash the server.</p>
+</blockquote>
+<p>我尝试在 <code>verify_dictoptions()</code> 函数中判断 <code>dictoptions</code> 是否为 <code>NIL</code> 来规避这个问题，这种做法并没有得到认同，诚然，通过检查 <code>dictoptions</code> 是否为 <code>NIL</code> 可以避免崩溃，但是这也就意味者我们必须为 <code>CREATE TEXT SEARCH DICTIONARY</code> 指定选项（这并不是预期的行为）。</p>
+<p>目前更倾向的做法是超级用户来确保 <code>CREATE TEXT SEARCH TEMPLATE</code> 语句中 <code>init</code> 参数的合法性。然而在我看来这种解决方案并不十分优雅。这就相当于是给 DBA 埋了一个定时炸弹，您不知道他何时会由何人引爆。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/devel/sql-createtstemplate.html">https://www.postgresql.org/docs/devel/sql-createtstemplate.html</a><br>[2] <a href="https://www.postgresql.org/docs/devel/sql-createtsdictionary.html">https://www.postgresql.org/docs/devel/sql-createtsdictionary.html</a><br>[3] <a href="https://www.postgresql.org/message-id/MEYP282MB16690107AAF04EBB3B9AADD8B6629@MEYP282MB1669.AUSP282.PROD.OUTLOOK.COM">Coredump with text search dictionary</a></p>
+<div class="just-for-fun">
+笑林广记 - 不愿富
+
+<p>一鬼托生时，冥王判作富人。<br>鬼曰：“不愿富也，但求一生衣食不缺，无是无非，烧清香，吃苦茶，安闲过日足矣。”<br>冥王曰：“要银子便再与你几万，这样安闲清福，却不许你享。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>BUG</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 临时表</title>
     <url>/2019/08/postgresql-temporary-table/</url>
     <content><![CDATA[<p>本文主要介绍 PostgreSQL 数据库中的临时表 (Temporary Table)。临时表将在会话结束或者当前事务结束时被删除。PostgreSQL 支持临时表和永久存储表 (Permanent Table) 具有相同的名称，如果出现这种情况，那么只有在临时表被删除之后才能看到永久表或者你可以指定 schema 来明确需要查询的是永久表。此外，在临时表上建立的索引同样也是临时的。</p>
@@ -6342,43 +6411,6 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 文本搜索字典导致奔溃</title>
-    <url>/2022/08/postgresql-text-search-dictionary-crashed/</url>
-    <content><![CDATA[<p>今天朋友在群里发了一个关于文本搜索字典导致崩溃的问题，如下所示：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> TEXT <span class="keyword">SEARCH</span> TEMPLATE public.my_ts_template(</span><br><span class="line">  init <span class="operator">=</span> varchar_support,</span><br><span class="line">  lexize <span class="operator">=</span> dispell_lexize</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> TEXT <span class="keyword">SEARCH</span> DICTIONARY public.my_ts_dict(</span><br><span class="line">  template <span class="operator">=</span> public.my_ts_template</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
-
-<p>在执行第二条语句时将出现如下错误信息：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">server closed the connection unexpectedly</span><br><span class="line">        This probably means the server terminated abnormally</span><br><span class="line">        before or while processing the request.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br></pre></td></tr></table></figure>
-
-<p>从上面的信息可以得知后端进程奔溃了（这个问题就目前的状况来看是不会修正的）。</p>
-<span id="more"></span>
-
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>通过 GDB 我们可以看到崩溃时的堆栈信息如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#0  0x00005605671bce72 in varchar_support (fcinfo=0x7ffd0c87a070)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/utils/adt/varchar.c:565</span><br><span class="line">#1  0x0000560567205842 in FunctionCall1Coll (flinfo=0x7ffd0c87a0d0, collation=0, arg1=0)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/utils/fmgr/fmgr.c:1124</span><br><span class="line">#2  0x000056056720675d in OidFunctionCall1Coll (functionId=3097, collation=0, arg1=0)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/utils/fmgr/fmgr.c:1402</span><br><span class="line">#3  0x0000560566d650ad in verify_dictoptions (tmplId=24576, dictoptions=0x0)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/commands/tsearchcmds.c:381</span><br><span class="line">#4  0x0000560566d652d1 in DefineTSDictionary (names=0x5605678ad4d8, parameters=0x5605678ad720)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/commands/tsearchcmds.c:442</span><br><span class="line">#5  0x0000560567042a96 in ProcessUtilitySlow (pstate=0x5605678cd940, pstmt=0x5605678adae8,</span><br><span class="line">    queryString=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;, context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/utility.c:1430</span><br><span class="line">#6  0x0000560567041e84 in standard_ProcessUtility (pstmt=0x5605678adae8,</span><br><span class="line">    queryString=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;, readOnlyTree=false, context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x5605678adbd8,</span><br><span class="line">    qc=0x7ffd0c87aa40) at /home/japin/Codes/postgresql/build/../src/backend/tcop/utility.c:1074</span><br><span class="line">#7  0x0000560567040dfe in ProcessUtility (pstmt=0x5605678adae8,</span><br><span class="line">    queryString=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;, readOnlyTree=false, context=PROCESS_UTILITY_TOPLEVEL, params=0x0, queryEnv=0x0, dest=0x5605678adbd8,</span><br><span class="line">    qc=0x7ffd0c87aa40) at /home/japin/Codes/postgresql/build/../src/backend/tcop/utility.c:530</span><br><span class="line">#8  0x000056056703f905 in PortalRunUtility (portal=0x56056791eed0, pstmt=0x5605678adae8, isTopLevel=true,</span><br><span class="line">    setHoldSnapshot=false, dest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/pquery.c:1158</span><br><span class="line">#9  0x000056056703fb77 in PortalRunMulti (portal=0x56056791eed0, isTopLevel=true, setHoldSnapshot=false,</span><br><span class="line">    dest=0x5605678adbd8, altdest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/pquery.c:1315</span><br><span class="line">#10 0x000056056703eff5 in PortalRun (portal=0x56056791eed0, count=9223372036854775807, isTopLevel=true,</span><br><span class="line">    run_once=true, dest=0x5605678adbd8, altdest=0x5605678adbd8, qc=0x7ffd0c87aa40)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/pquery.c:791</span><br><span class="line">#11 0x0000560567038332 in exec_simple_query (</span><br><span class="line">    query_string=0x5605678aca10 &quot;CREATE TEXT SEARCH DICTIONARY public.my_ts_dict (\n  template = public.my_ts_template\n);&quot;) at /home/japin/Codes/postgresql/build/../src/backend/tcop/postgres.c:1243</span><br><span class="line">#12 0x000056056703ce29 in PostgresMain (dbname=0x5605678a7168 &quot;postgres&quot;, username=0x5605678d8d18 &quot;japin&quot;)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/tcop/postgres.c:4505</span><br><span class="line">#13 0x0000560566f64bd0 in BackendRun (port=0x5605678d4c60)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:4491</span><br><span class="line">#14 0x0000560566f644be in BackendStartup (port=0x5605678d4c60)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:4219</span><br><span class="line">#15 0x0000560566f60730 in ServerLoop ()</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:1809</span><br><span class="line">#16 0x0000560566f5fee1 in PostmasterMain (argc=1, argv=0x5605678a5120)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/postmaster/postmaster.c:1481</span><br><span class="line">#17 0x0000560566e234d2 in main (argc=1, argv=0x5605678a5120)</span><br><span class="line">    at /home/japin/Codes/postgresql/build/../src/backend/main/main.c:197</span><br></pre></td></tr></table></figure>
-
-<p>从上面的堆栈中，我们可以得知在 <code>DefineTSDictionary()</code> 函数中 <code>dictoptions</code> 变量为 <code>NIL</code>（即空链表），在传入到 <code>varchar_support()</code> 函数中时并没有检查空值，从而导致崩溃。</p>
-<p>问题是找到了，但是这个问题并没有得到认同，Tom Lane 指出 <code>varchar_support()</code> 并不是有效的 <code>init</code> 参数。随后，我又重新查看了<a href="https://www.postgresql.org/docs/devel/sql-createtstemplate.html">文档</a>，发现这个点在文档里面有说明。</p>
-<blockquote>
-<p>You must be a superuser to use CREATE TEXT SEARCH TEMPLATE. This restriction is made because an erroneous text search template definition could confuse or even crash the server.</p>
-</blockquote>
-<p>我尝试在 <code>verify_dictoptions()</code> 函数中判断 <code>dictoptions</code> 是否为 <code>NIL</code> 来规避这个问题，这种做法并没有得到认同，诚然，通过检查 <code>dictoptions</code> 是否为 <code>NIL</code> 可以避免崩溃，但是这也就意味者我们必须为 <code>CREATE TEXT SEARCH DICTIONARY</code> 指定选项（这并不是预期的行为）。</p>
-<p>目前更倾向的做法是超级用户来确保 <code>CREATE TEXT SEARCH TEMPLATE</code> 语句中 <code>init</code> 参数的合法性。然而在我看来这种解决方案并不十分优雅。这就相当于是给 DBA 埋了一个定时炸弹，您不知道他何时会由何人引爆。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/devel/sql-createtstemplate.html">https://www.postgresql.org/docs/devel/sql-createtstemplate.html</a><br>[2] <a href="https://www.postgresql.org/docs/devel/sql-createtsdictionary.html">https://www.postgresql.org/docs/devel/sql-createtsdictionary.html</a><br>[3] <a href="https://www.postgresql.org/message-id/MEYP282MB16690107AAF04EBB3B9AADD8B6629@MEYP282MB1669.AUSP282.PROD.OUTLOOK.COM">Coredump with text search dictionary</a></p>
-<div class="just-for-fun">
-笑林广记 - 不愿富
-
-<p>一鬼托生时，冥王判作富人。<br>鬼曰：“不愿富也，但求一生衣食不缺，无是无非，烧清香，吃苦茶，安闲过日足矣。”<br>冥王曰：“要银子便再与你几万，这样安闲清福，却不许你享。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>BUG</tag>
       </tags>
   </entry>
   <entry>
@@ -6819,35 +6851,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </tags>
   </entry>
   <entry>
-    <title>LaTeX 查看命令的定义</title>
-    <url>/2019/04/show-LaTeX-command-definition/</url>
-    <content><![CDATA[<p>最近在使用 LaTeX 撰写文档时需要重定义一个命令的，但是我想要知道该命令的原始定义时怎样的，经过查找发现 LaTeX 在这方面做得还是很不错的。目前，我知道有两种方式可以获取命令的定义：(a) 在文档中使用 <code>\show\command</code>；(b) 在命令行中使用 <code>texdef command</code>。</p>
-<span id="more"></span>
-
-<h2 id="show-查看命令定义"><a href="#show-查看命令定义" class="headerlink" title="\show 查看命令定义"></a><code>\show</code> 查看命令定义</h2><p>下面是一个完整的文档示例，在该文档中，我们通过 <code>\show\section</code> 来查看 <code>\section</code> 的定义。</p>
-<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="keyword">\documentclass</span>&#123;article&#125;</span><br><span class="line"><span class="keyword">\begin</span>&#123;document&#125;</span><br><span class="line"><span class="keyword">\show</span><span class="keyword">\section</span></span><br><span class="line"><span class="keyword">\end</span>&#123;document&#125;</span><br></pre></td></tr></table></figure>
-
-<p>上述代码非常简单，当我们通过 <code>latex</code> 编译时可以得到以下内容：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ latex test.tex</span><br><span class="line">This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=latex)</span><br><span class="line"> restricted \write18 enabled.</span><br><span class="line"> entering extended mode</span><br><span class="line"> (./test.tex</span><br><span class="line"> LaTeX2e &lt;2018-04-01&gt; patch level 5</span><br><span class="line"> (/usr/local/texlive/2018/texmf-dist/tex/latex/base/article.cls</span><br><span class="line"> Document Class: article 2014/09/29 v1.4h Standard LaTeX document class</span><br><span class="line"> (/usr/local/texlive/2018/texmf-dist/tex/latex/base/size10.clo)) (./test.aux)</span><br><span class="line"> &gt; \section=\long macro:</span><br><span class="line"> -&gt;\@startsection &#123;section&#125;&#123;1&#125;&#123;\z@ &#125;&#123;-3.5ex \@plus -1ex \@minus -.2ex&#125;&#123;2.3ex \@p</span><br><span class="line"> lus .2ex&#125;&#123;\normalfont \Large \bfseries &#125;.</span><br><span class="line"> l.3 \show\section</span><br><span class="line"></span><br><span class="line"> ?</span><br></pre></td></tr></table></figure>
-
-<p>注意第 10 行的输出，<code>\section=\long macro:</code> 这里就是关于 <code>\section</code> 命令的定义。</p>
-<h2 id="texdef-查看命令定义"><a href="#texdef-查看命令定义" class="headerlink" title="texdef 查看命令定义"></a><code>texdef</code> 查看命令定义</h2><p><code>texdef</code> 时一个 shell 命令，我们可以直接在 shell 中执行，例如，我们想看 <code>\section</code> 命令的定义，可以在 shell 中输入 <code>texdef section</code>，其输出结果如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ texdef section</span><br><span class="line"></span><br><span class="line">\section:</span><br><span class="line">undefined</span><br></pre></td></tr></table></figure>
-
-<p>为什么 <code>section</code> 命令没有定义？这里的例子其实与上面的稍微有点不一样，上面我们使用的是 <code>latex</code> 来编译的，而 <code>texdef</code> 查看的是原 <code>TeX</code> 命令的定义而非 <code>LaTeX</code> 命令的定义，因此我们需要将其换为 <code>latexdef</code>，其结果如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ latexdef section</span><br><span class="line"></span><br><span class="line">\section:</span><br><span class="line">\long macro:-&gt;\@startsection &#123;section&#125;&#123;1&#125;&#123;\z@ &#125;&#123;-3.5ex \@plus -1ex \@minus -.2ex&#125;&#123;2.3ex \@plus .2ex&#125;&#123;\normalfont \Large \bfseries &#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>latexdef</code> 命令提供了很多选项给用户选择，关于如何使用 <code>latexdef</code> 请使用 <code>latexdef --help</code> 查看帮助手册。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://tex.stackexchange.com/questions/36955/display-source-for-a-command">https://tex.stackexchange.com/questions/36955/display-source-for-a-command</a></p>
-]]></content>
-      <categories>
-        <category>排版</category>
-      </categories>
-      <tags>
-        <tag>LaTeX</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 中 ROUND 函数的使用</title>
     <url>/2019/03/sql-rounding/</url>
     <content><![CDATA[<p>在某些情况下我们可能需要对实数进行四舍五入，在 SQL 中我们可以通过 <code>ROUND</code> 函数来实现。</p>
@@ -6946,42 +6949,32 @@ index 16ab2238e7..6c19749194 100644
       </tags>
   </entry>
   <entry>
-    <title>申威平台 float 到 short 类型转换的编译器优化问题</title>
-    <url>/2022/02/sunway-float-to-short-compiler-bug/</url>
-    <content><![CDATA[<p>最近在做申威平台的兼容时发现一个关于编译器优化的 BUG。第一次遇到编译器优化的问题，因此在这里对其进行简要的记录。</p>
+    <title>LaTeX 查看命令的定义</title>
+    <url>/2019/04/show-LaTeX-command-definition/</url>
+    <content><![CDATA[<p>最近在使用 LaTeX 撰写文档时需要重定义一个命令的，但是我想要知道该命令的原始定义时怎样的，经过查找发现 LaTeX 在这方面做得还是很不错的。目前，我知道有两种方式可以获取命令的定义：(a) 在文档中使用 <code>\show\command</code>；(b) 在命令行中使用 <code>texdef command</code>。</p>
 <span id="more"></span>
 
-<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><p>下面是此次主角的基本信息，包括 CPU 硬件、操作系统和 GCC 编译器信息。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> lscpu</span></span><br><span class="line">架构：           sw_64</span><br><span class="line">CPU 运行模式：   64-bit</span><br><span class="line">字节序：         Little Endian</span><br><span class="line">Address sizes:   48 bits physical, 53 bits virtual</span><br><span class="line">CPU:             64</span><br><span class="line">在线 CPU 列表：  0-63</span><br><span class="line">每个核的线程数： 1</span><br><span class="line">每个座的核数：   32</span><br><span class="line">座：             2</span><br><span class="line">NUMA 节点：      2</span><br><span class="line">厂商 ID：        sunway</span><br><span class="line">CPU 系列：       6</span><br><span class="line">型号：           49</span><br><span class="line">型号名称：       SW3231 CPU @ 2.40GHz</span><br><span class="line">CPU MHz：        2400.00</span><br><span class="line">BogoMIPS：       4800.00</span><br><span class="line">L1d 缓存：       2 MiB</span><br><span class="line">L1i 缓存：       2 MiB</span><br><span class="line">L2 缓存：        32 MiB</span><br><span class="line">L3 缓存：        64 MiB</span><br><span class="line">NUMA 节点0 CPU： 0-31</span><br><span class="line">NUMA 节点1 CPU： 32-63</span><br><span class="line">标记：           fpu simd vpn upn cpuid</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> uname -a</span></span><br><span class="line">Linux localhost.localdomain 4.19.90-25.0.v2101.ky10.sw_64 #1 SMP Wed Jun 16 18:08:09 CST 2021 sw_64 sw_64 sw_64 GNU/Linux</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc --version</span></span><br><span class="line">gcc (GCC) 8.3.0 20190222 (Kylin 8.3.0-4)</span><br><span class="line">Copyright (C) 2018 Free Software Foundation, Inc.</span><br><span class="line">This is free software; see the source for copying conditions.  There is NO</span><br><span class="line">warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</span><br></pre></td></tr></table></figure>
+<h2 id="show-查看命令定义"><a href="#show-查看命令定义" class="headerlink" title="\show 查看命令定义"></a><code>\show</code> 查看命令定义</h2><p>下面是一个完整的文档示例，在该文档中，我们通过 <code>\show\section</code> 来查看 <code>\section</code> 的定义。</p>
+<figure class="highlight tex"><table><tr><td class="code"><pre><span class="line"><span class="keyword">\documentclass</span>&#123;article&#125;</span><br><span class="line"><span class="keyword">\begin</span>&#123;document&#125;</span><br><span class="line"><span class="keyword">\show</span><span class="keyword">\section</span></span><br><span class="line"><span class="keyword">\end</span>&#123;document&#125;</span><br></pre></td></tr></table></figure>
 
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>这个问题是在进行数据库产品兼容互认证的时候发现的。我当时采用 <code>-O2</code> 在该平台上编译代码，随后跑回归测试，发现回归测试失败，其中一条信息如下所示：</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"> -- test edge-case coercions to integer</span><br><span class="line"> SELECT &#x27;32767.4&#x27;::float4::int2;</span><br><span class="line"><span class="deletion">- int2</span></span><br><span class="line"><span class="comment">--------</span></span><br><span class="line"><span class="deletion">- 32767</span></span><br><span class="line"><span class="deletion">-(1 row)</span></span><br><span class="line"><span class="addition">+ERROR:  smallint out of range</span></span><br></pre></td></tr></table></figure>
+<p>上述代码非常简单，当我们通过 <code>latex</code> 编译时可以得到以下内容：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ latex test.tex</span><br><span class="line">This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=latex)</span><br><span class="line"> restricted \write18 enabled.</span><br><span class="line"> entering extended mode</span><br><span class="line"> (./test.tex</span><br><span class="line"> LaTeX2e &lt;2018-04-01&gt; patch level 5</span><br><span class="line"> (/usr/local/texlive/2018/texmf-dist/tex/latex/base/article.cls</span><br><span class="line"> Document Class: article 2014/09/29 v1.4h Standard LaTeX document class</span><br><span class="line"> (/usr/local/texlive/2018/texmf-dist/tex/latex/base/size10.clo)) (./test.aux)</span><br><span class="line"> &gt; \section=\long macro:</span><br><span class="line"> -&gt;\@startsection &#123;section&#125;&#123;1&#125;&#123;\z@ &#125;&#123;-3.5ex \@plus -1ex \@minus -.2ex&#125;&#123;2.3ex \@p</span><br><span class="line"> lus .2ex&#125;&#123;\normalfont \Large \bfseries &#125;.</span><br><span class="line"> l.3 \show\section</span><br><span class="line"></span><br><span class="line"> ?</span><br></pre></td></tr></table></figure>
 
-<p>这就很奇怪了，为什么超出了范围呢？这个代码在 x86 平台上是可以正常通过的啊！！！于是乎我尝试使用 <code>-O0</code> 来编译想要调试一下，在调试之前，我跑了一下回归测试，发现居然通过了！怎么回事？是我哪儿搞错了吗？我再次尝试 <code>-O2</code> 优化，回归测试依然不过。既然 <code>-O0</code> 编译是正常的那么调试这个版本就没有意义了，为此我使用 <code>-O2 -g</code> 来编译并对其进行调试，发现其在执行 <code>rint()</code> 函数的时候出现了异常，如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">1317    ftoi2(PG_FUNCTION_ARGS)</span><br><span class="line">1318    &#123;</span><br><span class="line">1319    	float4	num = PG_GETARG_FLOAT4(0);</span><br><span class="line">1320</span><br><span class="line">1321    	/*</span><br><span class="line">1322    	 * Get rid of any fractional part in the input.  This is so we don&#x27;t fail</span><br><span class="line">(gdb) n</span><br><span class="line">1326    	num = rint(num);</span><br><span class="line">(gdb) p num</span><br><span class="line">$15 = 32767.4004</span><br><span class="line">(gdb) n</span><br><span class="line">1329    	if (unlikely(isnan(num) || !FLOAT4_FITS_IN_INT16(num)))</span><br><span class="line">(gdb) p num</span><br><span class="line">$15 = 32768</span><br></pre></td></tr></table></figure>
+<p>注意第 10 行的输出，<code>\section=\long macro:</code> 这里就是关于 <code>\section</code> 命令的定义。</p>
+<h2 id="texdef-查看命令定义"><a href="#texdef-查看命令定义" class="headerlink" title="texdef 查看命令定义"></a><code>texdef</code> 查看命令定义</h2><p><code>texdef</code> 时一个 shell 命令，我们可以直接在 shell 中执行，例如，我们想看 <code>\section</code> 命令的定义，可以在 shell 中输入 <code>texdef section</code>，其输出结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ texdef section</span><br><span class="line"></span><br><span class="line">\section:</span><br><span class="line">undefined</span><br></pre></td></tr></table></figure>
 
-<p>上面出现了异常，正常情况下调用了 <code>rint()</code> 函数之后应该返回 <code>32767</code>，然而这里却返回了 <code>32768</code>。</p>
-<p>为了方便申威那边的人员调试，我将这个用例进行了简化，最开始我是直接调用 <code>rint()</code> 函数（如下所示），发现这样做并不能重现这个问题。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat test.c</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;math.h&gt;</span></span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(void)</span><br><span class="line">&#123;</span><br><span class="line">    float num = 32767.4;</span><br><span class="line">    float t = rint(num);</span><br><span class="line">    printf(&quot;rint(%f) = %d\n&quot;, num, (short) t);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O2 -g -o t2 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t2</span></span><br><span class="line">rint(32767.400391) = 32767</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O0 -g -o t0 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t0</span></span><br><span class="line">rint(32767.400391) = 32767</span><br></pre></td></tr></table></figure>
+<p>为什么 <code>section</code> 命令没有定义？这里的例子其实与上面的稍微有点不一样，上面我们使用的是 <code>latex</code> 来编译的，而 <code>texdef</code> 查看的是原 <code>TeX</code> 命令的定义而非 <code>LaTeX</code> 命令的定义，因此我们需要将其换为 <code>latexdef</code>，其结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ latexdef section</span><br><span class="line"></span><br><span class="line">\section:</span><br><span class="line">\long macro:-&gt;\@startsection &#123;section&#125;&#123;1&#125;&#123;\z@ &#125;&#123;-3.5ex \@plus -1ex \@minus -.2ex&#125;&#123;2.3ex \@plus .2ex&#125;&#123;\normalfont \Large \bfseries &#125;</span><br></pre></td></tr></table></figure>
 
-<p>上面的测试一切都是正常的。为什么在我们的数据库代码中就不行呢？考虑到数据库的代码是通过函数调用的，因此我将其封装成函数调用来进行测试。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat test.c</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;math.h&gt;</span></span><br><span class="line"></span><br><span class="line">void</span><br><span class="line">ftoi2(float num)</span><br><span class="line">&#123;</span><br><span class="line">    float t = rint(num);</span><br><span class="line">    printf(&quot;rint(%f) = %d\n&quot;, num, (short) t);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(void)</span><br><span class="line">&#123;</span><br><span class="line">    ftoi2(32767.4);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O2 -g -o t2 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t2</span></span><br><span class="line">rint(32767.400391) = -32768</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O0 -g -o t0 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t0</span></span><br><span class="line">rint(32767.400391) = 32767</span><br></pre></td></tr></table></figure>
-
-<p>是不是很神奇！！！反正我是被惊艳到了。现在，问题得到复现了，从上面的结果来看，可以肯定的是申威平台上的 GCC 编译器优化存在问题，从而导致了计算结果错误。看到这里，我就没办法继续深入下去了，主要还是由于对申威平台不了解、不熟悉他的汇编指令，因此，我将这个问题转给了申威的人继续跟踪，期待这个问题能早日解决。</p>
-<p>当前主流的趋势是国产替代，然而我们还是应该要认识到自身与西方国家差距，不能光靠 PPT。只有当潮水退去时，您才知道谁一直在裸泳。希望国产软件不是那个一直裸泳的。</p>
-<div class="just-for-fun">
-笑林广记 - 监生娘娘
-
-<p>监生至城隍庙，傍有监生案，塑监生娘娘像。<br>归谓妻曰：“原来我们监生恁般尊贵，连你的像，早已都塑在城隍庙里了。”</p>
-</div>
+<p><code>latexdef</code> 命令提供了很多选项给用户选择，关于如何使用 <code>latexdef</code> 请使用 <code>latexdef --help</code> 查看帮助手册。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://tex.stackexchange.com/questions/36955/display-source-for-a-command">https://tex.stackexchange.com/questions/36955/display-source-for-a-command</a></p>
 ]]></content>
       <categories>
-        <category>杂项</category>
+        <category>排版</category>
       </categories>
       <tags>
-        <tag>BUG</tag>
-        <tag>Sunway</tag>
-        <tag>Compiler</tag>
+        <tag>LaTeX</tag>
       </tags>
   </entry>
   <entry>
@@ -7048,6 +7041,45 @@ index 16ab2238e7..6c19749194 100644
       </categories>
       <tags>
         <tag>tmux</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>申威平台 float 到 short 类型转换的编译器优化问题</title>
+    <url>/2022/02/sunway-float-to-short-compiler-bug/</url>
+    <content><![CDATA[<p>最近在做申威平台的兼容时发现一个关于编译器优化的 BUG。第一次遇到编译器优化的问题，因此在这里对其进行简要的记录。</p>
+<span id="more"></span>
+
+<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><p>下面是此次主角的基本信息，包括 CPU 硬件、操作系统和 GCC 编译器信息。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> lscpu</span></span><br><span class="line">架构：           sw_64</span><br><span class="line">CPU 运行模式：   64-bit</span><br><span class="line">字节序：         Little Endian</span><br><span class="line">Address sizes:   48 bits physical, 53 bits virtual</span><br><span class="line">CPU:             64</span><br><span class="line">在线 CPU 列表：  0-63</span><br><span class="line">每个核的线程数： 1</span><br><span class="line">每个座的核数：   32</span><br><span class="line">座：             2</span><br><span class="line">NUMA 节点：      2</span><br><span class="line">厂商 ID：        sunway</span><br><span class="line">CPU 系列：       6</span><br><span class="line">型号：           49</span><br><span class="line">型号名称：       SW3231 CPU @ 2.40GHz</span><br><span class="line">CPU MHz：        2400.00</span><br><span class="line">BogoMIPS：       4800.00</span><br><span class="line">L1d 缓存：       2 MiB</span><br><span class="line">L1i 缓存：       2 MiB</span><br><span class="line">L2 缓存：        32 MiB</span><br><span class="line">L3 缓存：        64 MiB</span><br><span class="line">NUMA 节点0 CPU： 0-31</span><br><span class="line">NUMA 节点1 CPU： 32-63</span><br><span class="line">标记：           fpu simd vpn upn cpuid</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> uname -a</span></span><br><span class="line">Linux localhost.localdomain 4.19.90-25.0.v2101.ky10.sw_64 #1 SMP Wed Jun 16 18:08:09 CST 2021 sw_64 sw_64 sw_64 GNU/Linux</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc --version</span></span><br><span class="line">gcc (GCC) 8.3.0 20190222 (Kylin 8.3.0-4)</span><br><span class="line">Copyright (C) 2018 Free Software Foundation, Inc.</span><br><span class="line">This is free software; see the source for copying conditions.  There is NO</span><br><span class="line">warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</span><br></pre></td></tr></table></figure>
+
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>这个问题是在进行数据库产品兼容互认证的时候发现的。我当时采用 <code>-O2</code> 在该平台上编译代码，随后跑回归测试，发现回归测试失败，其中一条信息如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"> -- test edge-case coercions to integer</span><br><span class="line"> SELECT &#x27;32767.4&#x27;::float4::int2;</span><br><span class="line"><span class="deletion">- int2</span></span><br><span class="line"><span class="comment">--------</span></span><br><span class="line"><span class="deletion">- 32767</span></span><br><span class="line"><span class="deletion">-(1 row)</span></span><br><span class="line"><span class="addition">+ERROR:  smallint out of range</span></span><br></pre></td></tr></table></figure>
+
+<p>这就很奇怪了，为什么超出了范围呢？这个代码在 x86 平台上是可以正常通过的啊！！！于是乎我尝试使用 <code>-O0</code> 来编译想要调试一下，在调试之前，我跑了一下回归测试，发现居然通过了！怎么回事？是我哪儿搞错了吗？我再次尝试 <code>-O2</code> 优化，回归测试依然不过。既然 <code>-O0</code> 编译是正常的那么调试这个版本就没有意义了，为此我使用 <code>-O2 -g</code> 来编译并对其进行调试，发现其在执行 <code>rint()</code> 函数的时候出现了异常，如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">1317    ftoi2(PG_FUNCTION_ARGS)</span><br><span class="line">1318    &#123;</span><br><span class="line">1319    	float4	num = PG_GETARG_FLOAT4(0);</span><br><span class="line">1320</span><br><span class="line">1321    	/*</span><br><span class="line">1322    	 * Get rid of any fractional part in the input.  This is so we don&#x27;t fail</span><br><span class="line">(gdb) n</span><br><span class="line">1326    	num = rint(num);</span><br><span class="line">(gdb) p num</span><br><span class="line">$15 = 32767.4004</span><br><span class="line">(gdb) n</span><br><span class="line">1329    	if (unlikely(isnan(num) || !FLOAT4_FITS_IN_INT16(num)))</span><br><span class="line">(gdb) p num</span><br><span class="line">$15 = 32768</span><br></pre></td></tr></table></figure>
+
+<p>上面出现了异常，正常情况下调用了 <code>rint()</code> 函数之后应该返回 <code>32767</code>，然而这里却返回了 <code>32768</code>。</p>
+<p>为了方便申威那边的人员调试，我将这个用例进行了简化，最开始我是直接调用 <code>rint()</code> 函数（如下所示），发现这样做并不能重现这个问题。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat test.c</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;math.h&gt;</span></span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(void)</span><br><span class="line">&#123;</span><br><span class="line">    float num = 32767.4;</span><br><span class="line">    float t = rint(num);</span><br><span class="line">    printf(&quot;rint(%f) = %d\n&quot;, num, (short) t);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O2 -g -o t2 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t2</span></span><br><span class="line">rint(32767.400391) = 32767</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O0 -g -o t0 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t0</span></span><br><span class="line">rint(32767.400391) = 32767</span><br></pre></td></tr></table></figure>
+
+<p>上面的测试一切都是正常的。为什么在我们的数据库代码中就不行呢？考虑到数据库的代码是通过函数调用的，因此我将其封装成函数调用来进行测试。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat test.c</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash">include &lt;math.h&gt;</span></span><br><span class="line"></span><br><span class="line">void</span><br><span class="line">ftoi2(float num)</span><br><span class="line">&#123;</span><br><span class="line">    float t = rint(num);</span><br><span class="line">    printf(&quot;rint(%f) = %d\n&quot;, num, (short) t);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(void)</span><br><span class="line">&#123;</span><br><span class="line">    ftoi2(32767.4);</span><br><span class="line">    return 0;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O2 -g -o t2 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t2</span></span><br><span class="line">rint(32767.400391) = -32768</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> gcc -O0 -g -o t0 test.c -lm</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./t0</span></span><br><span class="line">rint(32767.400391) = 32767</span><br></pre></td></tr></table></figure>
+
+<p>是不是很神奇！！！反正我是被惊艳到了。现在，问题得到复现了，从上面的结果来看，可以肯定的是申威平台上的 GCC 编译器优化存在问题，从而导致了计算结果错误。看到这里，我就没办法继续深入下去了，主要还是由于对申威平台不了解、不熟悉他的汇编指令，因此，我将这个问题转给了申威的人继续跟踪，期待这个问题能早日解决。</p>
+<p>当前主流的趋势是国产替代，然而我们还是应该要认识到自身与西方国家差距，不能光靠 PPT。只有当潮水退去时，您才知道谁一直在裸泳。希望国产软件不是那个一直裸泳的。</p>
+<div class="just-for-fun">
+笑林广记 - 监生娘娘
+
+<p>监生至城隍庙，傍有监生案，塑监生娘娘像。<br>归谓妻曰：“原来我们监生恁般尊贵，连你的像，早已都塑在城隍庙里了。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>BUG</tag>
+        <tag>Sunway</tag>
+        <tag>Compiler</tag>
       </tags>
   </entry>
   <entry>
