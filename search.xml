@@ -826,6 +826,45 @@
       </tags>
   </entry>
   <entry>
+    <title>OpenSSH 私钥转 RSA 私钥</title>
+    <url>/2022/01/convert-openssh-private-key-to-rsa-private-key/</url>
+    <content><![CDATA[<p>今天遇到关于私钥格式的问题，需要通过远程连接访问远端的服务器，该服务器是客户给的，然后通过 ssh 的方式访问，然而客户给的私钥是如下形式的：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-----BEGIN OPENSSH PRIVATE KEY-----</span><br><span class="line">b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAA...</span><br><span class="line">-----END OPENSSH PRIVATE KEY-----</span><br></pre></td></tr></table></figure>
+
+<p>通过 ssh 连接时报无效的格式，<code>Load key &quot;~/.ssh/openssh_id_rsa&quot;: invalid format</code>。本文简要记录一下解决方法。</p>
+<span id="more"></span>
+
+<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>我们可以通过工具将其转换为 <code>RSA</code> 格式的私钥，需要使用到 putty 工具。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo apt-get install putty</span></span><br></pre></td></tr></table></figure>
+
+<p>首先，我们通过 puttygen 将 OpenSSH 的私钥转换为 SSHv2 的中间格式。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> puttygen ~/.ssh/openssh_id_rsa -O private-sshcom -o ~/.ssh/sshv2_id_rsa</span></span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>~/.ssh/openssh_id_rsa</code> 是原始的 OpenSSH 私钥文件，<code>~/.ssh/sshv2_id_rsa</code> 是生成的中间文件（SSHv2 格式），其格式如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">---- BEGIN SSH2 ENCRYPTED PRIVATE KEY ----</span><br><span class="line">P2/56wAABa4AAAA3aWYtbW9kbntzaWdue3JzYS1wa2NzMS1za...</span><br><span class="line">---- END SSH2 ENCRYPTED PRIVATE KEY ----</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们使用 ssh-keygen 将 SSHv2 格式的文件转换为 RSA 格式的文件。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> ssh-keygen -i -f ~/.ssh/sshv2_id_rsa &gt; ~/.ssh/converted_id_rsa</span></span><br></pre></td></tr></table></figure>
+
+<p>最后，转换后的 RSA 私钥格式如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-----BEGIN RSA PRIVATE KEY-----</span><br><span class="line">MIIG5AIBAAKCAYEArwZXd5mI3XeOynhMIFWbRX1HoDWvXXO0C...</span><br><span class="line">-----END RSA PRIVATE KEY-----</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://federicofr.wordpress.com/2019/01/02/how-to-convert-openssh-private-keys-to-rsa-pem/">https://federicofr.wordpress.com/2019/01/02/how-to-convert-openssh-private-keys-to-rsa-pem/</a></p>
+<div class="just-for-fun">
+笑林广记 - 坐监
+
+<p>一监生妻屡劝其夫读书，因假寓于寺中，素无书箱，乃唤脚夫以罗担挑书先往。<br>脚夫中途疲甚，身坐担上，适生至，闻傍人语所坐《通鉴》，因怒责脚夫，夫谢罪曰：“小人因为不识字，一时坐了鉴（监），弗怪弗怪。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>OpenSSH</tag>
+        <tag>RSA</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 视图替换时更新输出列的 collation 问题</title>
     <url>/2022/02/create-or-replace-view-output-column-collation/</url>
     <content><![CDATA[<p>最近在邮件列表中发现 <a href="https://www.postgresql.org/message-id/17404-8a4a270ef30a6709@postgresql.org"><code>CREATE OR REPLACE VIEW</code> 存在一个 bug，无法更新输出列的 collation</a>。如下所示：</p>
@@ -898,45 +937,6 @@
       </categories>
       <tags>
         <tag>MacOS</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>OpenSSH 私钥转 RSA 私钥</title>
-    <url>/2022/01/convert-openssh-private-key-to-rsa-private-key/</url>
-    <content><![CDATA[<p>今天遇到关于私钥格式的问题，需要通过远程连接访问远端的服务器，该服务器是客户给的，然后通过 ssh 的方式访问，然而客户给的私钥是如下形式的：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-----BEGIN OPENSSH PRIVATE KEY-----</span><br><span class="line">b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAA...</span><br><span class="line">-----END OPENSSH PRIVATE KEY-----</span><br></pre></td></tr></table></figure>
-
-<p>通过 ssh 连接时报无效的格式，<code>Load key &quot;~/.ssh/openssh_id_rsa&quot;: invalid format</code>。本文简要记录一下解决方法。</p>
-<span id="more"></span>
-
-<h2 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h2><p>我们可以通过工具将其转换为 <code>RSA</code> 格式的私钥，需要使用到 putty 工具。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo apt-get install putty</span></span><br></pre></td></tr></table></figure>
-
-<p>首先，我们通过 puttygen 将 OpenSSH 的私钥转换为 SSHv2 的中间格式。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> puttygen ~/.ssh/openssh_id_rsa -O private-sshcom -o ~/.ssh/sshv2_id_rsa</span></span><br></pre></td></tr></table></figure>
-
-<p>其中 <code>~/.ssh/openssh_id_rsa</code> 是原始的 OpenSSH 私钥文件，<code>~/.ssh/sshv2_id_rsa</code> 是生成的中间文件（SSHv2 格式），其格式如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">---- BEGIN SSH2 ENCRYPTED PRIVATE KEY ----</span><br><span class="line">P2/56wAABa4AAAA3aWYtbW9kbntzaWdue3JzYS1wa2NzMS1za...</span><br><span class="line">---- END SSH2 ENCRYPTED PRIVATE KEY ----</span><br></pre></td></tr></table></figure>
-
-<p>接着，我们使用 ssh-keygen 将 SSHv2 格式的文件转换为 RSA 格式的文件。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> ssh-keygen -i -f ~/.ssh/sshv2_id_rsa &gt; ~/.ssh/converted_id_rsa</span></span><br></pre></td></tr></table></figure>
-
-<p>最后，转换后的 RSA 私钥格式如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-----BEGIN RSA PRIVATE KEY-----</span><br><span class="line">MIIG5AIBAAKCAYEArwZXd5mI3XeOynhMIFWbRX1HoDWvXXO0C...</span><br><span class="line">-----END RSA PRIVATE KEY-----</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://federicofr.wordpress.com/2019/01/02/how-to-convert-openssh-private-keys-to-rsa-pem/">https://federicofr.wordpress.com/2019/01/02/how-to-convert-openssh-private-keys-to-rsa-pem/</a></p>
-<div class="just-for-fun">
-笑林广记 - 坐监
-
-<p>一监生妻屡劝其夫读书，因假寓于寺中，素无书箱，乃唤脚夫以罗担挑书先往。<br>脚夫中途疲甚，身坐担上，适生至，闻傍人语所坐《通鉴》，因怒责脚夫，夫谢罪曰：“小人因为不识字，一时坐了鉴（监），弗怪弗怪。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>OpenSSH</tag>
-        <tag>RSA</tag>
       </tags>
   </entry>
   <entry>
@@ -2664,35 +2664,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Oracle wm_concat 函数说明</title>
-    <url>/2021/03/oracle-wm-concat/</url>
-    <content><![CDATA[<p>Oracle 数据库的 <code>wm_concat</code> 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。<br>本文主要介绍 <code>wm_concat</code> 函数的功能以及其在 PostgreSQL 数据库中的替换方法。</p>
-<span id="more"></span>
-
-<h2 id="测试用例"><a href="#测试用例" class="headerlink" title="测试用例"></a>测试用例</h2><p>本文将使用下面的测试用例来测试 <code>wm_concat</code> 函数以及其替代方法。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (col1 <span class="type">int</span>, col2 <span class="type">VARCHAR</span>(<span class="number">20</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Hello&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;world&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;this&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;is&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;a&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;test&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;wm_concat test&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<h2 id="Oracle"><a href="#Oracle" class="headerlink" title="Oracle"></a>Oracle</h2><p>在 Oracle 数据库中 <code>wm_concat</code> 没有相关的文档记录的，其输出如下所示。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, wm_concat(col2) <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> (col1);</span><br><span class="line"></span><br><span class="line">      COL1 WM_CONCAT(COL2)</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>由于 <code>wm_concat</code> 没有相关的文档记录，因此不建议使用该函数。其次，在 Oracle 12c 中 <code>wm_concat</code> 已经被移除了。更好的写法是通过 <code>listagg</code> 函数对其进行替换。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, <span class="built_in">listagg</span>(col2, <span class="string">&#x27;,&#x27;</span>) <span class="keyword">WITHIN</span> <span class="keyword">GROUP</span> (<span class="keyword">ORDER</span> <span class="keyword">BY</span> col2) <span class="keyword">AS</span> agg <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1;</span><br><span class="line"></span><br><span class="line">      COL1 AGG</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<h2 id="PostgreSQL"><a href="#PostgreSQL" class="headerlink" title="PostgreSQL"></a>PostgreSQL</h2><p>当我们将其迁移到 PostgreSQL 时，我们可以使用 <code>string_agg</code> 函数来替换 Oracle 中的 <code>wm_concat</code> 和 <code>listagg</code> 函数。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# SELECT col1, string_agg(col2, &#x27;,&#x27;) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">    1 | Hello,world,this,is,a,test</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres# SELECT col1, string_agg(col2, &#x27;,&#x27; ORDER BY col2) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    1 | a,Hello,is,test,this,world</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
-
-<p>默认情况下，<code>wm_concat</code> 函数是根据其聚合的列进行排序的，但是其排序的结果和 PostgreSQL 中不太一样，目前尚不清楚具体原因。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="http://psoug.org/definition/WM_CONCAT.htm">http://psoug.org/definition/WM_CONCAT.htm</a><br>[1] <a href="https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631">https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>Oracle</tag>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Oracle VARCHAR2 与 PostgreSQL VARCHAR 异同</title>
     <url>/2021/11/oracle-varchar2-vs-postgresql-varchar/</url>
     <content><![CDATA[<p>在 Oracle 迁移到 PostgreSQL 数据库的过程中，我们通常使用 PostgreSQL 中的 <code>VARCHAR</code> 类型替换 Oracle 中的 <code>VARCHAR2</code> 类型。本文将针对 Oracle 中的 <code>VARCHAR2</code> 类型和 PostgreSQL 中的 <code>VARCHAR</code> 类型进行简要的比较。</p>
@@ -2767,6 +2738,35 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
+    <title>Oracle wm_concat 函数说明</title>
+    <url>/2021/03/oracle-wm-concat/</url>
+    <content><![CDATA[<p>Oracle 数据库的 <code>wm_concat</code> 函数用于将多行数据聚合为单行，从而提供与特定值关联的数据列表，它将以逗号来分割列表。<br>本文主要介绍 <code>wm_concat</code> 函数的功能以及其在 PostgreSQL 数据库中的替换方法。</p>
+<span id="more"></span>
+
+<h2 id="测试用例"><a href="#测试用例" class="headerlink" title="测试用例"></a>测试用例</h2><p>本文将使用下面的测试用例来测试 <code>wm_concat</code> 函数以及其替代方法。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl (col1 <span class="type">int</span>, col2 <span class="type">VARCHAR</span>(<span class="number">20</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Hello&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;world&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;this&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;is&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;a&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;test&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;wm_concat test&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="Oracle"><a href="#Oracle" class="headerlink" title="Oracle"></a>Oracle</h2><p>在 Oracle 数据库中 <code>wm_concat</code> 没有相关的文档记录的，其输出如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, wm_concat(col2) <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> (col1);</span><br><span class="line"></span><br><span class="line">      COL1 WM_CONCAT(COL2)</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>由于 <code>wm_concat</code> 没有相关的文档记录，因此不建议使用该函数。其次，在 Oracle 12c 中 <code>wm_concat</code> 已经被移除了。更好的写法是通过 <code>listagg</code> 函数对其进行替换。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> col1, <span class="built_in">listagg</span>(col2, <span class="string">&#x27;,&#x27;</span>) <span class="keyword">WITHIN</span> <span class="keyword">GROUP</span> (<span class="keyword">ORDER</span> <span class="keyword">BY</span> col2) <span class="keyword">AS</span> agg <span class="keyword">FROM</span> tbl <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1;</span><br><span class="line"></span><br><span class="line">      COL1 AGG</span><br><span class="line"><span class="comment">---------- --------------------------------------------------------------------------------</span></span><br><span class="line">         <span class="number">1</span> Hello,test,a,<span class="keyword">is</span>,this,world</span><br><span class="line">         <span class="number">2</span> wm_concat test</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="PostgreSQL"><a href="#PostgreSQL" class="headerlink" title="PostgreSQL"></a>PostgreSQL</h2><p>当我们将其迁移到 PostgreSQL 时，我们可以使用 <code>string_agg</code> 函数来替换 Oracle 中的 <code>wm_concat</code> 和 <code>listagg</code> 函数。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# SELECT col1, string_agg(col2, &#x27;,&#x27;) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">    1 | Hello,world,this,is,a,test</span><br><span class="line">(2 rows)</span><br><span class="line"></span><br><span class="line">postgres# SELECT col1, string_agg(col2, &#x27;,&#x27; ORDER BY col2) FROM tbl GROUP BY col1;</span><br><span class="line"> col1 |         string_agg</span><br><span class="line">------+----------------------------</span><br><span class="line">    1 | a,Hello,is,test,this,world</span><br><span class="line">    2 | wm_concat test</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下，<code>wm_concat</code> 函数是根据其聚合的列进行排序的，但是其排序的结果和 PostgreSQL 中不太一样，目前尚不清楚具体原因。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="http://psoug.org/definition/WM_CONCAT.htm">http://psoug.org/definition/WM_CONCAT.htm</a><br>[1] <a href="https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631">https://asktom.oracle.com/pls/apex/f?p=100:11:::NO:RP:P11_QUESTION_ID:9529613900346315631</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>Oracle</tag>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Ping 权限拒绝</title>
     <url>/2018/09/ping-permission-denied/</url>
     <content><![CDATA[<p>今天在 CentOS 上遇到一个奇怪的问题，ping 程序在 root 用户下能正常使用，但是在非 root 用户下则出现如下错误：</p>
@@ -2795,6 +2795,43 @@ table th:nth-of-type(2) {
       </categories>
       <tags>
         <tag>ping</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 修改配置参数</title>
+    <url>/2020/06/postgresql-alter-system/</url>
+    <content><![CDATA[<p>今天在使用 <code>ALTER SYSTEM</code> 来修改 PostgreSQL 参数时遇到无法启动数据库的问题。如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# ALTER SYSTEM SET shared_preload_libraries TO &#x27;pg_buffercache,passwordcheck&#x27;;</span><br><span class="line">ALTER SYSTEM</span><br><span class="line">postgres=# \q</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">waiting for server to shut down.... done</span><br><span class="line">server stopped</span><br><span class="line">waiting for server to start....postgres: could not access directory &quot;/Users/japinli/Codes/postgresql/pg/data&quot;: No such file or directory</span><br><span class="line">Run initdb or pg_basebackup to initialize a PostgreSQL data directory.</span><br><span class="line"> stopped waiting</span><br><span class="line">pg_ctl: could not start server</span><br><span class="line">Examine the log output.</span><br></pre></td></tr></table></figure>
+
+<p>你是否也遇到了这样的问题呢？其实这都是由于我们先入为主的思想导致的，<code>ALTER SYSTEM</code> 支持以逗号分割的列表，而这类参数的修改不需要使用引号。因此，正确的使用方式如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ALTER SYSTEM SET shared_preload_libraries TO pg_buffercache, passwordcheck;</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>首先我们看看 pg_ctl 在启动时是如何加载 <code>shared_preload_libraries</code> 配置文件的。这里我们需要注意的是 pg_ctl 最终还是调用 postgres 来启动。通过分析我们可以发现 <code>shared_preload_libraries</code> 参数是在 <code>PostmasterMain()</code> 函数中调用 <code>process_shared_preload_libraries()</code> 来处理的，该函数定义如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">process_shared_preload_libraries</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">true</span>;</span><br><span class="line">    load_libraries(shared_preload_libraries_string,</span><br><span class="line">                   <span class="string">&quot;shared_preload_libraries&quot;</span>,</span><br><span class="line">                   <span class="literal">false</span>);</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，<code>shared_preload_libraries</code> 是通过 <code>load_libraries()</code> 函数处理的，<code>load_libraries()</code> 函数则是通过 <code>SplitDirectoriesString()</code> 函数来处理的。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">SplitDirectoriesString</span><span class="params">(<span class="keyword">char</span> *rawstring, <span class="keyword">char</span> separator,</span></span></span><br><span class="line"><span class="params"><span class="function">                       List **namelist)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span>       *nextp = rawstring;</span><br><span class="line">    <span class="keyword">bool</span>        done = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">    *namelist = NIL;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">        nextp++;                <span class="comment">/* skip leading whitespace */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;            <span class="comment">/* allow empty string */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* At the top of the loop, we are at start of a new directory. */</span></span><br><span class="line">    <span class="keyword">do</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">char</span>       *curname;</span><br><span class="line">        <span class="keyword">char</span>       *endp;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Quoted name --- collapse quote-quote pairs */</span></span><br><span class="line">            curname = nextp + <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">for</span> (;;)</span><br><span class="line">            &#123;</span><br><span class="line">                endp = <span class="built_in">strchr</span>(nextp + <span class="number">1</span>, <span class="string">&#x27;&quot;&#x27;</span>);</span><br><span class="line">                <span class="keyword">if</span> (endp == <span class="literal">NULL</span>)</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* mismatched quotes */</span></span><br><span class="line">                <span class="keyword">if</span> (endp[<span class="number">1</span>] != <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">                    <span class="keyword">break</span>;      <span class="comment">/* found end of quoted name */</span></span><br><span class="line">                <span class="comment">/* Collapse adjacent quotes into one quote, and look again */</span></span><br><span class="line">                memmove(endp, endp + <span class="number">1</span>, <span class="built_in">strlen</span>(endp));</span><br><span class="line">                nextp = endp;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/* endp now points at the terminating quote */</span></span><br><span class="line">            nextp = endp + <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Unquoted name --- extends to separator or end of string */</span></span><br><span class="line">            curname = endp = nextp;</span><br><span class="line">            <span class="keyword">while</span> (*nextp &amp;&amp; *nextp != separator)</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="comment">/* trailing whitespace should not be included in name */</span></span><br><span class="line">                <span class="keyword">if</span> (!scanner_isspace(*nextp))</span><br><span class="line">                    endp = nextp + <span class="number">1</span>;</span><br><span class="line">                nextp++;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (curname == endp)</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* empty unquoted name not allowed */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">            nextp++;            <span class="comment">/* skip trailing whitespace */</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == separator)</span><br><span class="line">        &#123;</span><br><span class="line">            nextp++;</span><br><span class="line">            <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">                nextp++;        <span class="comment">/* skip leading whitespace for next */</span></span><br><span class="line">            <span class="comment">/* we expect another name, so done remains false */</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">            done = <span class="literal">true</span>;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;       <span class="comment">/* invalid syntax */</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Now safe to overwrite separator with a null */</span></span><br><span class="line">        *endp = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Truncate path if it&#x27;s overlength */</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">strlen</span>(curname) &gt;= MAXPGPATH)</span><br><span class="line">            curname[MAXPGPATH - <span class="number">1</span>] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Finished isolating current name --- add it to list</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        curname = pstrdup(curname);</span><br><span class="line">        canonicalize_path(curname);</span><br><span class="line">        *namelist = lappend(*namelist, curname);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Loop back if we didn&#x27;t reach end of string */</span></span><br><span class="line">    &#125; <span class="keyword">while</span> (!done);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的 22-38 行代码，我们可以看到，postgres 在处理带有双引号的内容是将其作为一个整体来处理的，因此，我们的 <code>shared_preload_libraries</code> 配置无法通过。</p>
+<p>关于 <code>shared_preload_libraries</code> 的处理流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; PostmasterMain()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; process_shared_preload_libraries()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; load_libraries()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; SplitDirectoriesString()</span><br></pre></td></tr></table></figure>
+
+<p>那么为什么 <code>ALTER SYSTEM</code> 在写入时要加上双引号呢？我们先看看 <code>share_preload_libraries</code> 参数的相关设置。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &#123;<span class="string">&quot;shared_preload_libraries&quot;</span>, PGC_POSTMASTER, CLIENT_CONN_PRELOAD,</span><br><span class="line">        gettext_noop(<span class="string">&quot;Lists shared libraries to preload into server.&quot;</span>),</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</span><br><span class="line">    &#125;,</span><br><span class="line">    &amp;shared_preload_libraries_string,</span><br><span class="line">    <span class="string">&quot;&quot;</span>,</span><br><span class="line">    <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+
+<p>参数 <code>shared_preload_libraries</code> 的 <code>flag</code> 为 <code>GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</code>，而我们使用的 <code>&#39;pg_buffercache,passwordcheck&#39;</code> 是作为一个整体，而不是 LIST 来处理的，因此，在写入是由于有特殊的分割符，所以就需要加上双引号，从而导致错误。</p>
+<p>关于 <code>ALTER SYSTEM</code> 命令的处理可以查看 <code>gram.y</code> 中的 <code>AlterSystemStmt</code> 定义，随后接着分析 <code>AlterSystemSetConfigFile()</code> 函数，其处理流程大致如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; AlterSystemSetConfigFile()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; ExtractSetVariableArgs()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; ExtractSetVariableArgs()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; flatten_set_variable_args()</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/sql-altersystem.html">https://www.postgresql.org/docs/10/sql-altersystem.html</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -2869,43 +2906,6 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 修改配置参数</title>
-    <url>/2020/06/postgresql-alter-system/</url>
-    <content><![CDATA[<p>今天在使用 <code>ALTER SYSTEM</code> 来修改 PostgreSQL 参数时遇到无法启动数据库的问题。如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# ALTER SYSTEM SET shared_preload_libraries TO &#x27;pg_buffercache,passwordcheck&#x27;;</span><br><span class="line">ALTER SYSTEM</span><br><span class="line">postgres=# \q</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">waiting for server to shut down.... done</span><br><span class="line">server stopped</span><br><span class="line">waiting for server to start....postgres: could not access directory &quot;/Users/japinli/Codes/postgresql/pg/data&quot;: No such file or directory</span><br><span class="line">Run initdb or pg_basebackup to initialize a PostgreSQL data directory.</span><br><span class="line"> stopped waiting</span><br><span class="line">pg_ctl: could not start server</span><br><span class="line">Examine the log output.</span><br></pre></td></tr></table></figure>
-
-<p>你是否也遇到了这样的问题呢？其实这都是由于我们先入为主的思想导致的，<code>ALTER SYSTEM</code> 支持以逗号分割的列表，而这类参数的修改不需要使用引号。因此，正确的使用方式如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ALTER SYSTEM SET shared_preload_libraries TO pg_buffercache, passwordcheck;</span><br></pre></td></tr></table></figure>
-
-<span id="more"></span>
-
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>首先我们看看 pg_ctl 在启动时是如何加载 <code>shared_preload_libraries</code> 配置文件的。这里我们需要注意的是 pg_ctl 最终还是调用 postgres 来启动。通过分析我们可以发现 <code>shared_preload_libraries</code> 参数是在 <code>PostmasterMain()</code> 函数中调用 <code>process_shared_preload_libraries()</code> 来处理的，该函数定义如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">process_shared_preload_libraries</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">true</span>;</span><br><span class="line">    load_libraries(shared_preload_libraries_string,</span><br><span class="line">                   <span class="string">&quot;shared_preload_libraries&quot;</span>,</span><br><span class="line">                   <span class="literal">false</span>);</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到，<code>shared_preload_libraries</code> 是通过 <code>load_libraries()</code> 函数处理的，<code>load_libraries()</code> 函数则是通过 <code>SplitDirectoriesString()</code> 函数来处理的。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">SplitDirectoriesString</span><span class="params">(<span class="keyword">char</span> *rawstring, <span class="keyword">char</span> separator,</span></span></span><br><span class="line"><span class="params"><span class="function">                       List **namelist)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span>       *nextp = rawstring;</span><br><span class="line">    <span class="keyword">bool</span>        done = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">    *namelist = NIL;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">        nextp++;                <span class="comment">/* skip leading whitespace */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;            <span class="comment">/* allow empty string */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* At the top of the loop, we are at start of a new directory. */</span></span><br><span class="line">    <span class="keyword">do</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">char</span>       *curname;</span><br><span class="line">        <span class="keyword">char</span>       *endp;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Quoted name --- collapse quote-quote pairs */</span></span><br><span class="line">            curname = nextp + <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">for</span> (;;)</span><br><span class="line">            &#123;</span><br><span class="line">                endp = <span class="built_in">strchr</span>(nextp + <span class="number">1</span>, <span class="string">&#x27;&quot;&#x27;</span>);</span><br><span class="line">                <span class="keyword">if</span> (endp == <span class="literal">NULL</span>)</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* mismatched quotes */</span></span><br><span class="line">                <span class="keyword">if</span> (endp[<span class="number">1</span>] != <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">                    <span class="keyword">break</span>;      <span class="comment">/* found end of quoted name */</span></span><br><span class="line">                <span class="comment">/* Collapse adjacent quotes into one quote, and look again */</span></span><br><span class="line">                memmove(endp, endp + <span class="number">1</span>, <span class="built_in">strlen</span>(endp));</span><br><span class="line">                nextp = endp;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/* endp now points at the terminating quote */</span></span><br><span class="line">            nextp = endp + <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Unquoted name --- extends to separator or end of string */</span></span><br><span class="line">            curname = endp = nextp;</span><br><span class="line">            <span class="keyword">while</span> (*nextp &amp;&amp; *nextp != separator)</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="comment">/* trailing whitespace should not be included in name */</span></span><br><span class="line">                <span class="keyword">if</span> (!scanner_isspace(*nextp))</span><br><span class="line">                    endp = nextp + <span class="number">1</span>;</span><br><span class="line">                nextp++;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (curname == endp)</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* empty unquoted name not allowed */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">            nextp++;            <span class="comment">/* skip trailing whitespace */</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == separator)</span><br><span class="line">        &#123;</span><br><span class="line">            nextp++;</span><br><span class="line">            <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">                nextp++;        <span class="comment">/* skip leading whitespace for next */</span></span><br><span class="line">            <span class="comment">/* we expect another name, so done remains false */</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">            done = <span class="literal">true</span>;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;       <span class="comment">/* invalid syntax */</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Now safe to overwrite separator with a null */</span></span><br><span class="line">        *endp = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Truncate path if it&#x27;s overlength */</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">strlen</span>(curname) &gt;= MAXPGPATH)</span><br><span class="line">            curname[MAXPGPATH - <span class="number">1</span>] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Finished isolating current name --- add it to list</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        curname = pstrdup(curname);</span><br><span class="line">        canonicalize_path(curname);</span><br><span class="line">        *namelist = lappend(*namelist, curname);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Loop back if we didn&#x27;t reach end of string */</span></span><br><span class="line">    &#125; <span class="keyword">while</span> (!done);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从上面的 22-38 行代码，我们可以看到，postgres 在处理带有双引号的内容是将其作为一个整体来处理的，因此，我们的 <code>shared_preload_libraries</code> 配置无法通过。</p>
-<p>关于 <code>shared_preload_libraries</code> 的处理流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; PostmasterMain()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; process_shared_preload_libraries()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; load_libraries()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; SplitDirectoriesString()</span><br></pre></td></tr></table></figure>
-
-<p>那么为什么 <code>ALTER SYSTEM</code> 在写入时要加上双引号呢？我们先看看 <code>share_preload_libraries</code> 参数的相关设置。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &#123;<span class="string">&quot;shared_preload_libraries&quot;</span>, PGC_POSTMASTER, CLIENT_CONN_PRELOAD,</span><br><span class="line">        gettext_noop(<span class="string">&quot;Lists shared libraries to preload into server.&quot;</span>),</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</span><br><span class="line">    &#125;,</span><br><span class="line">    &amp;shared_preload_libraries_string,</span><br><span class="line">    <span class="string">&quot;&quot;</span>,</span><br><span class="line">    <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
-
-<p>参数 <code>shared_preload_libraries</code> 的 <code>flag</code> 为 <code>GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</code>，而我们使用的 <code>&#39;pg_buffercache,passwordcheck&#39;</code> 是作为一个整体，而不是 LIST 来处理的，因此，在写入是由于有特殊的分割符，所以就需要加上双引号，从而导致错误。</p>
-<p>关于 <code>ALTER SYSTEM</code> 命令的处理可以查看 <code>gram.y</code> 中的 <code>AlterSystemStmt</code> 定义，随后接着分析 <code>AlterSystemSetConfigFile()</code> 函数，其处理流程大致如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; AlterSystemSetConfigFile()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; ExtractSetVariableArgs()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; ExtractSetVariableArgs()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; flatten_set_variable_args()</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/sql-altersystem.html">https://www.postgresql.org/docs/10/sql-altersystem.html</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -4043,6 +4043,37 @@ Date:   Wed Feb 5 16:59:29 2020 -0300
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 类型转换时无效的类型输入</title>
+    <url>/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/</url>
+    <content><![CDATA[<p>最近在做 Oracle 迁移的时候发现一个类型错误，如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ERROR:  invalid input syntax for type numeric: &quot;null&quot;</span><br></pre></td></tr></table></figure>
+
+<p>这个问题其实很简单，就是原始数据里面包含 <code>&#39;null&#39;</code> 的字符串导致的。解决这个问题的办法就是将数据中为 <code>&#39;null&#39;</code> 的异常数据转换为正常数据。</p>
+<span id="more"></span>
+
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>这个问题是我们想要将 <code>varchar</code> 类型的字段转为 <code>numeric</code> 类型时出现的。原始数据有大约 60w 行记录，其中大部分都是可以之间通过 <code>cast</code> 转换为 <code>numeric</code> 类型的。通过下面的查询我们可以看到有 4 条记录存储了 <code>null</code> 字符串。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SELECT id, total_year FROM contract_export WHERE total_year !~ &#x27;[0-9.]+&#x27;;</span><br><span class="line">        id        | total_year</span><br><span class="line">------------------+------------</span><br><span class="line"> PG202006173J2995 | null</span><br><span class="line"> PG202007074K5842 | null</span><br><span class="line"> PG202005181L4194 | null</span><br><span class="line"> PG202005186D1908 | null</span><br><span class="line">(4 rows)</span><br></pre></td></tr></table></figure>
+
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>既然是数据异常，那么我们就要想法将异常数据转换为正常数据，这个可能就需要根据业务来确定异常的数据该如何进行转换。不过可以确定的是，我们可以通过 <code>CASE WHEN</code> 语句来处理异常数据。那么如果异常的数据过多怎么办？我们是否需要提供很多的 <code>WHEN</code> 分支呢？</p>
+<p>这里我们就需要查看异常数据是否有共性？如果有共性，那么我们可以通过正则表达式将其刷选出来。如果异常数据没有共性呢？那么我们是否可以方向思考呢？通过正常数据的共性来匹配正常数据，从而达到刷选异常数据的目的。</p>
+<p>这个问题的解决方法其实在上面的 SQL 查询中已经给出了，我们可以使用下面的语句来进行处理。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="keyword">LIKE</span> <span class="string">&#x27;%null%&#x27;</span> <span class="keyword">THEN</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">     <span class="keyword">ELSE</span> total_year</span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="operator">!</span><span class="operator">~</span> <span class="string">&#x27;[0-9.]+&#x27;</span> <span class="keyword">THEN</span> total_year</span><br><span class="line">	 <span class="keyword">ELSE</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br></pre></td></tr></table></figure>
+
+<p>为了防止其出现 <code>NULL</code> 值导致类型转换失败，我们可以使用 <code>COALESCE</code> 来处理 <code>NULL</code> 值。</p>
+<div class="just-for-fun">
+笑林广记 - 狗父
+
+<p>陆某，善说话，有邻妇性不好笑，<br>其友谓之曰：“汝能说一字令彼妇笑，又说一字令彼妇骂，则吾愿以酒菜享汝。”<br>一日，妇立门前，适门前卧一犬，陆向之长跪曰：“爷！”<br>妇见之不觉好笑，陆复仰首向妇曰：“娘！”<br>妇闻之大骂。</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 行类型规则导出错误</title>
     <url>/2022/01/postgresql-invalid-dump-for-rules/</url>
     <content><![CDATA[<p>最近在浏览邮件列表时发现通过 pg_dump 导出带有行类型的规则导出之后无法导入到数据库中，已确认为 bug，目前已被修复。</p>
@@ -4100,90 +4131,6 @@ Date:   Thu Jan 13 17:49:25 2022 -0500
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 类型转换时无效的类型输入</title>
-    <url>/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/</url>
-    <content><![CDATA[<p>最近在做 Oracle 迁移的时候发现一个类型错误，如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ERROR:  invalid input syntax for type numeric: &quot;null&quot;</span><br></pre></td></tr></table></figure>
-
-<p>这个问题其实很简单，就是原始数据里面包含 <code>&#39;null&#39;</code> 的字符串导致的。解决这个问题的办法就是将数据中为 <code>&#39;null&#39;</code> 的异常数据转换为正常数据。</p>
-<span id="more"></span>
-
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>这个问题是我们想要将 <code>varchar</code> 类型的字段转为 <code>numeric</code> 类型时出现的。原始数据有大约 60w 行记录，其中大部分都是可以之间通过 <code>cast</code> 转换为 <code>numeric</code> 类型的。通过下面的查询我们可以看到有 4 条记录存储了 <code>null</code> 字符串。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SELECT id, total_year FROM contract_export WHERE total_year !~ &#x27;[0-9.]+&#x27;;</span><br><span class="line">        id        | total_year</span><br><span class="line">------------------+------------</span><br><span class="line"> PG202006173J2995 | null</span><br><span class="line"> PG202007074K5842 | null</span><br><span class="line"> PG202005181L4194 | null</span><br><span class="line"> PG202005186D1908 | null</span><br><span class="line">(4 rows)</span><br></pre></td></tr></table></figure>
-
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>既然是数据异常，那么我们就要想法将异常数据转换为正常数据，这个可能就需要根据业务来确定异常的数据该如何进行转换。不过可以确定的是，我们可以通过 <code>CASE WHEN</code> 语句来处理异常数据。那么如果异常的数据过多怎么办？我们是否需要提供很多的 <code>WHEN</code> 分支呢？</p>
-<p>这里我们就需要查看异常数据是否有共性？如果有共性，那么我们可以通过正则表达式将其刷选出来。如果异常数据没有共性呢？那么我们是否可以方向思考呢？通过正常数据的共性来匹配正常数据，从而达到刷选异常数据的目的。</p>
-<p>这个问题的解决方法其实在上面的 SQL 查询中已经给出了，我们可以使用下面的语句来进行处理。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="keyword">LIKE</span> <span class="string">&#x27;%null%&#x27;</span> <span class="keyword">THEN</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">     <span class="keyword">ELSE</span> total_year</span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="operator">!</span><span class="operator">~</span> <span class="string">&#x27;[0-9.]+&#x27;</span> <span class="keyword">THEN</span> total_year</span><br><span class="line">	 <span class="keyword">ELSE</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br></pre></td></tr></table></figure>
-
-<p>为了防止其出现 <code>NULL</code> 值导致类型转换失败，我们可以使用 <code>COALESCE</code> 来处理 <code>NULL</code> 值。</p>
-<div class="just-for-fun">
-笑林广记 - 狗父
-
-<p>陆某，善说话，有邻妇性不好笑，<br>其友谓之曰：“汝能说一字令彼妇笑，又说一字令彼妇骂，则吾愿以酒菜享汝。”<br>一日，妇立门前，适门前卧一犬，陆向之长跪曰：“爷！”<br>妇见之不觉好笑，陆复仰首向妇曰：“娘！”<br>妇闻之大骂。</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 使用 JDBC 调用存储过程错误</title>
-    <url>/2021/11/postgresql-jdbc-call-procedure/</url>
-    <content><![CDATA[<p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
-<span id="more"></span>
-
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在将 Oracle 中的存储过程迁移到 PostgreSQL 中，我们遇到了一个如下的存储过程（经过了简化）：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> proc(a <span class="keyword">INOUT</span> <span class="type">bigint</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span>(a);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
-
-<p>随后在 Java 程序中使用 JDBC 去调用这个存储过程，调用代码如下所示：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">CallableStatement proc = conn.prepareCall(<span class="string">&quot;&#123;call proc( ? )&#125;&quot;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>运行时程序报如下错误：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2674)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2364)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:354)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:484)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:404)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:162)</span><br><span class="line">        at org.postgresql.jdbc.PgCallableStatement.executeWithFlags(PgCallableStatement.java:83)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.execute(PgPreparedStatement.java:151)</span><br><span class="line">        at PGTest.main(PGTest.java:52)</span><br><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br></pre></td></tr></table></figure>
-
-<p>错误提示我们调用的是一个存储过程，应该使用 <code>CALL</code> 来调用存储过程？WTF? 难道我在程序里使用的不是 <code>CALL</code> 么？真的是老眼昏花了吗？</p>
-<p>经过一番尝试之后发现还是不能解决这个问题，当时由于敢进度，就选择了曲线救国的思路，将存储过程改为函数，折腾了一番之后总算是可以用了。</p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>晚上回来继续研究，这次选择了查看<a href="https://jdbc.postgresql.org/documentation/head/callproc.html">官方文档</a>，浏览了一下发现 PostgreSQL 的 JDBC 在处理存储过程没有返回值的时候需要设置 <code>escapeSyntaxCallMode</code> 参数。如下所示：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Ensure EscapeSyntaxCallmode property set to support procedures if no return value</span></span><br><span class="line">props.setProperty(<span class="string">&quot;escapeSyntaxCallMode&quot;</span>, <span class="string">&quot;callIfNoReturn&quot;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>根据注释来看，设置 <code>escapeSyntaxCallMode</code> 为 <code>callIfNoReturn</code> 可以确保存储过程在没有返回值的时候依然正常工作，经验证，通过这个设置，存储过程便能正确执行了。</p>
-<p>这个问题虽然不大，但是对于不懂 Java 的我来说定位还是比较费事的，不过还好 PostgreSQL 的 jdbc 文档比较完善，虽然走了一些弯路，从这个也能看出，官方文档才是第一手资料，其他的都是浮云啊。</p>
-<p>此外，<a href="https://jdbc.postgresql.org/documentation/head/connect.html">这里</a> 包含了 PostgreSQL 数据库 jdbc 连接的所有参数信息。拿上面的 <code>escapeSyntaxCallMode</code> 来说，您可以看到如下内容：</p>
-<blockquote>
-<ul>
-<li><p>escapeSyntaxCallMode = String</p>
-<p>Specifies how the driver transforms JDBC escape call syntax into underlying SQL, for invoking procedures or functions. In escapeSyntaxCallMode=select mode (the default), the driver always uses a SELECT statement (allowing function invocation only). In escapeSyntaxCallMode=callIfNoReturn mode, the driver uses a CALL statement (allowing procedure invocation) if there is no return parameter specified, otherwise the driver uses a SELECT statement. In escapeSyntaxCallMode=call mode, the driver always uses a CALL statement (allowing procedure invocation only).</p>
-<p>The default is select</p>
-</li>
-</ul>
-</blockquote>
-<p>从上面的说明可以看到，<code>escapeSyntaxCallMode</code> 参数制定了如何调用底层的函数和存储过程，它有三种模式：</p>
-<ul>
-<li><strong>select</strong> - 默认值，jdbc 驱动使用 <code>SELECT</code> 来调用函数和存储过程。</li>
-<li><strong>callIfNoReturn</strong> - 当存储过程没有返回值时使用 <code>CALL</code> 来调用，其他情况则使用 <code>SELECT</code> 来调用。</li>
-<li><strong>call</strong> - 所有的函数和存储过程都使用 <code>CALL</code> 来调用。</li>
-</ul>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://jdbc.postgresql.org/documentation/head/callproc.html">https://jdbc.postgresql.org/documentation/head/callproc.html</a><br>[2] <a href="https://jdbc.postgresql.org/documentation/head/connect.html">https://jdbc.postgresql.org/documentation/head/connect.html</a></p>
-<div class="just-for-fun">
-笑林广记 - 进士第
-
-<p>一介弟横行于乡，怨家骂曰：“兄登黄甲，与汝何干，而豪横若此？”<br>答曰：“尔不见匾额上面写着‘进士第（弟）’么？”</p>
-</div>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>Java</tag>
-        <tag>JDBC</tag>
       </tags>
   </entry>
   <entry>
@@ -4271,6 +4218,59 @@ Date:   Thu Jan 13 17:49:25 2022 -0500
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 使用 JDBC 调用存储过程错误</title>
+    <url>/2021/11/postgresql-jdbc-call-procedure/</url>
+    <content><![CDATA[<p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
+<span id="more"></span>
+
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在将 Oracle 中的存储过程迁移到 PostgreSQL 中，我们遇到了一个如下的存储过程（经过了简化）：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> proc(a <span class="keyword">INOUT</span> <span class="type">bigint</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span>(a);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
+
+<p>随后在 Java 程序中使用 JDBC 去调用这个存储过程，调用代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">CallableStatement proc = conn.prepareCall(<span class="string">&quot;&#123;call proc( ? )&#125;&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>运行时程序报如下错误：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2674)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2364)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:354)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:484)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:404)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:162)</span><br><span class="line">        at org.postgresql.jdbc.PgCallableStatement.executeWithFlags(PgCallableStatement.java:83)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.execute(PgPreparedStatement.java:151)</span><br><span class="line">        at PGTest.main(PGTest.java:52)</span><br><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br></pre></td></tr></table></figure>
+
+<p>错误提示我们调用的是一个存储过程，应该使用 <code>CALL</code> 来调用存储过程？WTF? 难道我在程序里使用的不是 <code>CALL</code> 么？真的是老眼昏花了吗？</p>
+<p>经过一番尝试之后发现还是不能解决这个问题，当时由于敢进度，就选择了曲线救国的思路，将存储过程改为函数，折腾了一番之后总算是可以用了。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>晚上回来继续研究，这次选择了查看<a href="https://jdbc.postgresql.org/documentation/head/callproc.html">官方文档</a>，浏览了一下发现 PostgreSQL 的 JDBC 在处理存储过程没有返回值的时候需要设置 <code>escapeSyntaxCallMode</code> 参数。如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Ensure EscapeSyntaxCallmode property set to support procedures if no return value</span></span><br><span class="line">props.setProperty(<span class="string">&quot;escapeSyntaxCallMode&quot;</span>, <span class="string">&quot;callIfNoReturn&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>根据注释来看，设置 <code>escapeSyntaxCallMode</code> 为 <code>callIfNoReturn</code> 可以确保存储过程在没有返回值的时候依然正常工作，经验证，通过这个设置，存储过程便能正确执行了。</p>
+<p>这个问题虽然不大，但是对于不懂 Java 的我来说定位还是比较费事的，不过还好 PostgreSQL 的 jdbc 文档比较完善，虽然走了一些弯路，从这个也能看出，官方文档才是第一手资料，其他的都是浮云啊。</p>
+<p>此外，<a href="https://jdbc.postgresql.org/documentation/head/connect.html">这里</a> 包含了 PostgreSQL 数据库 jdbc 连接的所有参数信息。拿上面的 <code>escapeSyntaxCallMode</code> 来说，您可以看到如下内容：</p>
+<blockquote>
+<ul>
+<li><p>escapeSyntaxCallMode = String</p>
+<p>Specifies how the driver transforms JDBC escape call syntax into underlying SQL, for invoking procedures or functions. In escapeSyntaxCallMode=select mode (the default), the driver always uses a SELECT statement (allowing function invocation only). In escapeSyntaxCallMode=callIfNoReturn mode, the driver uses a CALL statement (allowing procedure invocation) if there is no return parameter specified, otherwise the driver uses a SELECT statement. In escapeSyntaxCallMode=call mode, the driver always uses a CALL statement (allowing procedure invocation only).</p>
+<p>The default is select</p>
+</li>
+</ul>
+</blockquote>
+<p>从上面的说明可以看到，<code>escapeSyntaxCallMode</code> 参数制定了如何调用底层的函数和存储过程，它有三种模式：</p>
+<ul>
+<li><strong>select</strong> - 默认值，jdbc 驱动使用 <code>SELECT</code> 来调用函数和存储过程。</li>
+<li><strong>callIfNoReturn</strong> - 当存储过程没有返回值时使用 <code>CALL</code> 来调用，其他情况则使用 <code>SELECT</code> 来调用。</li>
+<li><strong>call</strong> - 所有的函数和存储过程都使用 <code>CALL</code> 来调用。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://jdbc.postgresql.org/documentation/head/callproc.html">https://jdbc.postgresql.org/documentation/head/callproc.html</a><br>[2] <a href="https://jdbc.postgresql.org/documentation/head/connect.html">https://jdbc.postgresql.org/documentation/head/connect.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 进士第
+
+<p>一介弟横行于乡，怨家骂曰：“兄登黄甲，与汝何干，而豪横若此？”<br>答曰：“尔不见匾额上面写着‘进士第（弟）’么？”</p>
+</div>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>Java</tag>
+        <tag>JDBC</tag>
       </tags>
   </entry>
   <entry>
@@ -5757,6 +5757,39 @@ Date:   Mon Jan 17 10:16:53 2022 +0900
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 使用存储过程发送邮件</title>
+    <url>/2021/11/postgresql-send-email-using-procedure/</url>
+    <content><![CDATA[<p>在<a href="/2021/11/postgresql-send-http-using-procedure/" title="上一篇">上一篇</a>中我介绍了如何在 PostgreSQL 数据库中使用存储过程来发送 HTTP 请求，本文则介绍如何使用 PostgreSQL 的存储过程发送邮件。</p>
+<p>Oracle 数据库提供了 ult_smtp 来发送邮件，PostgreSQL 同样的不支持该功能，因此只能采取曲线救国的策略，本文将采用 plpython3u 来编写存储过程并发送邮件。</p>
+<span id="more"></span>
+
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>这里的准备工作与上一篇文章类似，唯一不同的是我们不需要装任何 Python 的依赖，因为 Python 默认已经安装好了。这里简要提一下如何在数据库中安装 plpython3u 插件。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">$ psql postgres <span class="operator">-</span>c <span class="string">&#x27;ALTER SYSTEM SET shared_preload_libraries TO plpython3;&#x27;</span></span><br><span class="line">$ pg_ctl restart</span><br><span class="line">$ psql postgres <span class="operator">-</span>c <span class="string">&#x27;CREATE EXTENSION plpython3u;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="编写存储过程发送邮件"><a href="#编写存储过程发送邮件" class="headerlink" title="编写存储过程发送邮件"></a>编写存储过程发送邮件</h2><p>准备工作已经就绪，接下来就可以编译存储过程了。下面是一个简单的用例。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> send_email(</span><br><span class="line">    sender      <span class="type">varchar</span>,</span><br><span class="line">    receiver    <span class="type">varchar</span>,</span><br><span class="line">    copyto      <span class="type">varchar</span>,</span><br><span class="line">    title       <span class="type">varchar</span>,</span><br><span class="line">    content     <span class="type">varchar</span>,</span><br><span class="line">    filenames   <span class="type">varchar</span>,</span><br><span class="line">    smtp_user   <span class="type">varchar</span> <span class="keyword">default</span> <span class="string">&#x27;japinli@hotmail.com&#x27;</span>,</span><br><span class="line">    smtp_passwd <span class="type">varchar</span> <span class="keyword">default</span> <span class="string">&#x27;your-password&#x27;</span>,</span><br><span class="line">    smtp_server <span class="type">varchar</span> <span class="keyword">default</span> <span class="string">&#x27;outlook.office365.com&#x27;</span>,</span><br><span class="line">    smtp_port   <span class="type">int</span> <span class="keyword">default</span> <span class="number">587</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"></span><br><span class="line">import os</span><br><span class="line">import ssl</span><br><span class="line">import smtplib</span><br><span class="line"><span class="keyword">from</span> email.mime.text import MIMEText</span><br><span class="line"><span class="keyword">from</span> email.header import Header</span><br><span class="line"><span class="keyword">from</span> email.mime.multipart import MIMEMultipart</span><br><span class="line"></span><br><span class="line">message <span class="operator">=</span> MIMEMultipart()</span><br><span class="line">message[<span class="string">&#x27;From&#x27;</span>] <span class="operator">=</span> sender</span><br><span class="line">message[<span class="string">&#x27;To&#x27;</span>] <span class="operator">=</span> receiver</span><br><span class="line">message[<span class="string">&#x27;Cc&#x27;</span>] <span class="operator">=</span> copyto</span><br><span class="line">message[<span class="string">&#x27;Subject&#x27;</span>] <span class="operator">=</span> title</span><br><span class="line"></span><br><span class="line">try:</span><br><span class="line">    message.attach(MIMEText(content, <span class="string">&#x27;plain&#x27;</span>, <span class="string">&#x27;utf-8&#x27;</span>))</span><br><span class="line"></span><br><span class="line">    # <span class="keyword">Add</span> attachement <span class="keyword">to</span> email</span><br><span class="line">    if filenames:</span><br><span class="line">        <span class="keyword">for</span> fname <span class="keyword">in</span> filenames.split(<span class="string">&#x27;;&#x27;</span>):</span><br><span class="line">            if <span class="keyword">not</span> fname:</span><br><span class="line">                continue</span><br><span class="line"></span><br><span class="line">            attach <span class="operator">=</span> MIMEText(<span class="keyword">open</span>(fname, <span class="string">&#x27;rb&#x27;</span>).read(), <span class="string">&#x27;base64&#x27;</span>, <span class="string">&#x27;utf-8&#x27;</span>)</span><br><span class="line">            attach[<span class="string">&#x27;Content-Type&#x27;</span>] <span class="operator">=</span> <span class="string">&#x27;application/octect-stream&#x27;</span></span><br><span class="line">            attach[<span class="string">&#x27;Content-Disposition&#x27;</span>] <span class="operator">=</span> <span class="string">&#x27;attachement;filename=&quot;&#123;0&#125;&quot;&#x27;</span>.format(os.path.basename(fname))</span><br><span class="line">            message.attach(attach)</span><br><span class="line"></span><br><span class="line">    context <span class="operator">=</span> ssl.create_default_context()</span><br><span class="line">    rcpts <span class="operator">=</span> receiver.split(<span class="string">&#x27;,&#x27;</span>) <span class="operator">+</span> copyto.split(<span class="string">&#x27;,&#x27;</span>)</span><br><span class="line">    serv <span class="operator">=</span> smtplib.SMTP(smtp_server, smtp_port)</span><br><span class="line">    serv.starttls(context<span class="operator">=</span>context)</span><br><span class="line">    serv.login(smtp_user, smtp_passwd)</span><br><span class="line">    serv.sendmail(sender, rcpts, message.as_string())</span><br><span class="line">    plpy.<span class="built_in">log</span>(<span class="string">&#x27;ok&#x27;</span>)</span><br><span class="line"><span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">    plpy.error(<span class="string">&#x27;failed&#x27;</span> <span class="operator">+</span> str(e))</span><br><span class="line"></span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpython3u;</span><br></pre></td></tr></table></figure>
+
+<p>您可以将上面的存储过程导入到已经安装了 plpython3u 插件的数据库中（注意，您需要修改邮件服务器和用户信息）。</p>
+<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>我们可以使用下面的命令进行测试。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">call</span> send_email(</span><br><span class="line">    <span class="string">&#x27;japinli@hotmail.com&#x27;</span>,     <span class="comment">-- 发送者</span></span><br><span class="line">    <span class="string">&#x27;jianping.li@xxxxx.cn&#x27;</span>,    <span class="comment">-- 接收者</span></span><br><span class="line">    <span class="string">&#x27;&#x27;</span>,                        <span class="comment">-- 抄送</span></span><br><span class="line">    <span class="string">&#x27;Send Email using PostgreSQL Procedure&#x27;</span>,      <span class="comment">-- 邮件主题</span></span><br><span class="line">    <span class="string">&#x27;This email is sent by PostgreSQL procedure&#x27;</span>, <span class="comment">-- 邮件内容</span></span><br><span class="line">    <span class="string">&#x27;/tmp/scor2272ueR&#x27;</span>                            <span class="comment">-- 附件</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>测试结果如下所示。</p>
+<img src="/2021/11/postgresql-send-email-using-procedure/email.jpg" class="">
+
+<div class="just-for-fun">
+笑林广记 - 太监观风
+
+<p>镇守太监观风，出“后生可畏焉”为题，众皆掩口而笑，乃问其故，<br>教官禀曰：“诸生以题目太难，求减得一字为好。”<br>乃笑曰：“既如此，除了‘后’字，只做‘生可畏焉’罢。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 使用存储过程发送 HTTP 请求</title>
     <url>/2021/11/postgresql-send-http-using-procedure/</url>
     <content><![CDATA[<p>在 Oracle 中可以通过 utl_http 来发送 HTTP 请求，PostgreSQL 中默认不支持，但是，我们可以通过 plpython3u 插件来实现这个功能。</p>
@@ -6023,7 +6056,7 @@ $ hexdump -C 0000
 </div>
 ]]></content>
       <categories>
-        <category>Database</category>
+        <category>数据库</category>
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
@@ -6419,28 +6452,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 更新 configure 引入无关更改</title>
-    <url>/2021/02/postgresql-update-configure-file/</url>
-    <content><![CDATA[<p>PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="meta">@@ -1187,6 +1189,15 @@</span> do</span><br><span class="line">   | -silent | --silent | --silen | --sile | --sil)</span><br><span class="line">     silent=yes ;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+  -runstatedir | --runstatedir | --runstatedi | --runstated \</span></span><br><span class="line"><span class="addition">+  | --runstate | --runstat | --runsta | --runst | --runs \</span></span><br><span class="line"><span class="addition">+  | --run | --ru | --r)</span></span><br><span class="line"><span class="addition">+    ac_prev=runstatedir ;;</span></span><br><span class="line"><span class="addition">+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \</span></span><br><span class="line"><span class="addition">+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \</span></span><br><span class="line"><span class="addition">+  | --run=* | --ru=* | --r=*)</span></span><br><span class="line"><span class="addition">+    runstatedir=$ac_optarg ;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -14714,7 +14738,7 @@</span> else</span><br><span class="line">     We can&#x27;t simply define LARGE_OFF_T to be 9223372036854775807,</span><br><span class="line">     since some C++ compilers masquerading as C compilers</span><br><span class="line">     incorrectly reject 9223372036854775807.  */</span><br><span class="line"><span class="deletion">-#define LARGE_OFF_T (((off_t) 1 &lt;&lt; 62) - 1 + ((off_t) 1 &lt;&lt; 62))</span></span><br><span class="line"><span class="addition">+#define LARGE_OFF_T ((((off_t) 1 &lt;&lt; 31) &lt;&lt; 31) - 1 + (((off_t) 1 &lt;&lt; 31) &lt;&lt; 31))</span></span><br><span class="line">   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721</span><br><span class="line">               &amp;&amp; LARGE_OFF_T % 2147483647 == 1)</span><br><span class="line">              ? 1 : -1];</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。</p>
-<span id="more"></span>
-
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>我们可以从 autoconf 的<a href="https://www.gnu.org/software/autoconf/#downloading">官网下载</a>并重新安装。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> wget https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar xf autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./configure --prefix=/usr/<span class="built_in">local</span>/autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> make</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> sudo make install</span></span><br></pre></td></tr></table></figure>
-
-<p>最后将 <code>/usr/local/autoconf-2.69/bin</code> 加入到 <code>PATH</code> 环境变量的开始（确保我们安装的 autoconf 先于系统的即可）并重新载入环境变量。随后执行 <code>autoreconf</code> 命令更新 <code>configure</code> 文件，这时就不会引入其他无关的更改。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz">https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 无法更改外键引用的聚集列的数据类型</title>
     <url>/2022/03/postgresql-unable-to-change-data-type-for-column-referenced-by-foreign-key/</url>
     <content><![CDATA[<p>最近在邮件列表中看到一个关于聚集列的数据类型修改导致的异常问题 <a href="https://www.postgresql.org/message-id/17409-52871dda8b5741cb%40postgresql.org">BUG #17409</a>。本文简要记录一下分析过程以及解决方案。目前该问题已经被修复，在 14.1 和 14.2 版本中应该可以重现。</p>
@@ -6528,6 +6539,28 @@ Date:   Wed Dec 9 15:12:05 2020 +0100
         <tag>PostgreSQL</tag>
         <tag>BUG</tag>
         <tag>PG14</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 更新 configure 引入无关更改</title>
+    <url>/2021/02/postgresql-update-configure-file/</url>
+    <content><![CDATA[<p>PostgreSQL 使用 autoconf 工具来自动配置软件源代码包。我在修改了 configure.ac 文件之后执行 autoreconf 发现它将引入其他无关的更改，如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="meta">@@ -1187,6 +1189,15 @@</span> do</span><br><span class="line">   | -silent | --silent | --silen | --sile | --sil)</span><br><span class="line">     silent=yes ;;</span><br><span class="line"></span><br><span class="line"><span class="addition">+  -runstatedir | --runstatedir | --runstatedi | --runstated \</span></span><br><span class="line"><span class="addition">+  | --runstate | --runstat | --runsta | --runst | --runs \</span></span><br><span class="line"><span class="addition">+  | --run | --ru | --r)</span></span><br><span class="line"><span class="addition">+    ac_prev=runstatedir ;;</span></span><br><span class="line"><span class="addition">+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \</span></span><br><span class="line"><span class="addition">+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \</span></span><br><span class="line"><span class="addition">+  | --run=* | --ru=* | --r=*)</span></span><br><span class="line"><span class="addition">+    runstatedir=$ac_optarg ;;</span></span><br><span class="line"><span class="addition">+</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="meta">@@ -14714,7 +14738,7 @@</span> else</span><br><span class="line">     We can&#x27;t simply define LARGE_OFF_T to be 9223372036854775807,</span><br><span class="line">     since some C++ compilers masquerading as C compilers</span><br><span class="line">     incorrectly reject 9223372036854775807.  */</span><br><span class="line"><span class="deletion">-#define LARGE_OFF_T (((off_t) 1 &lt;&lt; 62) - 1 + ((off_t) 1 &lt;&lt; 62))</span></span><br><span class="line"><span class="addition">+#define LARGE_OFF_T ((((off_t) 1 &lt;&lt; 31) &lt;&lt; 31) - 1 + (((off_t) 1 &lt;&lt; 31) &lt;&lt; 31))</span></span><br><span class="line">   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721</span><br><span class="line">               &amp;&amp; LARGE_OFF_T % 2147483647 == 1)</span><br><span class="line">              ? 1 : -1];</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这是由于供应商的软件包经常包含一些改进导致的，这就导致了我们生成的 configure 文件与其他提交者的有不同的结果。</p>
+<span id="more"></span>
+
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>我们可以从 autoconf 的<a href="https://www.gnu.org/software/autoconf/#downloading">官网下载</a>并重新安装。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> wget https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> tar xf autoconf-2.69.tar.gz</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> ./configure --prefix=/usr/<span class="built_in">local</span>/autoconf-2.69</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> make</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> sudo make install</span></span><br></pre></td></tr></table></figure>
+
+<p>最后将 <code>/usr/local/autoconf-2.69/bin</code> 加入到 <code>PATH</code> 环境变量的开始（确保我们安装的 autoconf 先于系统的即可）并重新载入环境变量。随后执行 <code>autoreconf</code> 命令更新 <code>configure</code> 文件，这时就不会引入其他无关的更改。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz">https://www.postgresql.org/message-id/flat/20181229140802.GE2972%40paquier.xyz</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -7017,72 +7050,6 @@ index 16ab2238e7..6c19749194 100644
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 使用存储过程发送邮件</title>
-    <url>/2021/11/postgresql-send-email-using-procedure/</url>
-    <content><![CDATA[<p>在<a href="/2021/11/postgresql-send-http-using-procedure/" title="上一篇">上一篇</a>中我介绍了如何在 PostgreSQL 数据库中使用存储过程来发送 HTTP 请求，本文则介绍如何使用 PostgreSQL 的存储过程发送邮件。</p>
-<p>Oracle 数据库提供了 ult_smtp 来发送邮件，PostgreSQL 同样的不支持该功能，因此只能采取曲线救国的策略，本文将采用 plpython3u 来编写存储过程并发送邮件。</p>
-<span id="more"></span>
-
-<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>这里的准备工作与上一篇文章类似，唯一不同的是我们不需要装任何 Python 的依赖，因为 Python 默认已经安装好了。这里简要提一下如何在数据库中安装 plpython3u 插件。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">$ psql postgres <span class="operator">-</span>c <span class="string">&#x27;ALTER SYSTEM SET shared_preload_libraries TO plpython3;&#x27;</span></span><br><span class="line">$ pg_ctl restart</span><br><span class="line">$ psql postgres <span class="operator">-</span>c <span class="string">&#x27;CREATE EXTENSION plpython3u;&#x27;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="编写存储过程发送邮件"><a href="#编写存储过程发送邮件" class="headerlink" title="编写存储过程发送邮件"></a>编写存储过程发送邮件</h2><p>准备工作已经就绪，接下来就可以编译存储过程了。下面是一个简单的用例。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> send_email(</span><br><span class="line">    sender      <span class="type">varchar</span>,</span><br><span class="line">    receiver    <span class="type">varchar</span>,</span><br><span class="line">    copyto      <span class="type">varchar</span>,</span><br><span class="line">    title       <span class="type">varchar</span>,</span><br><span class="line">    content     <span class="type">varchar</span>,</span><br><span class="line">    filenames   <span class="type">varchar</span>,</span><br><span class="line">    smtp_user   <span class="type">varchar</span> <span class="keyword">default</span> <span class="string">&#x27;japinli@hotmail.com&#x27;</span>,</span><br><span class="line">    smtp_passwd <span class="type">varchar</span> <span class="keyword">default</span> <span class="string">&#x27;your-password&#x27;</span>,</span><br><span class="line">    smtp_server <span class="type">varchar</span> <span class="keyword">default</span> <span class="string">&#x27;outlook.office365.com&#x27;</span>,</span><br><span class="line">    smtp_port   <span class="type">int</span> <span class="keyword">default</span> <span class="number">587</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"></span><br><span class="line">import os</span><br><span class="line">import ssl</span><br><span class="line">import smtplib</span><br><span class="line"><span class="keyword">from</span> email.mime.text import MIMEText</span><br><span class="line"><span class="keyword">from</span> email.header import Header</span><br><span class="line"><span class="keyword">from</span> email.mime.multipart import MIMEMultipart</span><br><span class="line"></span><br><span class="line">message <span class="operator">=</span> MIMEMultipart()</span><br><span class="line">message[<span class="string">&#x27;From&#x27;</span>] <span class="operator">=</span> sender</span><br><span class="line">message[<span class="string">&#x27;To&#x27;</span>] <span class="operator">=</span> receiver</span><br><span class="line">message[<span class="string">&#x27;Cc&#x27;</span>] <span class="operator">=</span> copyto</span><br><span class="line">message[<span class="string">&#x27;Subject&#x27;</span>] <span class="operator">=</span> title</span><br><span class="line"></span><br><span class="line">try:</span><br><span class="line">    message.attach(MIMEText(content, <span class="string">&#x27;plain&#x27;</span>, <span class="string">&#x27;utf-8&#x27;</span>))</span><br><span class="line"></span><br><span class="line">    # <span class="keyword">Add</span> attachement <span class="keyword">to</span> email</span><br><span class="line">    if filenames:</span><br><span class="line">        <span class="keyword">for</span> fname <span class="keyword">in</span> filenames.split(<span class="string">&#x27;;&#x27;</span>):</span><br><span class="line">            if <span class="keyword">not</span> fname:</span><br><span class="line">                continue</span><br><span class="line"></span><br><span class="line">            attach <span class="operator">=</span> MIMEText(<span class="keyword">open</span>(fname, <span class="string">&#x27;rb&#x27;</span>).read(), <span class="string">&#x27;base64&#x27;</span>, <span class="string">&#x27;utf-8&#x27;</span>)</span><br><span class="line">            attach[<span class="string">&#x27;Content-Type&#x27;</span>] <span class="operator">=</span> <span class="string">&#x27;application/octect-stream&#x27;</span></span><br><span class="line">            attach[<span class="string">&#x27;Content-Disposition&#x27;</span>] <span class="operator">=</span> <span class="string">&#x27;attachement;filename=&quot;&#123;0&#125;&quot;&#x27;</span>.format(os.path.basename(fname))</span><br><span class="line">            message.attach(attach)</span><br><span class="line"></span><br><span class="line">    context <span class="operator">=</span> ssl.create_default_context()</span><br><span class="line">    rcpts <span class="operator">=</span> receiver.split(<span class="string">&#x27;,&#x27;</span>) <span class="operator">+</span> copyto.split(<span class="string">&#x27;,&#x27;</span>)</span><br><span class="line">    serv <span class="operator">=</span> smtplib.SMTP(smtp_server, smtp_port)</span><br><span class="line">    serv.starttls(context<span class="operator">=</span>context)</span><br><span class="line">    serv.login(smtp_user, smtp_passwd)</span><br><span class="line">    serv.sendmail(sender, rcpts, message.as_string())</span><br><span class="line">    plpy.<span class="built_in">log</span>(<span class="string">&#x27;ok&#x27;</span>)</span><br><span class="line"><span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">    plpy.error(<span class="string">&#x27;failed&#x27;</span> <span class="operator">+</span> str(e))</span><br><span class="line"></span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpython3u;</span><br></pre></td></tr></table></figure>
-
-<p>您可以将上面的存储过程导入到已经安装了 plpython3u 插件的数据库中（注意，您需要修改邮件服务器和用户信息）。</p>
-<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>我们可以使用下面的命令进行测试。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">call</span> send_email(</span><br><span class="line">    <span class="string">&#x27;japinli@hotmail.com&#x27;</span>,     <span class="comment">-- 发送者</span></span><br><span class="line">    <span class="string">&#x27;jianping.li@xxxxx.cn&#x27;</span>,    <span class="comment">-- 接收者</span></span><br><span class="line">    <span class="string">&#x27;&#x27;</span>,                        <span class="comment">-- 抄送</span></span><br><span class="line">    <span class="string">&#x27;Send Email using PostgreSQL Procedure&#x27;</span>,      <span class="comment">-- 邮件主题</span></span><br><span class="line">    <span class="string">&#x27;This email is sent by PostgreSQL procedure&#x27;</span>, <span class="comment">-- 邮件内容</span></span><br><span class="line">    <span class="string">&#x27;/tmp/scor2272ueR&#x27;</span>                            <span class="comment">-- 附件</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
-
-<p>测试结果如下所示。</p>
-<img src="/2021/11/postgresql-send-email-using-procedure/email.jpg" class="">
-
-<div class="just-for-fun">
-笑林广记 - 太监观风
-
-<p>镇守太监观风，出“后生可畏焉”为题，众皆掩口而笑，乃问其故，<br>教官禀曰：“诸生以题目太难，求减得一字为好。”<br>乃笑曰：“既如此，除了‘后’字，只做‘生可畏焉’罢。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Tmux 内存泄露</title>
-    <url>/2022/10/tmux-memory-leak/</url>
-    <content><![CDATA[<p>内存泄露又来啦！这次的主角是 tmux。我在升级 tmux 到 3.4 之后，并在 tmux 绘画中使用 fzf 时，出现了如下内存泄露。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">=================================================================</span><br><span class="line">==367944==ERROR: LeakSanitizer: detected memory leaks</span><br><span class="line"></span><br><span class="line">Direct leak of 2 byte(s) in 1 object(s) allocated from:</span><br><span class="line">    #0 0x4855e4 in strdup (/usr/local/bin/tmux+0x4855e4)</span><br><span class="line">    #1 0x84d104 in xstrdup /home/japin/Codes/tmux/xmalloc.c:93:12</span><br><span class="line">    #2 0x5170d8 in cmd_parse_from_arguments /home/japin/Codes/tmux/cmd-parse.y:1075:11</span><br><span class="line">    #3 0x4e10df in client_main /home/japin/Codes/tmux/client.c:267:8</span><br><span class="line">    #4 0x768190 in main /home/japin/Codes/tmux/tmux.c:519:7</span><br><span class="line">    #5 0x7fe9db1fe082 in __libc_start_main /build/glibc-SzIz7B/glibc-2.31/csu/../csu/libc-start.c:308:16</span><br><span class="line"></span><br><span class="line">SUMMARY: AddressSanitizer: 2 byte(s) leaked in 1 allocation(s).</span><br></pre></td></tr></table></figure>
-
-<span id="more"></span>
-
-<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>我使用的是提交号为 <a href="https://github.com/tmux/tmux/commit/5ce34add77fa3517a01e63b915c5f4e3241af470">5ce34add</a> 的 Tmux 编译安装。下面基本环境信息。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ uname -sp &amp;&amp; tmux -V &amp;&amp; <span class="built_in">echo</span> <span class="variable">$TERM</span></span><br><span class="line">Linux x86_64</span><br><span class="line">tmux next-3.4</span><br><span class="line">xterm-256color</span><br><span class="line"></span><br><span class="line">$ fzf --version</span><br><span class="line">0.34.0 (04d0b02)</span><br><span class="line"></span><br><span class="line">$ tmux -Ltest -f/dev/null new</span><br></pre></td></tr></table></figure>
-
-<p>接着，我们在 tmux 会话中执行 <code>fzf-tmux</code> 就出现了本文一开始的内存泄露问题。从错误日志可以看到问题出在 tmux 的 <code>cmd_parse_from_arguments()</code> 函数中。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">struct cmd_parse_result *</span></span><br><span class="line"><span class="function"><span class="title">cmd_parse_from_arguments</span><span class="params">(struct args_value *values, u_int count,</span></span></span><br><span class="line"><span class="params"><span class="function">    struct cmd_parse_input *pi)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++) &#123;</span><br><span class="line">        end = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (values[i].type == ARGS_STRING) &#123;</span><br><span class="line">            copy = xstrdup(values[i].<span class="built_in">string</span>);</span><br><span class="line">            size = <span class="built_in">strlen</span>(copy);</span><br><span class="line">            <span class="keyword">if</span> (size != <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;;&#x27;</span>) &#123;</span><br><span class="line">                copy[--size] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line">                <span class="keyword">if</span> (size &gt; <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;\\&#x27;</span>)</span><br><span class="line">                    copy[size - <span class="number">1</span>] = <span class="string">&#x27;;&#x27;</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                    end = <span class="number">1</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!end || size != <span class="number">0</span>) &#123;</span><br><span class="line">                arg = xcalloc(<span class="number">1</span>, <span class="keyword">sizeof</span> *arg);</span><br><span class="line">                arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line">                arg-&gt;<span class="built_in">string</span> = copy;</span><br><span class="line">                TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry); <span class="comment">/* 添加到 cmd-&gt;arguments 中 */</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/*</span></span><br><span class="line"><span class="comment">             * 如果进入到这里，那么 copy 的内存就泄露了，而当我执行 fzf-tmux 时，</span></span><br><span class="line"><span class="comment">             * 正好进入到这里，从而导致内存泄露。</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        [...]</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    cmd_parse_free_commands(cmds); <span class="comment">/* 此处释放内存 */</span></span><br><span class="line">    [...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="修复"><a href="#修复" class="headerlink" title="修复"></a>修复</h2><p>通过上面的分析，我们可以在条件 <code>!end || size != 0</code> 之后加上一个分支用于释放 <code>copy</code> 的内存，如下所示：</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="comment">diff --git a/cmd-parse.y b/cmd-parse.y</span></span><br><span class="line"><span class="comment">index 1d69277083..cdf026f3de 100644</span></span><br><span class="line"><span class="comment">--- a/cmd-parse.y</span></span><br><span class="line"><span class="comment">+++ b/cmd-parse.y</span></span><br><span class="line"><span class="meta">@@ -1086,7 +1086,8 @@</span> cmd_parse_from_arguments(struct args_value *values, u_int count,</span><br><span class="line"> 				arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line"> 				arg-&gt;string = copy;</span><br><span class="line"> 				TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry);</span><br><span class="line"><span class="deletion">-			&#125;</span></span><br><span class="line"><span class="addition">+			&#125; else</span></span><br><span class="line"><span class="addition">+				free(copy);</span></span><br><span class="line"> 		&#125; else if (values[i].type == ARGS_COMMANDS) &#123;</span><br><span class="line"> 			arg = xcalloc(1, sizeof *arg);</span><br><span class="line"> 			arg-&gt;type = CMD_PARSE_PARSED_COMMANDS;</span><br></pre></td></tr></table></figure>
-
-<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://github.com/tmux/tmux/pull/3358">https://github.com/tmux/tmux/pull/3358</a><br>[2] <a href="https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e">https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e</a></p>
-<div class="just-for-fun">
-笑林广记 - 抛锚
-
-<p>道士、和尚、胡子三人过江。忽遇狂风大作，舟将颠覆，僧道慌甚，急把经卷投入江中，求神救护。<br>而胡子无可掷得，惟将胡须逐根拔下，投于江内。<br>僧道问曰：“你拔胡须何用？”<br>其人曰：“我在此抛毛（锚）。”</p>
-</div>
-
-
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>tmux</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>【译】PostgreSQL 查询结果转为 JSON 格式</title>
     <url>/2019/09/turning-query-results-into-json-in-postgresql/</url>
     <content><![CDATA[<img src="/2019/09/turning-query-results-into-json-in-postgresql/postgresql-weekly.png" class="">
@@ -7134,41 +7101,36 @@ index 16ab2238e7..6c19749194 100644
       </tags>
   </entry>
   <entry>
-    <title>Ubuntu 修改 I/O 调度算法</title>
-    <url>/2019/03/ubuntu-modify-io-scheduler/</url>
-    <content><![CDATA[<p>Linux I/O 调度器控制着内核读写磁盘的工作方式。系统管理员可以通过更改调度器来自定义磁盘调度算法，从而优化系统性能。有三种调度程序可供选择，每种调度程序都有其优点。这些调度器是：</p>
-<ul>
-<li><p><strong>Noop</strong> - 电梯调度算法，最简单的调度算法，该算法基于先进先出队列 (FIFO) 实现，所有的 I/O 请求都符合先进先出规则，适合于 SSD 设备。</p>
-</li>
-<li><p><strong>Deadline</strong> - 绝对保障算法，它为读和写分别创建了 FIFO 队列，当内核收到请时，先尝试合并，不能合并则尝试排序或放入队列中，并且尽量保证在请求到达最终期限时进行调度，避免有一些请求长时间不能得到处理。该调度器适合虚拟机所在宿主机器或 I/O 压力比较重的场景，例如数据库服务器。</p>
-</li>
-<li><p><strong>Completely Fair Queuing, CFQ</strong> - 绝对公平调度算法，它为每个进程和线程单独创建一个队列来管理该进程的 I/O 请求，然后为每个队列分配访问磁盘的时间片。时间片的长度以及允许队列提交的请求数取决于给定进程的 I/O 优先级。该调度器比较适合于通用服务器。</p>
-</li>
-</ul>
+    <title>Tmux 内存泄露</title>
+    <url>/2022/10/tmux-memory-leak/</url>
+    <content><![CDATA[<p>内存泄露又来啦！这次的主角是 tmux。我在升级 tmux 到 3.4 之后，并在 tmux 绘画中使用 fzf 时，出现了如下内存泄露。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">=================================================================</span><br><span class="line">==367944==ERROR: LeakSanitizer: detected memory leaks</span><br><span class="line"></span><br><span class="line">Direct leak of 2 byte(s) in 1 object(s) allocated from:</span><br><span class="line">    #0 0x4855e4 in strdup (/usr/local/bin/tmux+0x4855e4)</span><br><span class="line">    #1 0x84d104 in xstrdup /home/japin/Codes/tmux/xmalloc.c:93:12</span><br><span class="line">    #2 0x5170d8 in cmd_parse_from_arguments /home/japin/Codes/tmux/cmd-parse.y:1075:11</span><br><span class="line">    #3 0x4e10df in client_main /home/japin/Codes/tmux/client.c:267:8</span><br><span class="line">    #4 0x768190 in main /home/japin/Codes/tmux/tmux.c:519:7</span><br><span class="line">    #5 0x7fe9db1fe082 in __libc_start_main /build/glibc-SzIz7B/glibc-2.31/csu/../csu/libc-start.c:308:16</span><br><span class="line"></span><br><span class="line">SUMMARY: AddressSanitizer: 2 byte(s) leaked in 1 allocation(s).</span><br></pre></td></tr></table></figure>
+
 <span id="more"></span>
 
-<h2 id="查询当前调度器"><a href="#查询当前调度器" class="headerlink" title="查询当前调度器"></a>查询当前调度器</h2><p>首先，我们需要知道系统目前使用的是哪种 I/O 调度器。假设我们有一块名为 <code>sda</code> 的磁盘，那么我们可以通过如下命令查看该磁盘使用的调度器类别。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat /sys/block/sda/queue/scheduler</span></span><br><span class="line">noop [deadline] cfq</span><br></pre></td></tr></table></figure>
+<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>我使用的是提交号为 <a href="https://github.com/tmux/tmux/commit/5ce34add77fa3517a01e63b915c5f4e3241af470">5ce34add</a> 的 Tmux 编译安装。下面基本环境信息。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ uname -sp &amp;&amp; tmux -V &amp;&amp; <span class="built_in">echo</span> <span class="variable">$TERM</span></span><br><span class="line">Linux x86_64</span><br><span class="line">tmux next-3.4</span><br><span class="line">xterm-256color</span><br><span class="line"></span><br><span class="line">$ fzf --version</span><br><span class="line">0.34.0 (04d0b02)</span><br><span class="line"></span><br><span class="line">$ tmux -Ltest -f/dev/null new</span><br></pre></td></tr></table></figure>
 
-<p>从上面可以看到我们的系统在 <code>sda</code> 磁盘上支持 <code>noop</code>，<code>deadline</code> 和 <code>cfq</code> 三种调度器，而默认采用的是 <code>deadline</code> 调度器。</p>
-<h2 id="修改调度器"><a href="#修改调度器" class="headerlink" title="修改调度器"></a>修改调度器</h2><p>Ubuntu 系统提供了两种方式来修改调度器：a) 临时修改；b) 永久修改。临时修改的方式在系统重启后将会恢复到默认设置。通常，我们可以通过临时修改的方式来确定哪种调度器能带来更大的性能提升，然后在永久的修改为这种调度器。</p>
-<p>我们可以通过下面的命令将系统的调度器临时的修改为 <code>noop</code> 类型：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo <span class="built_in">echo</span> noop &gt; /sys/block/sda/queue/scheduler</span></span><br></pre></td></tr></table></figure>
+<p>接着，我们在 tmux 会话中执行 <code>fzf-tmux</code> 就出现了本文一开始的内存泄露问题。从错误日志可以看到问题出在 tmux 的 <code>cmd_parse_from_arguments()</code> 函数中。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">struct cmd_parse_result *</span></span><br><span class="line"><span class="function"><span class="title">cmd_parse_from_arguments</span><span class="params">(struct args_value *values, u_int count,</span></span></span><br><span class="line"><span class="params"><span class="function">    struct cmd_parse_input *pi)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++) &#123;</span><br><span class="line">        end = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (values[i].type == ARGS_STRING) &#123;</span><br><span class="line">            copy = xstrdup(values[i].<span class="built_in">string</span>);</span><br><span class="line">            size = <span class="built_in">strlen</span>(copy);</span><br><span class="line">            <span class="keyword">if</span> (size != <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;;&#x27;</span>) &#123;</span><br><span class="line">                copy[--size] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line">                <span class="keyword">if</span> (size &gt; <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;\\&#x27;</span>)</span><br><span class="line">                    copy[size - <span class="number">1</span>] = <span class="string">&#x27;;&#x27;</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                    end = <span class="number">1</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!end || size != <span class="number">0</span>) &#123;</span><br><span class="line">                arg = xcalloc(<span class="number">1</span>, <span class="keyword">sizeof</span> *arg);</span><br><span class="line">                arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line">                arg-&gt;<span class="built_in">string</span> = copy;</span><br><span class="line">                TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry); <span class="comment">/* 添加到 cmd-&gt;arguments 中 */</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/*</span></span><br><span class="line"><span class="comment">             * 如果进入到这里，那么 copy 的内存就泄露了，而当我执行 fzf-tmux 时，</span></span><br><span class="line"><span class="comment">             * 正好进入到这里，从而导致内存泄露。</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        [...]</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    cmd_parse_free_commands(cmds); <span class="comment">/* 此处释放内存 */</span></span><br><span class="line">    [...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>通过上述方式修改不需要重启机器而是立马生效。如果你需要永久的修改调度器，那么你需要修改 GRUB 的配置文件，即编辑配置文件 <code>/etc/default/grub</code> 修改</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash&quot;</span><br></pre></td></tr></table></figure>
+<h2 id="修复"><a href="#修复" class="headerlink" title="修复"></a>修复</h2><p>通过上面的分析，我们可以在条件 <code>!end || size != 0</code> 之后加上一个分支用于释放 <code>copy</code> 的内存，如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="comment">diff --git a/cmd-parse.y b/cmd-parse.y</span></span><br><span class="line"><span class="comment">index 1d69277083..cdf026f3de 100644</span></span><br><span class="line"><span class="comment">--- a/cmd-parse.y</span></span><br><span class="line"><span class="comment">+++ b/cmd-parse.y</span></span><br><span class="line"><span class="meta">@@ -1086,7 +1086,8 @@</span> cmd_parse_from_arguments(struct args_value *values, u_int count,</span><br><span class="line"> 				arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line"> 				arg-&gt;string = copy;</span><br><span class="line"> 				TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry);</span><br><span class="line"><span class="deletion">-			&#125;</span></span><br><span class="line"><span class="addition">+			&#125; else</span></span><br><span class="line"><span class="addition">+				free(copy);</span></span><br><span class="line"> 		&#125; else if (values[i].type == ARGS_COMMANDS) &#123;</span><br><span class="line"> 			arg = xcalloc(1, sizeof *arg);</span><br><span class="line"> 			arg-&gt;type = CMD_PARSE_PARSED_COMMANDS;</span><br></pre></td></tr></table></figure>
 
-<p>为</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash elevator=noop&quot;</span><br></pre></td></tr></table></figure>
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://github.com/tmux/tmux/pull/3358">https://github.com/tmux/tmux/pull/3358</a><br>[2] <a href="https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e">https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e</a></p>
+<div class="just-for-fun">
+笑林广记 - 抛锚
 
-<p>通过这种方式修改我们需要重启机器以使修改生效，当然我们可以结合临时修改的方式，从而避免重启。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 谭峰，张文升《PostgreSQL 实战》<br>[2] <a href="https://www.techrepublic.com/article/how-to-change-the-linux-io-scheduler-to-fit-your-needs/">How to change the linux io scheduler to fit your needs</a></p>
+<p>道士、和尚、胡子三人过江。忽遇狂风大作，舟将颠覆，僧道慌甚，急把经卷投入江中，求神救护。<br>而胡子无可掷得，惟将胡须逐根拔下，投于江内。<br>僧道问曰：“你拔胡须何用？”<br>其人曰：“我在此抛毛（锚）。”</p>
+</div>
+
+
 ]]></content>
       <categories>
         <category>杂项</category>
       </categories>
       <tags>
-        <tag>Ubuntu</tag>
+        <tag>tmux</tag>
       </tags>
   </entry>
   <entry>
@@ -7228,6 +7190,44 @@ index 16ab2238e7..6c19749194 100644
       <tags>
         <tag>PostgreSQL</tag>
         <tag>翻译</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Ubuntu 修改 I/O 调度算法</title>
+    <url>/2019/03/ubuntu-modify-io-scheduler/</url>
+    <content><![CDATA[<p>Linux I/O 调度器控制着内核读写磁盘的工作方式。系统管理员可以通过更改调度器来自定义磁盘调度算法，从而优化系统性能。有三种调度程序可供选择，每种调度程序都有其优点。这些调度器是：</p>
+<ul>
+<li><p><strong>Noop</strong> - 电梯调度算法，最简单的调度算法，该算法基于先进先出队列 (FIFO) 实现，所有的 I/O 请求都符合先进先出规则，适合于 SSD 设备。</p>
+</li>
+<li><p><strong>Deadline</strong> - 绝对保障算法，它为读和写分别创建了 FIFO 队列，当内核收到请时，先尝试合并，不能合并则尝试排序或放入队列中，并且尽量保证在请求到达最终期限时进行调度，避免有一些请求长时间不能得到处理。该调度器适合虚拟机所在宿主机器或 I/O 压力比较重的场景，例如数据库服务器。</p>
+</li>
+<li><p><strong>Completely Fair Queuing, CFQ</strong> - 绝对公平调度算法，它为每个进程和线程单独创建一个队列来管理该进程的 I/O 请求，然后为每个队列分配访问磁盘的时间片。时间片的长度以及允许队列提交的请求数取决于给定进程的 I/O 优先级。该调度器比较适合于通用服务器。</p>
+</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="查询当前调度器"><a href="#查询当前调度器" class="headerlink" title="查询当前调度器"></a>查询当前调度器</h2><p>首先，我们需要知道系统目前使用的是哪种 I/O 调度器。假设我们有一块名为 <code>sda</code> 的磁盘，那么我们可以通过如下命令查看该磁盘使用的调度器类别。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat /sys/block/sda/queue/scheduler</span></span><br><span class="line">noop [deadline] cfq</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到我们的系统在 <code>sda</code> 磁盘上支持 <code>noop</code>，<code>deadline</code> 和 <code>cfq</code> 三种调度器，而默认采用的是 <code>deadline</code> 调度器。</p>
+<h2 id="修改调度器"><a href="#修改调度器" class="headerlink" title="修改调度器"></a>修改调度器</h2><p>Ubuntu 系统提供了两种方式来修改调度器：a) 临时修改；b) 永久修改。临时修改的方式在系统重启后将会恢复到默认设置。通常，我们可以通过临时修改的方式来确定哪种调度器能带来更大的性能提升，然后在永久的修改为这种调度器。</p>
+<p>我们可以通过下面的命令将系统的调度器临时的修改为 <code>noop</code> 类型：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo <span class="built_in">echo</span> noop &gt; /sys/block/sda/queue/scheduler</span></span><br></pre></td></tr></table></figure>
+
+<p>通过上述方式修改不需要重启机器而是立马生效。如果你需要永久的修改调度器，那么你需要修改 GRUB 的配置文件，即编辑配置文件 <code>/etc/default/grub</code> 修改</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash&quot;</span><br></pre></td></tr></table></figure>
+
+<p>为</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash elevator=noop&quot;</span><br></pre></td></tr></table></figure>
+
+<p>通过这种方式修改我们需要重启机器以使修改生效，当然我们可以结合临时修改的方式，从而避免重启。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 谭峰，张文升《PostgreSQL 实战》<br>[2] <a href="https://www.techrepublic.com/article/how-to-change-the-linux-io-scheduler-to-fit-your-needs/">How to change the linux io scheduler to fit your needs</a></p>
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>Ubuntu</tag>
       </tags>
   </entry>
   <entry>
@@ -9615,6 +9615,234 @@ index 16ab2238e7..6c19749194 100644
       <tags>
         <tag>PostgreSQL</tag>
         <tag>翻译</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>SystemTap 动态跟踪</title>
+    <url>/2023/01/systemtap-dynamic-tracing/</url>
+    <content><![CDATA[<p><a href="https://sourceware.org/systemtap/">SystemTap</a> 为 Linux 内核和用户态程序提供了动态跟踪功能。用户可以自定义探测事件来跟踪程序的运行情况，如函数调用栈、系统调用以及其他事件。<a href="https://sourceware.org/systemtap/">SystemTap</a> 可以在不修改代码、甚至是不需要重启的情况下就能分析程序的运行情况。</p>
+<p><a href="https://sourceware.org/systemtap/">SystemTap</a> 的基本思想是命名事件，以及事件对应的处理程序。当运行 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本时，<a href="https://sourceware.org/systemtap/">SystemTap</a> 会监视事件；一旦事件发生，Linux 内核就会将处理程序作为子例程运行，然后继续运行。<a href="https://sourceware.org/systemtap/">SystemTap</a> 有几种事件：进入/退出函数、计时器到期、会话开始/终止等。处理程序是一系列脚本语句，指定事件发生时要执行的工作。这项工作包括从事件上下午中提取数据，将其存储到内部变量中，打印结果。</p>
+<p><a href="https://sourceware.org/systemtap/">SystemTap</a> 的工作原理是将 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本翻译成 C 语言，然后将其编译为内核模块，并加载到内核中并启用脚本中的探测点；当相应的事件发生时，事件对应的处理程序被执行；一旦 <a href="https://sourceware.org/systemtap/">SystemTap</a> 会话结束，探测点将被禁用，内核模块也被卸载。下图是 <a href="https://sourceware.org/systemtap/">SystemTap</a> 的处理过程。</p>
+<img src="/2023/01/systemtap-dynamic-tracing/systemtap-processing-steps.png" class="">
+
+<p>图片来源于 <a href="https://sourceware.org/systemtap/archpaper.pdf">Architecture of systemtap: a Linux trace/probe tool</a>。</p>
+<span id="more"></span>
+
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><p>本文的环境如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ lsb_release -a</span><br><span class="line">No LSB modules are available.</span><br><span class="line">Distributor ID: Ubuntu</span><br><span class="line">Description:    Ubuntu 20.04.5 LTS</span><br><span class="line">Release:        20.04</span><br><span class="line">Codename:       focal</span><br><span class="line">$ uname -r</span><br><span class="line">5.4.0-135-generic</span><br></pre></td></tr></table></figure>
+
+<p><a href="https://sourceware.org/systemtap/">SystemTap</a> 最初主要是针对内核的跟踪分析工具，但是在 <a href="https://sourceware.org/systemtap/">SystemTap</a> 0.6 版本的时候引入了用户态程序的跟踪分析。<a href="https://sourceware.org/systemtap/">SystemTap</a> 需要 <code>uprobes</code> 模块来执行用户态的探测，如果您的 Linux 内核版本是 3.5 及其之后的版本，那么该模块已经包含在内。您可以使用下面的命令来查看内核是否支持 <code>uprobes</code>：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ grep CONFIG_UPROBES /boot/config-$(uname -r)</span><br><span class="line">CONFIG_UPROBES=y</span><br></pre></td></tr></table></figure>
+
+<p>上面的结构表示当前内核集成了 <code>uprobes</code> 模块。如果您运行的是 3.5 之前的内核，<a href="https://sourceware.org/systemtap/">SystemTap</a> 会自动构建 <code>uprobes</code> 模块，但是，您还需要 <code>utrace</code> 内核扩展，<a href="https://sourceware.org/systemtap/">SystemTap</a> 使用该扩展来跟踪用户态事件。有关 <code>utrace</code> 的更多详细信息，请参考<a href="http://sourceware.org/systemtap/wiki/utrace">这里</a>。您可以使用下面的命令来查看内核是否支持 <code>utrace</code>：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ grep CONFIG_UTRACE /boot/config-$(uname -r)</span><br><span class="line">CONFIG_UTRACE=y</span><br></pre></td></tr></table></figure>
+
+<p>在使用 <a href="https://sourceware.org/systemtap/">SystemTap</a> 对 PostgreSQL 进行动态跟踪时，我们需要在编译 PostgreSQL 的时候指定 <code>--enable-dtrace</code> 选项，我们可以通过下面的命令在 Ubuntu 平台 <a href="https://sourceware.org/systemtap/">SystemTap</a>。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ sudo apt-get install -y systemtap systemtap-runtime systemtap-sdt-dev</span><br></pre></td></tr></table></figure>
+
+<p>我们可以使用下面的命令来验证 <a href="https://sourceware.org/systemtap/">SystemTap</a> 是否正确安装。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ sudo stap -ve <span class="string">&#x27;probe begin &#123;printf(&quot;hello world\n&quot;); exit();&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果上述命令运行之后出现类似如下输出，则说明 <a href="https://sourceware.org/systemtap/">SystemTap</a> 已经正确安装。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Pass 1: parsed user script and 476 library scripts using 104372virt/90904res/7368shr/83404data kb, in 270usr/40sys/307real ms.</span><br><span class="line">Pass 2: analyzed script: 1 probe, 1 function, 0 embeds, 0 globals using 105956virt/92788res/7688shr/84988data kb, in 10usr/0sys/11real ms.</span><br><span class="line">Pass 3: translated to C into &quot;/tmp/stap7kdlzF/stap_2dbabdb328ff4c9621fa9f038ccc4a6d_992_src.c&quot; using 105956virt/92788res/7688shr/84988data kb, in 0usr/0sys/0real ms.</span><br><span class="line">Pass 4: compiled C into &quot;stap_2dbabdb328ff4c9621fa9f038ccc4a6d_992.ko&quot; in 2830usr/900sys/3843real ms.</span><br><span class="line">Pass 5: starting run.</span><br><span class="line">hello world</span><br><span class="line">Pass 5: run completed in 10usr/30sys/479real ms.</span><br></pre></td></tr></table></figure>
+
+<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>我们先通过一个小例子来熟悉一下 <a href="https://sourceware.org/systemtap/">SystemTap</a> 的使用。我们以斐波那契数列来作为演示。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ cat fib.c</span><br><span class="line"><span class="comment">#include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;stdlib.h&gt;</span></span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">fib(int n)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (n == 0 || n == 1) &#123;</span><br><span class="line">        <span class="built_in">return</span> 1;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">return</span> fib(n-1) + fib(n-2);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(int argc, char **argv)</span><br><span class="line">&#123;</span><br><span class="line">    int n = atoi(argv[1]);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;fib(%d) = %d\n&quot;</span>, n, fib(n));</span><br><span class="line">    <span class="built_in">return</span> 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$ gcc -g -o fib fib.c</span><br></pre></td></tr></table></figure>
+
+<p>接下来我们创建 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本来捕获 <code>fib</code> 程序的调用栈。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ cat fib.stp</span><br><span class="line">probe process(<span class="string">&quot;./fib&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;*&quot;</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s -&gt; %s: %s\n&quot;</span>, thread_indent(3), ppfunc(), $<span class="variable">$parms</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process(<span class="string">&quot;./fib&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;*&quot;</span>).<span class="built_in">return</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s &lt;- %s: %s\n&quot;</span>, thread_indent(-3), ppfunc(), $<span class="variable">$return</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>function()</code> 是函数进入的位置。</li>
+<li><code>function().return</code> 是函数返回的位置。</li>
+<li><code>thread_indent()</code> 用于记录缩紧的长度。</li>
+<li><code>ppfunc()</code> 返回函数的名称。</li>
+<li><code>$$parms</code> 变量记录了调用该函数的参数。</li>
+<li><code>$$return</code> 函数的返回值。</li>
+</ul>
+<p>现在，我们在两个终端中分别执行 <code>stap</code> 和 <code>fib</code> 就可以捕获到 <code>fib</code> 的调用栈。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ <span class="comment"># 终端一</span></span><br><span class="line">$ sudo stap fib.stp</span><br><span class="line">WARNING: <span class="keyword">function</span> _start <span class="built_in">return</span> probe is blacklisted: keyword at fib.stp:13:1</span><br><span class="line"> <span class="built_in">source</span>: probe process(<span class="string">&quot;./fib&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;*&quot;</span>).<span class="built_in">return</span> &#123;</span><br><span class="line">         ^</span><br></pre></td></tr></table></figure>
+
+<p>终端一执行完上述命令之后会一直处于等待状态，接着我们在终端二中执行下面的命令。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ <span class="comment"># 终端二</span></span><br><span class="line">$ ./fib 5</span><br></pre></td></tr></table></figure>
+
+<p>终端二执行完成之后，我们可以在终端一中看到如下输出。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">  0 fib(814956):   -&gt; _start:</span><br><span class="line"> 21 fib(814956):      -&gt; __libc_csu_init:</span><br><span class="line"> 26 fib(814956):         -&gt; _init:</span><br><span class="line"> 30 fib(814956):         &lt;- _init:</span><br><span class="line"> 33 fib(814956):         -&gt; frame_dummy:</span><br><span class="line"> 37 fib(814956):            -&gt; register_tm_clones:</span><br><span class="line"> 41 fib(814956):            &lt;- register_tm_clones:</span><br><span class="line"> 42 fib(814956):         &lt;- frame_dummy:</span><br><span class="line"> 45 fib(814956):      &lt;- __libc_csu_init:</span><br><span class="line"> 50 fib(814956):      -&gt; main: argc=0x2 argv=0x7ffd055f6208</span><br><span class="line"> 62 fib(814956):         -&gt; fib: n=0x5</span><br><span class="line"> 68 fib(814956):            -&gt; fib: n=0x4</span><br><span class="line"> 74 fib(814956):               -&gt; fib: n=0x3</span><br><span class="line"> 80 fib(814956):                  -&gt; fib: n=0x2</span><br><span class="line"> 86 fib(814956):                     -&gt; fib: n=0x1</span><br><span class="line"> 90 fib(814956):                     &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line"> 95 fib(814956):                     -&gt; fib: n=0x0</span><br><span class="line"> 99 fib(814956):                     &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">101 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x2</span><br><span class="line">106 fib(814956):                  -&gt; fib: n=0x1</span><br><span class="line">110 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">112 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x3</span><br><span class="line">116 fib(814956):               -&gt; fib: n=0x2</span><br><span class="line">122 fib(814956):                  -&gt; fib: n=0x1</span><br><span class="line">126 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">130 fib(814956):                  -&gt; fib: n=0x0</span><br><span class="line">134 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">136 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x2</span><br><span class="line">138 fib(814956):            &lt;- fib: <span class="built_in">return</span>=0x5</span><br><span class="line">143 fib(814956):            -&gt; fib: n=0x3</span><br><span class="line">148 fib(814956):               -&gt; fib: n=0x2</span><br><span class="line">154 fib(814956):                  -&gt; fib: n=0x1</span><br><span class="line">158 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">162 fib(814956):                  -&gt; fib: n=0x0</span><br><span class="line">165 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">168 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x2</span><br><span class="line">172 fib(814956):               -&gt; fib: n=0x1</span><br><span class="line">176 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">178 fib(814956):            &lt;- fib: <span class="built_in">return</span>=0x3</span><br><span class="line">180 fib(814956):         &lt;- fib: <span class="built_in">return</span>=0x8</span><br><span class="line">279 fib(814956):      &lt;- main: <span class="built_in">return</span>=0x0</span><br><span class="line">284 fib(814956):      -&gt; __do_global_dtors_aux:</span><br><span class="line">290 fib(814956):         -&gt; deregister_tm_clones:</span><br><span class="line">293 fib(814956):         &lt;- deregister_tm_clones:</span><br><span class="line">296 fib(814956):      &lt;- __do_global_dtors_aux:</span><br><span class="line">298 fib(814956):      -&gt; _fini:</span><br><span class="line">301 fib(814956):      &lt;- _fini:</span><br></pre></td></tr></table></figure>
+
+<h2 id="SystemTap-脚本"><a href="#SystemTap-脚本" class="headerlink" title="SystemTap 脚本"></a>SystemTap 脚本</h2><p>在上面的示例中我们已经见到了如何使用 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本，大多少情况下，<a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本是每个 <a href="https://sourceware.org/systemtap/">SystemTap</a> 会话的基础，它指示了 <a href="https://sourceware.org/systemtap/">SystemTap</a> 应该收集什么类型的信息以及对收集的信息做什么处理。本节我们将简要介绍一下 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本的基本语法。</p>
+<h3 id="基本语法"><a href="#基本语法" class="headerlink" title="基本语法"></a>基本语法</h3><p><a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本由两个组件构成：事件（events）和处理程序（handlers）。一旦 <a href="https://sourceware.org/systemtap/">SystemTap</a> 会话开始，<a href="https://sourceware.org/systemtap/">SystemTap</a> 将监视操作系统中指定的事件并在事件发生时执行处理程序。事件和对应的处理程序统称为探测点（probe）。<a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本通常使用 <code>.stp</code> 后缀，并包含如下格式的探测点：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">probe event &#123;statements&#125;</span><br></pre></td></tr></table></figure>
+
+<p><a href="https://sourceware.org/systemtap/">SystemTap</a> 同一探测点支持多个事件，多个事件通过逗号（<code>,</code>）分割，如果在一个探测点指定了多个事件，任何一个事件发生都将执行处理程序。我们还可以在 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本中定义函数，如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">function func_name(arguments) &#123;statements&#125;</span><br><span class="line">probe event &#123;func_name(arguments)&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="事件"><a href="#事件" class="headerlink" title="事件"></a>事件</h3><p><a href="https://sourceware.org/systemtap/">SystemTap</a> 事件大致可以分为两种类型：同步（synchronous）和异步（asynchronous）。</p>
+<p>当任何进程在内核代码的特定位置执行指令时，就会发生同步事件。这为其他事件提供了一个参考点，从中可以获得更多的上下文数据。同步事件包含以下示例：</p>
+<ul>
+<li><p><code>syscall.system_call</code> - 系统调用 <code>system_call</code> 的开始，可以在其后面添加 <code>.return</code> 后缀监控系统调用退出。例如想要监控系统调用 <code>close</code> 函数的开始和退出，可以使用 <code>syscall.close</code> 和 <code>syscall.close.return</code>。</p>
+</li>
+<li><p><code>vfs.file_operation</code> - 虚拟文件系统（VFS）的 <code>file_operation</code> 的开始。与 <code>syscall</code> 类型，可以添加 <code>.return</code> 后缀监控 <code>file_operation</code> 的退出。</p>
+</li>
+<li><p><code>kernel.function(&quot;function&quot;)</code> - 内核函数 <code>function</code> 的开始。例如 <code>kernel.function(&quot;sys_open&quot;)</code> 指的是内核函数 <code>sys_open</code> 被系统任意线程调用时发生的事件，同样地，可以通过 <code>.return</code> 后缀指定 <code>sys_open</code> 退出事件，即 <code>kernel.function(&quot;sys_open&quot;).return</code>。</p>
+<p>当定义探测事件时，我们可以使用星号（<code>*</code>）通配符。此外，我们还可以跟踪内核源文件中的函数开始和退出，如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">probe kernel.function(<span class="string">&quot;*@net/socket.c&quot;</span>) &#123;&#125;</span><br><span class="line">probe kernel.function(<span class="string">&quot;*@net/socket.c&quot;</span>).return &#123;&#125;</span><br></pre></td></tr></table></figure></li>
+<li><p><code>kernel.trace(&quot;tracepoint&quot;)</code> - <code>tracepoint</code> 的静态探测点。最近的内核（2.6.30 和更新版本）包括对内核中特定事件的检测。这些事件用跟踪点静态标记。<a href="https://sourceware.org/systemtap/">SystemTap</a> 中可用的跟踪点的一个示例是 <code>kernel.trace(&quot;kfree_skb&quot;)</code>，它指示每次在内核中释放网络缓冲区。</p>
+</li>
+<li><p><code>module(&quot;module&quot;).function(&quot;function&quot;)</code> - 探测特定模块下的 <code>function</code> 函数，例如：</p>
+ <figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">probe module(<span class="string">&quot;ext3&quot;</span>).function(<span class="string">&quot;*&quot;</span>) &#123;&#125;</span><br><span class="line">probe module(<span class="string">&quot;ext3&quot;</span>).function(<span class="string">&quot;*&quot;</span>).return &#123;&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>异步事件与代码中的特定指令或位置无关。这一系列探测点主要由计数器、计时器和类似结构组成。异步事件包含以下示例：</p>
+<ul>
+<li><code>begin</code>, <code>end</code> - 分别表示 <a href="https://sourceware.org/systemtap/">SystemTap</a> 会话的开始和结束。</li>
+<li><code>timer events</code> - 指定要定期执行的处理程序的事件。例如： <figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">probe timer.s(<span class="number">4</span>) &#123;</span><br><span class="line">    printf(<span class="string">&quot;hello world\n&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+ 上面的示例每个 4 秒打印 <code>hello world</code>，我们还可以使用下面的定时器事件：<ul>
+<li><code>timer.ms(milliseconds)</code></li>
+<li><code>timer.us(microseconds)</code></li>
+<li><code>timer.ns(nanoseconds)</code></li>
+<li><code>timer.hz(hertz)</code></li>
+<li><code>timer.jiffies(jiffies)</code><br>当与其他收集信息的探测点一起使用时，计时器事件允许您定期打印更新并查看该信息如何随时间变化。</li>
+</ul>
+</li>
+</ul>
+<h3 id="处理程序"><a href="#处理程序" class="headerlink" title="处理程序"></a>处理程序</h3><p><a href="https://sourceware.org/systemtap/">SystemTap</a> 支持在处理程序中使用几个基本结构。大多数这些处理程序构造的语法主要基于 C 和 awk 语法。本节描述几个最有用的 <a href="https://sourceware.org/systemtap/">SystemTap</a> 处理程序构造，它们应该为您提供足够的信息来编写简单但有用的 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本。</p>
+<h4 id="变量"><a href="#变量" class="headerlink" title="变量"></a>变量</h4><p>我们可以在 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本中自由的使用变量，<a href="https://sourceware.org/systemtap/">SystemTap</a> 将自动推导变量的类型，例如 <code>foo = gettimeofday_s()</code>，<code>foo</code> 的类型为整型，在 <code>printf()</code> 函数中可以使用 <code>%d</code> 来格式化输出。默认情况下，变量都是某个探测点的局部变量，如果想要在多个探测点共享变量，那么可以在探测点之外使用 <code>global</code> 关键字修饰变量，例如：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">global count_jiffies, count_ms</span><br><span class="line">probe timer.jiffies(<span class="number">100</span>) &#123; count_jiffies++ &#125;</span><br><span class="line">probe timer.ms(<span class="number">100</span>) &#123; count_ms++ &#125;</span><br><span class="line">probe timer.ms(<span class="number">12345</span>) &#123;</span><br><span class="line">    hz = (<span class="number">1000</span> * count_jiffies) / count_ms</span><br><span class="line">    printf(<span class="string">&quot;jiffies:ms ratio %d:%d =&gt; CONFIG_HZ=%d\n&quot;</span>, count_jiffies, count_ms, hz)</span><br><span class="line">    exit()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的示例使用 <code>jiffies</code> 和 <code>ms</code> 计时器计算内核的 <code>CONFIG_HZ</code> 设置，然后进行相应的计算。<code>global</code> 语句允许脚本在探测点之间共享 <code>count_jiffies</code> 和 <code>count_ms</code>（在它们各自的探测点中设置）变量。</p>
+<h4 id="目标变量"><a href="#目标变量" class="headerlink" title="目标变量"></a>目标变量</h4><p>我们可以使用 <code>-L</code> 选项来列出探测点可用的目标变量，如果为正在运行的内核安装了调试信息，则可以运行以下命令找出哪些目标变量可用于 <code>vfs_read</code> 函数：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ stap -L <span class="string">&#x27;kernel.function(&quot;vfs_read&quot;)&#x27;</span></span><br><span class="line">kernel.function(<span class="string">&quot;vfs_read@fs/read_write.c:277&quot;</span>) <span class="variable">$file</span>:struct file* <span class="variable">$buf</span>:char* <span class="variable">$count</span>:size_t <span class="variable">$pos</span>:loff_t*</span><br></pre></td></tr></table></figure>
+
+<p>每个目标变量前面都有一个 <code>$</code> 符号，目标变量的类型在 <code>:</code> 之后。内核 <code>vfs_read</code> 函数入口处的目标变量有 <code>$file</code>（指向描述文件的结构指针）、<code>$buf</code>（指向用于存储读取数据的用户空间内存的指针）、<code>$count</code>（要读取的字节数）和 <code>$pos</code>（从文件中读取开始位置）。</p>
+<p>如果目标变量不是探测点的局部变量，如果外部全局变量或者文件局部静态变量，我们可以使用 <code>@var(&quot;varname@src/file.c&quot;)</code> 来引用；我们还可以使用形如 <code>@var(&quot;varname&quot;, &quot;/path/to/exe/or/lib&quot;)</code> 来引入可执行文件或库中的变量。</p>
+<p>如果是执行基础类型的指针（如整型、字符串等），我们可以使用下面的函数来获取内核空间数据。</p>
+<ul>
+<li><code>kernel_char(address)</code> - 从内核内存中获取 <code>address</code> 处的字符。</li>
+<li><code>kernel_short(address)</code> - 从内核内存中获取 <code>address</code> 处的 <code>short</code> 类型数据。</li>
+<li><code>kernel_int(address)</code> - 从内核内存中获取 <code>address</code> 处的 <code>int</code> 类型数据。</li>
+<li><code>kernel_long(address)</code> - 从内核内存中获取 <code>address</code> 处的 <code>long</code> 类型数据。</li>
+<li><code>kernel_string(address)</code> - 从内核内存中获取 <code>address</code> 处的字符串。</li>
+<li><code>kernel_string(address)</code> - 从内核内存中获取 <code>address</code> 处的长度为 <code>n</code> 的字符串。</li>
+</ul>
+<p>同样地，<a href="https://sourceware.org/systemtap/">SystemTap</a> 提供了一系列函数用于获取用户空间数据。</p>
+<ul>
+<li><code>user_char(address)</code> - 从用户内存中获取 <code>address</code> 处的字符。</li>
+<li><code>user_short(address)</code> - 从用户内存中获取 <code>address</code> 处的 <code>short</code> 类型数据。</li>
+<li><code>user_int(address)</code> - 从用户内存中获取 <code>address</code> 处的 <code>int</code> 类型数据。</li>
+<li><code>user_long(address)</code> - 从用户内存中获取 <code>address</code> 处的 <code>long</code> 类型数据。</li>
+<li><code>user_string(address)</code> - 从用户内存中获取 <code>address</code> 处的字符串。</li>
+<li><code>user_string(address)</code> - 从用户内存中获取 <code>address</code> 处的长度为 <code>n</code> 的字符串。</li>
+</ul>
+<p>为了方便 <a href="https://sourceware.org/systemtap/">SystemTap</a> 提供了一系列内置变量用于打印目标变量。</p>
+<ul>
+<li><code>$$vars</code> - 等同于 <code>sprintf(&quot;parm1=%x ... parmN=%x var1=%x ... varN=%x&quot;, parm1, ..., parmN, var1, ... varN)</code>，有些变量由于无法找到运行时位置可能被输出为 <code>=?</code>。</li>
+<li><code>$$locals</code> - <code>$$vars</code> 的子集，仅包含局部变量。</li>
+<li><code>$$parms</code> - <code>$$vars</code> 的子集，仅包含函数参数。</li>
+<li><code>$$return</code> - 仅在 <code>.return</code> 中有效，如果函数有返回值，等同于 <code>sprintf(&quot;return=%x&quot;, $return)</code>；否则为空字符串。</li>
+</ul>
+<p>我们可以在变量后面添加 <code>$</code> 或 <code>$$</code> 后缀对变量进行展开，例如：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ sudo stap -e <span class="string">&#x27;probe kernel.function(&quot;vfs_read&quot;) &#123;printf(&quot;%s\n&quot;, $$parms$); exit(); &#125;&#x27;</span></span><br><span class="line">file=&#123;.f_u=&#123;...&#125;, .f_path=&#123;...&#125;, .f_op=0xffffffffa06e1d80, .f_lock=&#123;...&#125;, .f_count=&#123;...&#125;, .f_flags=34818, .f_mode=31, .f_pos=0, .f_owner=&#123;...&#125;, .f_cred=0xffff88013148fc80, .f_ra=&#123;...&#125;, .f_version=0, .f_security=0xffff8800b8dce560, .private_data=0x0, .f_ep_links=&#123;...&#125;, .f_mapping=0xffff880037f8fdf8&#125; buf=<span class="string">&quot;&quot;</span> count=8196 pos=-131938753921208</span><br><span class="line"></span><br><span class="line">$ sudo stap -e <span class="string">&#x27;probe kernel.function(&quot;vfs_read&quot;) &#123;printf(&quot;%s\n&quot;, $$parms$$); exit(); &#125;&#x27;</span></span><br><span class="line">file=&#123;.f_u=&#123;.fu_list=&#123;.next=0xffff8801336ca0e8, .prev=0xffff88012ded0840&#125;, .fu_rcuhead=&#123;.next=0xffff8801336ca0e8, .func=0xffff88012ded0840&#125;&#125;, .f_path=&#123;.mnt=0xffff880132fc97c0, .dentry=0xffff88001a889cc0&#125;, .f_op=0xffffffffa06f64c0, .f_lock=&#123;.raw_lock=&#123;.slock=196611&#125;&#125;, .f_count=&#123;.counter=2&#125;, .f_flags=34818, .f_mode=31, .f_pos=0, .f_owner=&#123;.lock=&#123;.raw_lock=&#123;.lock=16777216&#125;&#125;, .pid=0x0, .pid_type=0, .uid=0, .euid=0, .signum=0&#125;, .f_cred=0xffff880130129a80, .f_ra=&#123;.start=0, .size=0, .async_size=0, .ra_pages=32, ...</span><br></pre></td></tr></table></figure>
+
+<h4 id="控制语句"><a href="#控制语句" class="headerlink" title="控制语句"></a>控制语句</h4><p>在某些情况下，<a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本的输出可能非常大。要解决这个问题，我们需要进一步细化脚本的逻辑，以便将输出的内容与我们的探测更相关。通过在处理程序中使用条件语句来做到这一点。<a href="https://sourceware.org/systemtap/">SystemTap</a> 支持以下类型的控制语句：</p>
+<ul>
+<li><code>if/else</code> 语句<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">if (condition)</span><br><span class="line">    statement1</span><br><span class="line">else</span><br><span class="line">    statement2</span><br></pre></td></tr></table></figure></li>
+<li><code>while</code> 循环语句<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">while (condition)</span><br><span class="line">    statement</span><br></pre></td></tr></table></figure></li>
+<li><code>for</code> 循环语句<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">for (initialization; condition; increment)</span><br><span class="line">    statement</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="关联数组"><a href="#关联数组" class="headerlink" title="关联数组"></a>关联数组</h4><p><a href="https://sourceware.org/systemtap/">SystemTap</a> 支持关联数组（Associative Array），不管关联数组是在一个探测点还是多个探测点使用，我们都必须将其定义为全局变量，即使用 <code>global</code> 定义在所有探测点之外。关联数组最多支持 9 个下标，使用逗号分隔开，如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">device[pid(), execname(), uid(), ppid(), <span class="string">&quot;W&quot;</span>] = devname</span><br></pre></td></tr></table></figure>
+
+<p>我们可以使用 <code>=</code> 对关联数据进行赋值，如 <code>array_name[index_expression] = value</code>。通过 <code>array_name[index_expression]</code> 可以从关联数组中取出值。关联数组的遍历可以使用 <code>foreach</code>，例如：。</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">foreach(count in reads)</span><br><span class="line">    printf(<span class="string">&quot;%s: %d\n&quot;</span>, count, reads[count])</span><br></pre></td></tr></table></figure>
+
+<p>我们可以在遍历的使用指定是升序（<code>+</code>）还是降序（<code>-</code>），同时，我们还可以指定遍历的数量（<code>limit</code>），如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">foreach(count in reads- limit <span class="number">10</span>)</span><br><span class="line">    printf(<span class="string">&quot;%s: %d\n&quot;</span>, count, reads[count])</span><br></pre></td></tr></table></figure>
+
+<p><code>delete</code> 可以用于清除关联数组中的数据，如 <code>delete reads</code>。如果我们需要判断一个元素是否在关联数组中，可以 <code>if ([index_expression] in array_name) statement</code> 来进行判断。</p>
+<h4 id="聚合功能"><a href="#聚合功能" class="headerlink" title="聚合功能"></a>聚合功能</h4><p><a href="https://sourceware.org/systemtap/">SystemTap</a> 还有一个聚合的功能（<code>&lt;&lt;&lt; value</code> 操作符），例如：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">global reads</span><br><span class="line">probe vfs.read &#123;</span><br><span class="line">    reads[execname()] &lt;&lt;&lt; $count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>与 <code>=</code> 不同的是，<code>&lt;&lt;&lt;</code> 不会覆盖 <code>reads[execname()]</code> 的值，而是会将其视为一个唯一键值存储起来，后续我们可以使用 <code>sum</code>、<code>max</code> 等对其进行聚合运算，例如：</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">global reads</span><br><span class="line">probe vfs.read &#123;</span><br><span class="line">    reads[execname(), pid()] &lt;&lt;&lt; $count;</span><br><span class="line">&#125;</span><br><span class="line">probe timer.s(<span class="number">3</span>) &#123;</span><br><span class="line">    foreach([var1, var2] in reads)</span><br><span class="line">        printf(<span class="string">&quot;%s (%d): %d \n&quot;</span>, var1, var2, @count(reads[var1, var2]))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><a href="https://sourceware.org/systemtap/">SystemTap</a> 支持以下聚合运算：</p>
+<ul>
+<li><code>count</code> - 返回存储在变量/数组索引表达式中的所有值的数量。</li>
+<li><code>sum</code> - 返回存储在变量/数组索引表达式中的所有值的总和。</li>
+<li><code>min</code> - 返回存储在变量/数组索引表达式中的所有值中的最小值。</li>
+<li><code>max</code> - 返回存储在变量/数组索引表达式中的所有值中的最大值。</li>
+<li><code>avg</code> - 返回存储在变量/数组索引表达式中的所有值中的平均值。</li>
+</ul>
+<h2 id="SystemTap-跟踪-PostgreSQL"><a href="#SystemTap-跟踪-PostgreSQL" class="headerlink" title="SystemTap 跟踪 PostgreSQL"></a>SystemTap 跟踪 PostgreSQL</h2><p>本节将介绍如何使用 <a href="https://sourceware.org/systemtap/">SystemTap</a> 来跟踪 PostgreSQL。</p>
+<h3 id="查看探测点"><a href="#查看探测点" class="headerlink" title="查看探测点"></a>查看探测点</h3><p>首先，我们使用 <code>stap</code> 命令来获取 PostgreSQL 中所有的探测点。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ stap -l <span class="string">&#x27;process(&quot;postgres&quot;).function(&quot;*&quot;)&#x27;</span></span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddCheckConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8840&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddForeignKeyConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8977&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATCheckPartitionsNotInUse@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6335&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATColumnChangeRequiresRewrite@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:12346&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATController@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:4435&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATDetachCheckNoForeignKeyRefs@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:19184&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddColumn@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6644&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8725&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIdentity@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:7645&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndex@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8550&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndexConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8633&quot;</span>)</span><br><span class="line">[...]</span><br></pre></td></tr></table></figure>
+
+<p>此外，使用 <code>-L</code> 选项除了可以列出所有探测点，还可以列出局部变量。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ stap -L <span class="string">&#x27;process(&quot;postgres&quot;).function(&quot;*&quot;)&#x27;</span></span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddCheckConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8840&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$constr</span>:Constraint* <span class="variable">$recurse</span>:_Bool <span class="variable">$recursing</span>:_Bool <span class="variable">$is_readd</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$newcons</span>:List* <span class="variable">$lcon</span>:ListCell* <span class="variable">$children</span>:List* <span class="variable">$child</span>:ListCell* <span class="variable">$address</span>:ObjectAddress <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddForeignKeyConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8977&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$fkconstraint</span>:Constraint* <span class="variable">$recurse</span>:_Bool <span class="variable">$recursing</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$pkrel</span>:Relation <span class="variable">$pkattnum</span>:int16[] <span class="variable">$fkattnum</span>:int16[] <span class="variable">$pktypoid</span>:Oid[] <span class="variable">$fktypoid</span>:Oid[] <span class="variable">$opclasses</span>:Oid[] <span class="variable">$pfeqoperators</span>:Oid[] <span class="variable">$ppeqoperators</span>:Oid[] <span class="variable">$ffeqoperators</span>:Oid[] <span class="variable">$fkdelsetcols</span>:int16[] <span class="variable">$i</span>:int <span class="variable">$numfks</span>:int <span class="variable">$numpks</span>:int <span class="variable">$numfkdelsetcols</span>:int <span class="variable">$indexOid</span>:Oid <span class="variable">$old_check_ok</span>:_Bool <span class="variable">$address</span>:ObjectAddress <span class="variable">$old_pfeqop_item</span>:ListCell* <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATCheckPartitionsNotInUse@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6335&quot;</span>) <span class="variable">$rel</span>:Relation <span class="variable">$lockmode</span>:LOCKMODE</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATColumnChangeRequiresRewrite@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:12346&quot;</span>) <span class="variable">$expr</span>:Node* <span class="variable">$varattno</span>:AttrNumber</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATController@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:4435&quot;</span>) <span class="variable">$parsetree</span>:AlterTableStmt* <span class="variable">$rel</span>:Relation <span class="variable">$cmds</span>:List* <span class="variable">$recurse</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$context</span>:AlterTableUtilityContext* <span class="variable">$wqueue</span>:List* <span class="variable">$lcmd</span>:ListCell*</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATDetachCheckNoForeignKeyRefs@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:19184&quot;</span>) <span class="variable">$partition</span>:Relation <span class="variable">$constraints</span>:List* <span class="variable">$cell</span>:ListCell* <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddColumn@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6644&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$cmd</span>:AlterTableCmd** <span class="variable">$recurse</span>:_Bool <span class="variable">$recursing</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$cur_pass</span>:int <span class="variable">$context</span>:AlterTableUtilityContext* <span class="variable">$myrelid</span>:Oid <span class="variable">$colDef</span>:ColumnDef* <span class="variable">$if_not_exists</span>:_Bool <span class="variable">$pgclass</span>:Relation <span class="variable">$attrdesc</span>:Relation <span class="variable">$reltup</span>:HeapTuple <span class="variable">$attribute</span>:FormData_pg_attribute <span class="variable">$newattnum</span>:int <span class="variable">$relkind</span>:char <span class="variable">$typeTuple</span>:HeapTuple <span class="variable">$typeOid</span>:Oid <span class="variable">$typmod</span>:int32 <span class="variable">$collOid</span>:Oid <span class="variable">$tform</span>:Form_pg_type <span class="variable">$defval</span>:Expr* <span class="variable">$children</span>:List* <span class="variable">$child</span>:ListCell* <span class="variable">$childcmd</span>:AlterTableCmd* <span class="variable">$aclresult</span>:AclResult <span class="variable">$address</span>:ObjectAddress <span class="variable">$tupdesc</span>:TupleDesc <span class="variable">$aattr</span>:FormData_pg_attribute*[] <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8725&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$newConstraint</span>:Constraint* <span class="variable">$recurse</span>:_Bool <span class="variable">$is_readd</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$address</span>:ObjectAddress <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIdentity@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:7645&quot;</span>) <span class="variable">$rel</span>:Relation <span class="variable">$colName</span>:char const* <span class="variable">$def</span>:Node* <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$attrelation</span>:Relation <span class="variable">$tuple</span>:HeapTuple <span class="variable">$attTup</span>:Form_pg_attribute <span class="variable">$attnum</span>:AttrNumber <span class="variable">$address</span>:ObjectAddress <span class="variable">$cdef</span>:ColumnDef* <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndex@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8550&quot;</span>) <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$stmt</span>:IndexStmt* <span class="variable">$is_rebuild</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$check_rights</span>:_Bool <span class="variable">$skip_build</span>:_Bool <span class="variable">$quiet</span>:_Bool <span class="variable">$address</span>:ObjectAddress</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndexConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8633&quot;</span>) <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$stmt</span>:IndexStmt* <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$index_oid</span>:Oid <span class="variable">$indexRel</span>:Relation <span class="variable">$indexName</span>:char* <span class="variable">$indexInfo</span>:IndexInfo* <span class="variable">$constraintName</span>:char* <span class="variable">$constraintType</span>:char <span class="variable">$address</span>:ObjectAddress <span class="variable">$flags</span>:bits16 <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">[...]</span><br></pre></td></tr></table></figure>
+
+<p>从上面的输出可以看到，所有的探测点都以 <code>process</code> 开始，这是 <a href="https://sourceware.org/systemtap/">SystemTap</a> 跟踪用户态程序的统一使用方法。</p>
+<h3 id="查看调用栈"><a href="#查看调用栈" class="headerlink" title="查看调用栈"></a>查看调用栈</h3><p>我们在前面使用 <a href="https://sourceware.org/systemtap/">SystemTap</a> 抓取了斐波那契数列的调用栈，同样地，我们在这里也从抓取 PostgreSQL 的调用栈开始。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ cat call-stack.stp</span><br><span class="line">probe process.function(<span class="string">&quot;*&quot;</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s -&gt; %s\n&quot;</span>, thread_indent(3), ppfunc());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.function(<span class="string">&quot;*&quot;</span>).<span class="built_in">return</span> &#123;</span><br><span class="line">    thread_indent(-3);</span><br><span class="line">&#125;</span><br><span class="line">$ sudo stap -x 493044 -o call-stack.log</span><br><span class="line">$ <span class="comment"># 在另一个中断执行查询，结束之后查看捕获的调用栈信息</span></span><br><span class="line">$ cat call-stack.log</span><br><span class="line">     0 postgres(493044):   -&gt; WaitEventSetWaitBlock</span><br><span class="line">     0 postgres(493044):   -&gt; pgstat_report_wait_end</span><br><span class="line">     0 postgres(493044):   -&gt; secure_raw_read</span><br><span class="line">     0 postgres(493044):   -&gt; ProcessClientReadInterrupt</span><br><span class="line">     0 postgres(493044):   -&gt; pq_getmessage</span><br><span class="line">    11 postgres(493044):      -&gt; resetStringInfo</span><br><span class="line">    20 postgres(493044):      -&gt; pq_getbytes</span><br><span class="line">    30 postgres(493044):      -&gt; enlargeStringInfo</span><br><span class="line">    38 postgres(493044):      -&gt; pq_getbytes</span><br><span class="line">     0 postgres(493044):   -&gt; SetCurrentStatementStartTimestamp</span><br><span class="line">    11 postgres(493044):      -&gt; GetCurrentTimestamp</span><br><span class="line">     0 postgres(493044):   -&gt; pq_getmsgstring</span><br><span class="line">    10 postgres(493044):      -&gt; pg_client_to_server</span><br><span class="line">    17 postgres(493044):         -&gt; pg_any_to_server</span><br><span class="line">    25 postgres(493044):            -&gt; pg_verify_mbstr</span><br><span class="line">    33 postgres(493044):               -&gt; pg_utf8_verifystr</span><br><span class="line">     0 postgres(493044):   -&gt; pq_getmsgend</span><br><span class="line">     0 postgres(493044):   -&gt; exec_simple_query</span><br><span class="line">    10 postgres(493044):      -&gt; pgstat_report_activity</span><br><span class="line">    18 postgres(493044):         -&gt; GetCurrentStatementStartTimestamp</span><br><span class="line">    27 postgres(493044):         -&gt; GetCurrentTimestamp</span><br><span class="line">    39 postgres(493044):      -&gt; start_xact_command</span><br><span class="line">    46 postgres(493044):         -&gt; StartTransactionCommand</span><br><span class="line">    54 postgres(493044):            -&gt; StartTransaction</span><br><span class="line">    60 postgres(493044):               -&gt; FullTransactionIdFromEpochAndXid</span><br><span class="line">    72 postgres(493044):               -&gt; GetUserIdAndSecContext</span><br><span class="line">    82 postgres(493044):               -&gt; RecoveryInProgress</span><br><span class="line">    91 postgres(493044):               -&gt; AtStart_Memory</span><br><span class="line">   101 postgres(493044):                  -&gt; AllocSetContextCreateInternal</span><br><span class="line">   111 postgres(493044):                     -&gt; MemoryContextCreate</span><br><span class="line">   121 postgres(493044):                  -&gt; MemoryContextSwitchTo</span><br><span class="line">   131 postgres(493044):               -&gt; AtStart_ResourceOwner</span><br><span class="line">   140 postgres(493044):                  -&gt; ResourceOwnerCreate</span><br><span class="line">[...]</span><br></pre></td></tr></table></figure>
+
+<h3 id="SystemTap-抓取慢查询"><a href="#SystemTap-抓取慢查询" class="headerlink" title="SystemTap 抓取慢查询"></a>SystemTap 抓取慢查询</h3><p>在生产环境，我们可以会遇到慢查询的情况，我们同样可以使用 <a href="https://sourceware.org/systemtap/">SystemTap</a> 来分析 PostgreSQL 中的慢查询，<a href="https://sourceware.org/systemtap/wiki/PostgresqlMarkers?action=AttachFile&do=view&target=postgresql-slowq.stp">脚本如下所示</a>：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ cat pg_slow_query.stp</span><br><span class="line">global query_time, query_summary, threshold=0</span><br><span class="line"></span><br><span class="line">probe begin &#123;</span><br><span class="line">    threshold = <span class="variable">$1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;query__start&quot;</span>) &#123;</span><br><span class="line">    query_time[tid(), <span class="variable">$arg1</span>] = gettimeofday_s();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;query__done&quot;</span>) &#123;</span><br><span class="line">    p = tid();</span><br><span class="line">    t = query_time[p, <span class="variable">$arg1</span>]; delete query_time[p, <span class="variable">$arg1</span>];</span><br><span class="line">    <span class="keyword">if</span> (t) &#123;</span><br><span class="line">        e = (gettimeofday_s() - t);</span><br><span class="line">        <span class="keyword">if</span> (e &gt;= threshold) query_summary[p, user_string(<span class="variable">$arg1</span>)] &lt;&lt;&lt; <span class="string">e;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">probe end &#123;</span></span><br><span class="line"><span class="string">    printf(&quot;%10s %10s %s\n&quot;, &quot;tid&quot;, &quot;time&quot;, &quot;query&quot;);</span></span><br><span class="line"><span class="string">    foreach ([p, s] in query_summary) &#123;</span></span><br><span class="line"><span class="string">        printf(&quot;%10d %10d %s\n&quot;, p, @max(query_summary[p, s]), s);</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>query__start</code> 和 <code>query__done</code> 是 PostgreSQL 预定义的探测点，参考 PostgreSQL 文档的<a href="https://www.postgresql.org/docs/current/dynamic-trace.html#DTRACE-PROBE-POINT-TABLE">动态跟踪</a>。<strong>注意：文档中使用的是 <code>-</code>，在 <a href="https://sourceware.org/systemtap/">SystemTap</a> 脚本中需要将其替换为 <code>__</code>。</strong></li>
+<li><code>begin</code> 表示 <a href="https://sourceware.org/systemtap/">SystemTap</a> 会话开始的时候，<code>end</code> 则表示会话结束的时候。</li>
+<li><code>global</code> 用于定义全局变量。</li>
+</ul>
+<p>运行的时候需要指定慢查询的时间，如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ sudo stap -x 493044 -T 60 pg_slow_query.stp 10</span><br><span class="line">       tid       time query</span><br><span class="line">    493044         14 select random(), pg_sleep(14);</span><br></pre></td></tr></table></figure>
+
+<p>上面的命令将持续监控 <code>493044</code> 进程 60 秒并输出事务运行大于 10 秒的查询。</p>
+<h3 id="SystemTap-抓取事务信息"><a href="#SystemTap-抓取事务信息" class="headerlink" title="SystemTap 抓取事务信息"></a>SystemTap 抓取事务信息</h3><p>下面的脚本可以用于跟踪一段时间内事务的提交、回滚数量。</p>
+<figure class="highlight stp"><table><tr><td class="code"><pre><span class="line">global start, abort, commit, ts</span><br><span class="line"></span><br><span class="line">probe begin &#123;</span><br><span class="line">    ts = gettimeofday_s();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;transaction__start&quot;</span>) &#123;</span><br><span class="line">    start++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;transaction__abort&quot;</span>) &#123;</span><br><span class="line">    abort++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;transaction__commit&quot;</span>) &#123;</span><br><span class="line">    commit++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe end &#123;</span><br><span class="line">    printf(<span class="string">&quot;\n&quot;</span>);</span><br><span class="line">    printf(<span class="string">&quot;Start          %d\n&quot;</span>, start);</span><br><span class="line">    printf(<span class="string">&quot;Abort          %d\n&quot;</span>, abort);</span><br><span class="line">    printf(<span class="string">&quot;Commit         %d\n&quot;</span>, commit);</span><br><span class="line">    printf(<span class="string">&quot;Total time (s) %d\n&quot;</span>, gettimeofday_s() - ts);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当执行之后，其输出如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ sudo stap -x 493044 txn_count.stp</span><br><span class="line">^C</span><br><span class="line">Start          3</span><br><span class="line">Abort          1</span><br><span class="line">Commit         2</span><br><span class="line">Total time (s) 11</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://sourceware.org/systemtap/SystemTap_Beginners_Guide.pdf">https://sourceware.org/systemtap/SystemTap_Beginners_Guide.pdf</a><br>[2] <a href="https://sourceware.org/systemtap/archpaper.pdf">https://sourceware.org/systemtap/archpaper.pdf</a><br>[3] <a href="https://sourceware.org/systemtap/tapsets/">https://sourceware.org/systemtap/tapsets/</a><br>[4] <a href="https://www.postgresql.org/docs/current/dynamic-trace.html">https://www.postgresql.org/docs/current/dynamic-trace.html</a></p>
+<!-- [1] https://wiki.ubuntu.com/Kernel/Systemtap -->
+
+
+<div class="just-for-fun">
+笑林广记 -
+</div>
+
+<!--
+
+### 获取内核调试符号
+
+首先，导入 GPG 密钥。
+
+#+begin_src bash
+$ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C8CAB6595FDFF622
+Executing: /tmp/apt-key-gpghome.XVqJ8DQT7K/gpg.1.sh --keyserver keyserver.ubuntu.com --recv-keys C8CAB6595FDFF622
+gpg: key C8CAB6595FDFF622: public key "Ubuntu Debug Symbol Archive Automatic Signing Key (2016) <ubuntu-archive@lists.ubuntu.com>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+#+end_src
+
+接着，添加软件源。
+
+#begin_src bash
+$ codename=$(lsb_release -c | awk '{print $2}')
+$ sudo tee /etc/apt/sources.list.d/ddebs.list <<EOF
+deb http://ddebs.ubuntu.com/ ${codename}      main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ ${codename}-security main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ ${codename}-updates  main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ ${codename}-proposed main restricted universe multiverse
+EOF
+$ sudo apt-get update
+$ sudo apt-get install linux-image-$(uname -r)-dbgsym
+#+end_src
+-->
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>SystemTap</tag>
       </tags>
   </entry>
 </search>

@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="SystemTap 为 Linux 内核和用户态程序提供了动态跟踪功能。用户可以自定义探测事件来跟踪程序的运行情况，如函数调用栈、系统调用以及其他事件。SystemTap 可以在不修改代码、甚至是不需要重启的情况下就能分析程序的运行情况。 SystemTap 的基本思想是命名事件，以及事件对应的处理程序。当运行 SystemTap 脚本时，SystemTap 会监视事件；一旦事件发生，Linux">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SystemTap 动态跟踪">
+<meta property="og:url" content="https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="SystemTap 为 Linux 内核和用户态程序提供了动态跟踪功能。用户可以自定义探测事件来跟踪程序的运行情况，如函数调用栈、系统调用以及其他事件。SystemTap 可以在不修改代码、甚至是不需要重启的情况下就能分析程序的运行情况。 SystemTap 的基本思想是命名事件，以及事件对应的处理程序。当运行 SystemTap 脚本时，SystemTap 会监视事件；一旦事件发生，Linux">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/systemtap-processing-steps.png">
+<meta property="article:published_time" content="2023-01-03T13:08:49.000Z">
+<meta property="article:modified_time" content="2023-01-03T13:40:27.298Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="SystemTap">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/systemtap-processing-steps.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/","path":"2023/01/systemtap-dynamic-tracing/","title":"SystemTap 动态跟踪"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SystemTap 动态跟踪 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">138</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85"><span class="nav-number">1.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95"><span class="nav-number">2.</span> <span class="nav-text">测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SystemTap-%E8%84%9A%E6%9C%AC"><span class="nav-number">3.</span> <span class="nav-text">SystemTap 脚本</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E8%AF%AD%E6%B3%95"><span class="nav-number">3.1.</span> <span class="nav-text">基本语法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8B%E4%BB%B6"><span class="nav-number">3.2.</span> <span class="nav-text">事件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E7%A8%8B%E5%BA%8F"><span class="nav-number">3.3.</span> <span class="nav-text">处理程序</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%98%E9%87%8F"><span class="nav-number">3.3.1.</span> <span class="nav-text">变量</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%9B%AE%E6%A0%87%E5%8F%98%E9%87%8F"><span class="nav-number">3.3.2.</span> <span class="nav-text">目标变量</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%A7%E5%88%B6%E8%AF%AD%E5%8F%A5"><span class="nav-number">3.3.3.</span> <span class="nav-text">控制语句</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%B3%E8%81%94%E6%95%B0%E7%BB%84"><span class="nav-number">3.3.4.</span> <span class="nav-text">关联数组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%81%9A%E5%90%88%E5%8A%9F%E8%83%BD"><span class="nav-number">3.3.5.</span> <span class="nav-text">聚合功能</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SystemTap-%E8%B7%9F%E8%B8%AA-PostgreSQL"><span class="nav-number">4.</span> <span class="nav-text">SystemTap 跟踪 PostgreSQL</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%8E%A2%E6%B5%8B%E7%82%B9"><span class="nav-number">4.1.</span> <span class="nav-text">查看探测点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E8%B0%83%E7%94%A8%E6%A0%88"><span class="nav-number">4.2.</span> <span class="nav-text">查看调用栈</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SystemTap-%E6%8A%93%E5%8F%96%E6%85%A2%E6%9F%A5%E8%AF%A2"><span class="nav-number">4.3.</span> <span class="nav-text">SystemTap 抓取慢查询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SystemTap-%E6%8A%93%E5%8F%96%E4%BA%8B%E5%8A%A1%E4%BF%A1%E6%81%AF"><span class="nav-number">4.4.</span> <span class="nav-text">SystemTap 抓取事务信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">138</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SystemTap 动态跟踪
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-01-03 21:08:49" itemprop="dateCreated datePublished" datetime="2023-01-03T21:08:49+08:00">2023-01-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%9D%82%E9%A1%B9/" itemprop="url" rel="index"><span itemprop="name">杂项</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>22k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>20 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 为 Linux 内核和用户态程序提供了动态跟踪功能。用户可以自定义探测事件来跟踪程序的运行情况，如函数调用栈、系统调用以及其他事件。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 可以在不修改代码、甚至是不需要重启的情况下就能分析程序的运行情况。</p>
+<p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的基本思想是命名事件，以及事件对应的处理程序。当运行 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本时，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会监视事件；一旦事件发生，Linux 内核就会将处理程序作为子例程运行，然后继续运行。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 有几种事件：进入/退出函数、计时器到期、会话开始/终止等。处理程序是一系列脚本语句，指定事件发生时要执行的工作。这项工作包括从事件上下午中提取数据，将其存储到内部变量中，打印结果。</p>
+<p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的工作原理是将 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本翻译成 C 语言，然后将其编译为内核模块，并加载到内核中并启用脚本中的探测点；当相应的事件发生时，事件对应的处理程序被执行；一旦 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会话结束，探测点将被禁用，内核模块也被卸载。下图是 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的处理过程。</p>
+<img src="/2023/01/systemtap-dynamic-tracing/systemtap-processing-steps.png" class="">
+
+<p>图片来源于 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/archpaper.pdf">Architecture of systemtap: a Linux trace/probe tool</a>。</p>
+<span id="more"></span>
+
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><p>本文的环境如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ lsb_release -a</span><br><span class="line">No LSB modules are available.</span><br><span class="line">Distributor ID: Ubuntu</span><br><span class="line">Description:    Ubuntu 20.04.5 LTS</span><br><span class="line">Release:        20.04</span><br><span class="line">Codename:       focal</span><br><span class="line">$ uname -r</span><br><span class="line">5.4.0-135-generic</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 最初主要是针对内核的跟踪分析工具，但是在 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 0.6 版本的时候引入了用户态程序的跟踪分析。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 需要 <code>uprobes</code> 模块来执行用户态的探测，如果您的 Linux 内核版本是 3.5 及其之后的版本，那么该模块已经包含在内。您可以使用下面的命令来查看内核是否支持 <code>uprobes</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ grep CONFIG_UPROBES /boot/config-$(uname -r)</span><br><span class="line">CONFIG_UPROBES=y</span><br></pre></td></tr></table></figure>
+
+<p>上面的结构表示当前内核集成了 <code>uprobes</code> 模块。如果您运行的是 3.5 之前的内核，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会自动构建 <code>uprobes</code> 模块，但是，您还需要 <code>utrace</code> 内核扩展，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 使用该扩展来跟踪用户态事件。有关 <code>utrace</code> 的更多详细信息，请参考<a target="_blank" rel="noopener" href="http://sourceware.org/systemtap/wiki/utrace">这里</a>。您可以使用下面的命令来查看内核是否支持 <code>utrace</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ grep CONFIG_UTRACE /boot/config-$(uname -r)</span><br><span class="line">CONFIG_UTRACE=y</span><br></pre></td></tr></table></figure>
+
+<p>在使用 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 对 PostgreSQL 进行动态跟踪时，我们需要在编译 PostgreSQL 的时候指定 <code>--enable-dtrace</code> 选项，我们可以通过下面的命令在 Ubuntu 平台 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a>。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ sudo apt-get install -y systemtap systemtap-runtime systemtap-sdt-dev</span><br></pre></td></tr></table></figure>
+
+<p>我们可以使用下面的命令来验证 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 是否正确安装。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ sudo stap -ve <span class="string">&#x27;probe begin &#123;printf(&quot;hello world\n&quot;); exit();&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果上述命令运行之后出现类似如下输出，则说明 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 已经正确安装。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Pass 1: parsed user script and 476 library scripts using 104372virt/90904res/7368shr/83404data kb, in 270usr/40sys/307real ms.</span><br><span class="line">Pass 2: analyzed script: 1 probe, 1 function, 0 embeds, 0 globals using 105956virt/92788res/7688shr/84988data kb, in 10usr/0sys/11real ms.</span><br><span class="line">Pass 3: translated to C into &quot;/tmp/stap7kdlzF/stap_2dbabdb328ff4c9621fa9f038ccc4a6d_992_src.c&quot; using 105956virt/92788res/7688shr/84988data kb, in 0usr/0sys/0real ms.</span><br><span class="line">Pass 4: compiled C into &quot;stap_2dbabdb328ff4c9621fa9f038ccc4a6d_992.ko&quot; in 2830usr/900sys/3843real ms.</span><br><span class="line">Pass 5: starting run.</span><br><span class="line">hello world</span><br><span class="line">Pass 5: run completed in 10usr/30sys/479real ms.</span><br></pre></td></tr></table></figure>
+
+<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><p>我们先通过一个小例子来熟悉一下 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的使用。我们以斐波那契数列来作为演示。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">$ cat fib.c</span><br><span class="line"><span class="comment">#include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;stdlib.h&gt;</span></span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">fib(int n)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (n == 0 || n == 1) &#123;</span><br><span class="line">        <span class="built_in">return</span> 1;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">return</span> fib(n-1) + fib(n-2);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">main(int argc, char **argv)</span><br><span class="line">&#123;</span><br><span class="line">    int n = atoi(argv[1]);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;fib(%d) = %d\n&quot;</span>, n, fib(n));</span><br><span class="line">    <span class="built_in">return</span> 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">$ gcc -g -o fib fib.c</span><br></pre></td></tr></table></figure>
+
+<p>接下来我们创建 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本来捕获 <code>fib</code> 程序的调用栈。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ cat fib.stp</span><br><span class="line">probe process(<span class="string">&quot;./fib&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;*&quot;</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s -&gt; %s: %s\n&quot;</span>, thread_indent(3), ppfunc(), $<span class="variable">$parms</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process(<span class="string">&quot;./fib&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;*&quot;</span>).<span class="built_in">return</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s &lt;- %s: %s\n&quot;</span>, thread_indent(-3), ppfunc(), $<span class="variable">$return</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>function()</code> 是函数进入的位置。</li>
+<li><code>function().return</code> 是函数返回的位置。</li>
+<li><code>thread_indent()</code> 用于记录缩紧的长度。</li>
+<li><code>ppfunc()</code> 返回函数的名称。</li>
+<li><code>$$parms</code> 变量记录了调用该函数的参数。</li>
+<li><code>$$return</code> 函数的返回值。</li>
+</ul>
+<p>现在，我们在两个终端中分别执行 <code>stap</code> 和 <code>fib</code> 就可以捕获到 <code>fib</code> 的调用栈。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="comment"># 终端一</span></span><br><span class="line">$ sudo stap fib.stp</span><br><span class="line">WARNING: <span class="keyword">function</span> _start <span class="built_in">return</span> probe is blacklisted: keyword at fib.stp:13:1</span><br><span class="line"> <span class="built_in">source</span>: probe process(<span class="string">&quot;./fib&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;*&quot;</span>).<span class="built_in">return</span> &#123;</span><br><span class="line">         ^</span><br></pre></td></tr></table></figure>
+
+<p>终端一执行完上述命令之后会一直处于等待状态，接着我们在终端二中执行下面的命令。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="comment"># 终端二</span></span><br><span class="line">$ ./fib 5</span><br></pre></td></tr></table></figure>
+
+<p>终端二执行完成之后，我们可以在终端一中看到如下输出。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">  0 fib(814956):   -&gt; _start:</span><br><span class="line"> 21 fib(814956):      -&gt; __libc_csu_init:</span><br><span class="line"> 26 fib(814956):         -&gt; _init:</span><br><span class="line"> 30 fib(814956):         &lt;- _init:</span><br><span class="line"> 33 fib(814956):         -&gt; frame_dummy:</span><br><span class="line"> 37 fib(814956):            -&gt; register_tm_clones:</span><br><span class="line"> 41 fib(814956):            &lt;- register_tm_clones:</span><br><span class="line"> 42 fib(814956):         &lt;- frame_dummy:</span><br><span class="line"> 45 fib(814956):      &lt;- __libc_csu_init:</span><br><span class="line"> 50 fib(814956):      -&gt; main: argc=0x2 argv=0x7ffd055f6208</span><br><span class="line"> 62 fib(814956):         -&gt; fib: n=0x5</span><br><span class="line"> 68 fib(814956):            -&gt; fib: n=0x4</span><br><span class="line"> 74 fib(814956):               -&gt; fib: n=0x3</span><br><span class="line"> 80 fib(814956):                  -&gt; fib: n=0x2</span><br><span class="line"> 86 fib(814956):                     -&gt; fib: n=0x1</span><br><span class="line"> 90 fib(814956):                     &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line"> 95 fib(814956):                     -&gt; fib: n=0x0</span><br><span class="line"> 99 fib(814956):                     &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">101 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x2</span><br><span class="line">106 fib(814956):                  -&gt; fib: n=0x1</span><br><span class="line">110 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">112 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x3</span><br><span class="line">116 fib(814956):               -&gt; fib: n=0x2</span><br><span class="line">122 fib(814956):                  -&gt; fib: n=0x1</span><br><span class="line">126 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">130 fib(814956):                  -&gt; fib: n=0x0</span><br><span class="line">134 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">136 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x2</span><br><span class="line">138 fib(814956):            &lt;- fib: <span class="built_in">return</span>=0x5</span><br><span class="line">143 fib(814956):            -&gt; fib: n=0x3</span><br><span class="line">148 fib(814956):               -&gt; fib: n=0x2</span><br><span class="line">154 fib(814956):                  -&gt; fib: n=0x1</span><br><span class="line">158 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">162 fib(814956):                  -&gt; fib: n=0x0</span><br><span class="line">165 fib(814956):                  &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">168 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x2</span><br><span class="line">172 fib(814956):               -&gt; fib: n=0x1</span><br><span class="line">176 fib(814956):               &lt;- fib: <span class="built_in">return</span>=0x1</span><br><span class="line">178 fib(814956):            &lt;- fib: <span class="built_in">return</span>=0x3</span><br><span class="line">180 fib(814956):         &lt;- fib: <span class="built_in">return</span>=0x8</span><br><span class="line">279 fib(814956):      &lt;- main: <span class="built_in">return</span>=0x0</span><br><span class="line">284 fib(814956):      -&gt; __do_global_dtors_aux:</span><br><span class="line">290 fib(814956):         -&gt; deregister_tm_clones:</span><br><span class="line">293 fib(814956):         &lt;- deregister_tm_clones:</span><br><span class="line">296 fib(814956):      &lt;- __do_global_dtors_aux:</span><br><span class="line">298 fib(814956):      -&gt; _fini:</span><br><span class="line">301 fib(814956):      &lt;- _fini:</span><br></pre></td></tr></table></figure>
+
+<h2 id="SystemTap-脚本"><a href="#SystemTap-脚本" class="headerlink" title="SystemTap 脚本"></a>SystemTap 脚本</h2><p>在上面的示例中我们已经见到了如何使用 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本，大多少情况下，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本是每个 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会话的基础，它指示了 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 应该收集什么类型的信息以及对收集的信息做什么处理。本节我们将简要介绍一下 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本的基本语法。</p>
+<h3 id="基本语法"><a href="#基本语法" class="headerlink" title="基本语法"></a>基本语法</h3><p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本由两个组件构成：事件（events）和处理程序（handlers）。一旦 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会话开始，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 将监视操作系统中指定的事件并在事件发生时执行处理程序。事件和对应的处理程序统称为探测点（probe）。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本通常使用 <code>.stp</code> 后缀，并包含如下格式的探测点：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">probe event &#123;statements&#125;</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 同一探测点支持多个事件，多个事件通过逗号（<code>,</code>）分割，如果在一个探测点指定了多个事件，任何一个事件发生都将执行处理程序。我们还可以在 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本中定义函数，如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">function func_name(arguments) &#123;statements&#125;</span><br><span class="line">probe event &#123;func_name(arguments)&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="事件"><a href="#事件" class="headerlink" title="事件"></a>事件</h3><p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 事件大致可以分为两种类型：同步（synchronous）和异步（asynchronous）。</p>
+<p>当任何进程在内核代码的特定位置执行指令时，就会发生同步事件。这为其他事件提供了一个参考点，从中可以获得更多的上下文数据。同步事件包含以下示例：</p>
+<ul>
+<li><p><code>syscall.system_call</code> - 系统调用 <code>system_call</code> 的开始，可以在其后面添加 <code>.return</code> 后缀监控系统调用退出。例如想要监控系统调用 <code>close</code> 函数的开始和退出，可以使用 <code>syscall.close</code> 和 <code>syscall.close.return</code>。</p>
+</li>
+<li><p><code>vfs.file_operation</code> - 虚拟文件系统（VFS）的 <code>file_operation</code> 的开始。与 <code>syscall</code> 类型，可以添加 <code>.return</code> 后缀监控 <code>file_operation</code> 的退出。</p>
+</li>
+<li><p><code>kernel.function(&quot;function&quot;)</code> - 内核函数 <code>function</code> 的开始。例如 <code>kernel.function(&quot;sys_open&quot;)</code> 指的是内核函数 <code>sys_open</code> 被系统任意线程调用时发生的事件，同样地，可以通过 <code>.return</code> 后缀指定 <code>sys_open</code> 退出事件，即 <code>kernel.function(&quot;sys_open&quot;).return</code>。</p>
+<p>当定义探测事件时，我们可以使用星号（<code>*</code>）通配符。此外，我们还可以跟踪内核源文件中的函数开始和退出，如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">probe kernel.function(<span class="string">&quot;*@net/socket.c&quot;</span>) &#123;&#125;</span><br><span class="line">probe kernel.function(<span class="string">&quot;*@net/socket.c&quot;</span>).return &#123;&#125;</span><br></pre></td></tr></table></figure></li>
+<li><p><code>kernel.trace(&quot;tracepoint&quot;)</code> - <code>tracepoint</code> 的静态探测点。最近的内核（2.6.30 和更新版本）包括对内核中特定事件的检测。这些事件用跟踪点静态标记。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 中可用的跟踪点的一个示例是 <code>kernel.trace(&quot;kfree_skb&quot;)</code>，它指示每次在内核中释放网络缓冲区。</p>
+</li>
+<li><p><code>module(&quot;module&quot;).function(&quot;function&quot;)</code> - 探测特定模块下的 <code>function</code> 函数，例如：</p>
+ <figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">probe module(<span class="string">&quot;ext3&quot;</span>).function(<span class="string">&quot;*&quot;</span>) &#123;&#125;</span><br><span class="line">probe module(<span class="string">&quot;ext3&quot;</span>).function(<span class="string">&quot;*&quot;</span>).return &#123;&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>异步事件与代码中的特定指令或位置无关。这一系列探测点主要由计数器、计时器和类似结构组成。异步事件包含以下示例：</p>
+<ul>
+<li><code>begin</code>, <code>end</code> - 分别表示 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会话的开始和结束。</li>
+<li><code>timer events</code> - 指定要定期执行的处理程序的事件。例如： <figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">probe timer.s(<span class="number">4</span>) &#123;</span><br><span class="line">    printf(<span class="string">&quot;hello world\n&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+ 上面的示例每个 4 秒打印 <code>hello world</code>，我们还可以使用下面的定时器事件：<ul>
+<li><code>timer.ms(milliseconds)</code></li>
+<li><code>timer.us(microseconds)</code></li>
+<li><code>timer.ns(nanoseconds)</code></li>
+<li><code>timer.hz(hertz)</code></li>
+<li><code>timer.jiffies(jiffies)</code><br>当与其他收集信息的探测点一起使用时，计时器事件允许您定期打印更新并查看该信息如何随时间变化。</li>
+</ul>
+</li>
+</ul>
+<h3 id="处理程序"><a href="#处理程序" class="headerlink" title="处理程序"></a>处理程序</h3><p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 支持在处理程序中使用几个基本结构。大多数这些处理程序构造的语法主要基于 C 和 awk 语法。本节描述几个最有用的 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 处理程序构造，它们应该为您提供足够的信息来编写简单但有用的 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本。</p>
+<h4 id="变量"><a href="#变量" class="headerlink" title="变量"></a>变量</h4><p>我们可以在 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本中自由的使用变量，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 将自动推导变量的类型，例如 <code>foo = gettimeofday_s()</code>，<code>foo</code> 的类型为整型，在 <code>printf()</code> 函数中可以使用 <code>%d</code> 来格式化输出。默认情况下，变量都是某个探测点的局部变量，如果想要在多个探测点共享变量，那么可以在探测点之外使用 <code>global</code> 关键字修饰变量，例如：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">global count_jiffies, count_ms</span><br><span class="line">probe timer.jiffies(<span class="number">100</span>) &#123; count_jiffies++ &#125;</span><br><span class="line">probe timer.ms(<span class="number">100</span>) &#123; count_ms++ &#125;</span><br><span class="line">probe timer.ms(<span class="number">12345</span>) &#123;</span><br><span class="line">    hz = (<span class="number">1000</span> * count_jiffies) / count_ms</span><br><span class="line">    printf(<span class="string">&quot;jiffies:ms ratio %d:%d =&gt; CONFIG_HZ=%d\n&quot;</span>, count_jiffies, count_ms, hz)</span><br><span class="line">    exit()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的示例使用 <code>jiffies</code> 和 <code>ms</code> 计时器计算内核的 <code>CONFIG_HZ</code> 设置，然后进行相应的计算。<code>global</code> 语句允许脚本在探测点之间共享 <code>count_jiffies</code> 和 <code>count_ms</code>（在它们各自的探测点中设置）变量。</p>
+<h4 id="目标变量"><a href="#目标变量" class="headerlink" title="目标变量"></a>目标变量</h4><p>我们可以使用 <code>-L</code> 选项来列出探测点可用的目标变量，如果为正在运行的内核安装了调试信息，则可以运行以下命令找出哪些目标变量可用于 <code>vfs_read</code> 函数：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ stap -L <span class="string">&#x27;kernel.function(&quot;vfs_read&quot;)&#x27;</span></span><br><span class="line">kernel.function(<span class="string">&quot;vfs_read@fs/read_write.c:277&quot;</span>) <span class="variable">$file</span>:struct file* <span class="variable">$buf</span>:char* <span class="variable">$count</span>:size_t <span class="variable">$pos</span>:loff_t*</span><br></pre></td></tr></table></figure>
+
+<p>每个目标变量前面都有一个 <code>$</code> 符号，目标变量的类型在 <code>:</code> 之后。内核 <code>vfs_read</code> 函数入口处的目标变量有 <code>$file</code>（指向描述文件的结构指针）、<code>$buf</code>（指向用于存储读取数据的用户空间内存的指针）、<code>$count</code>（要读取的字节数）和 <code>$pos</code>（从文件中读取开始位置）。</p>
+<p>如果目标变量不是探测点的局部变量，如果外部全局变量或者文件局部静态变量，我们可以使用 <code>@var(&quot;varname@src/file.c&quot;)</code> 来引用；我们还可以使用形如 <code>@var(&quot;varname&quot;, &quot;/path/to/exe/or/lib&quot;)</code> 来引入可执行文件或库中的变量。</p>
+<p>如果是执行基础类型的指针（如整型、字符串等），我们可以使用下面的函数来获取内核空间数据。</p>
+<ul>
+<li><code>kernel_char(address)</code> - 从内核内存中获取 <code>address</code> 处的字符。</li>
+<li><code>kernel_short(address)</code> - 从内核内存中获取 <code>address</code> 处的 <code>short</code> 类型数据。</li>
+<li><code>kernel_int(address)</code> - 从内核内存中获取 <code>address</code> 处的 <code>int</code> 类型数据。</li>
+<li><code>kernel_long(address)</code> - 从内核内存中获取 <code>address</code> 处的 <code>long</code> 类型数据。</li>
+<li><code>kernel_string(address)</code> - 从内核内存中获取 <code>address</code> 处的字符串。</li>
+<li><code>kernel_string(address)</code> - 从内核内存中获取 <code>address</code> 处的长度为 <code>n</code> 的字符串。</li>
+</ul>
+<p>同样地，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 提供了一系列函数用于获取用户空间数据。</p>
+<ul>
+<li><code>user_char(address)</code> - 从用户内存中获取 <code>address</code> 处的字符。</li>
+<li><code>user_short(address)</code> - 从用户内存中获取 <code>address</code> 处的 <code>short</code> 类型数据。</li>
+<li><code>user_int(address)</code> - 从用户内存中获取 <code>address</code> 处的 <code>int</code> 类型数据。</li>
+<li><code>user_long(address)</code> - 从用户内存中获取 <code>address</code> 处的 <code>long</code> 类型数据。</li>
+<li><code>user_string(address)</code> - 从用户内存中获取 <code>address</code> 处的字符串。</li>
+<li><code>user_string(address)</code> - 从用户内存中获取 <code>address</code> 处的长度为 <code>n</code> 的字符串。</li>
+</ul>
+<p>为了方便 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 提供了一系列内置变量用于打印目标变量。</p>
+<ul>
+<li><code>$$vars</code> - 等同于 <code>sprintf(&quot;parm1=%x ... parmN=%x var1=%x ... varN=%x&quot;, parm1, ..., parmN, var1, ... varN)</code>，有些变量由于无法找到运行时位置可能被输出为 <code>=?</code>。</li>
+<li><code>$$locals</code> - <code>$$vars</code> 的子集，仅包含局部变量。</li>
+<li><code>$$parms</code> - <code>$$vars</code> 的子集，仅包含函数参数。</li>
+<li><code>$$return</code> - 仅在 <code>.return</code> 中有效，如果函数有返回值，等同于 <code>sprintf(&quot;return=%x&quot;, $return)</code>；否则为空字符串。</li>
+</ul>
+<p>我们可以在变量后面添加 <code>$</code> 或 <code>$$</code> 后缀对变量进行展开，例如：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ sudo stap -e <span class="string">&#x27;probe kernel.function(&quot;vfs_read&quot;) &#123;printf(&quot;%s\n&quot;, $$parms$); exit(); &#125;&#x27;</span></span><br><span class="line">file=&#123;.f_u=&#123;...&#125;, .f_path=&#123;...&#125;, .f_op=0xffffffffa06e1d80, .f_lock=&#123;...&#125;, .f_count=&#123;...&#125;, .f_flags=34818, .f_mode=31, .f_pos=0, .f_owner=&#123;...&#125;, .f_cred=0xffff88013148fc80, .f_ra=&#123;...&#125;, .f_version=0, .f_security=0xffff8800b8dce560, .private_data=0x0, .f_ep_links=&#123;...&#125;, .f_mapping=0xffff880037f8fdf8&#125; buf=<span class="string">&quot;&quot;</span> count=8196 pos=-131938753921208</span><br><span class="line"></span><br><span class="line">$ sudo stap -e <span class="string">&#x27;probe kernel.function(&quot;vfs_read&quot;) &#123;printf(&quot;%s\n&quot;, $$parms$$); exit(); &#125;&#x27;</span></span><br><span class="line">file=&#123;.f_u=&#123;.fu_list=&#123;.next=0xffff8801336ca0e8, .prev=0xffff88012ded0840&#125;, .fu_rcuhead=&#123;.next=0xffff8801336ca0e8, .func=0xffff88012ded0840&#125;&#125;, .f_path=&#123;.mnt=0xffff880132fc97c0, .dentry=0xffff88001a889cc0&#125;, .f_op=0xffffffffa06f64c0, .f_lock=&#123;.raw_lock=&#123;.slock=196611&#125;&#125;, .f_count=&#123;.counter=2&#125;, .f_flags=34818, .f_mode=31, .f_pos=0, .f_owner=&#123;.lock=&#123;.raw_lock=&#123;.lock=16777216&#125;&#125;, .pid=0x0, .pid_type=0, .uid=0, .euid=0, .signum=0&#125;, .f_cred=0xffff880130129a80, .f_ra=&#123;.start=0, .size=0, .async_size=0, .ra_pages=32, ...</span><br></pre></td></tr></table></figure>
+
+<h4 id="控制语句"><a href="#控制语句" class="headerlink" title="控制语句"></a>控制语句</h4><p>在某些情况下，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本的输出可能非常大。要解决这个问题，我们需要进一步细化脚本的逻辑，以便将输出的内容与我们的探测更相关。通过在处理程序中使用条件语句来做到这一点。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 支持以下类型的控制语句：</p>
+<ul>
+<li><code>if/else</code> 语句<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">if (condition)</span><br><span class="line">    statement1</span><br><span class="line">else</span><br><span class="line">    statement2</span><br></pre></td></tr></table></figure></li>
+<li><code>while</code> 循环语句<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">while (condition)</span><br><span class="line">    statement</span><br></pre></td></tr></table></figure></li>
+<li><code>for</code> 循环语句<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">for (initialization; condition; increment)</span><br><span class="line">    statement</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="关联数组"><a href="#关联数组" class="headerlink" title="关联数组"></a>关联数组</h4><p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 支持关联数组（Associative Array），不管关联数组是在一个探测点还是多个探测点使用，我们都必须将其定义为全局变量，即使用 <code>global</code> 定义在所有探测点之外。关联数组最多支持 9 个下标，使用逗号分隔开，如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">device[pid(), execname(), uid(), ppid(), <span class="string">&quot;W&quot;</span>] = devname</span><br></pre></td></tr></table></figure>
+
+<p>我们可以使用 <code>=</code> 对关联数据进行赋值，如 <code>array_name[index_expression] = value</code>。通过 <code>array_name[index_expression]</code> 可以从关联数组中取出值。关联数组的遍历可以使用 <code>foreach</code>，例如：。</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">foreach(count in reads)</span><br><span class="line">    printf(<span class="string">&quot;%s: %d\n&quot;</span>, count, reads[count])</span><br></pre></td></tr></table></figure>
+
+<p>我们可以在遍历的使用指定是升序（<code>+</code>）还是降序（<code>-</code>），同时，我们还可以指定遍历的数量（<code>limit</code>），如下所示：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">foreach(count in reads- limit <span class="number">10</span>)</span><br><span class="line">    printf(<span class="string">&quot;%s: %d\n&quot;</span>, count, reads[count])</span><br></pre></td></tr></table></figure>
+
+<p><code>delete</code> 可以用于清除关联数组中的数据，如 <code>delete reads</code>。如果我们需要判断一个元素是否在关联数组中，可以 <code>if ([index_expression] in array_name) statement</code> 来进行判断。</p>
+<h4 id="聚合功能"><a href="#聚合功能" class="headerlink" title="聚合功能"></a>聚合功能</h4><p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 还有一个聚合的功能（<code>&lt;&lt;&lt; value</code> 操作符），例如：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">global reads</span><br><span class="line">probe vfs.read &#123;</span><br><span class="line">    reads[execname()] &lt;&lt;&lt; $count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>与 <code>=</code> 不同的是，<code>&lt;&lt;&lt;</code> 不会覆盖 <code>reads[execname()]</code> 的值，而是会将其视为一个唯一键值存储起来，后续我们可以使用 <code>sum</code>、<code>max</code> 等对其进行聚合运算，例如：</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">global reads</span><br><span class="line">probe vfs.read &#123;</span><br><span class="line">    reads[execname(), pid()] &lt;&lt;&lt; $count;</span><br><span class="line">&#125;</span><br><span class="line">probe timer.s(<span class="number">3</span>) &#123;</span><br><span class="line">    foreach([var1, var2] in reads)</span><br><span class="line">        printf(<span class="string">&quot;%s (%d): %d \n&quot;</span>, var1, var2, @count(reads[var1, var2]))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 支持以下聚合运算：</p>
+<ul>
+<li><code>count</code> - 返回存储在变量/数组索引表达式中的所有值的数量。</li>
+<li><code>sum</code> - 返回存储在变量/数组索引表达式中的所有值的总和。</li>
+<li><code>min</code> - 返回存储在变量/数组索引表达式中的所有值中的最小值。</li>
+<li><code>max</code> - 返回存储在变量/数组索引表达式中的所有值中的最大值。</li>
+<li><code>avg</code> - 返回存储在变量/数组索引表达式中的所有值中的平均值。</li>
+</ul>
+<h2 id="SystemTap-跟踪-PostgreSQL"><a href="#SystemTap-跟踪-PostgreSQL" class="headerlink" title="SystemTap 跟踪 PostgreSQL"></a>SystemTap 跟踪 PostgreSQL</h2><p>本节将介绍如何使用 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 来跟踪 PostgreSQL。</p>
+<h3 id="查看探测点"><a href="#查看探测点" class="headerlink" title="查看探测点"></a>查看探测点</h3><p>首先，我们使用 <code>stap</code> 命令来获取 PostgreSQL 中所有的探测点。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ stap -l <span class="string">&#x27;process(&quot;postgres&quot;).function(&quot;*&quot;)&#x27;</span></span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddCheckConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8840&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddForeignKeyConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8977&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATCheckPartitionsNotInUse@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6335&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATColumnChangeRequiresRewrite@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:12346&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATController@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:4435&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATDetachCheckNoForeignKeyRefs@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:19184&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddColumn@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6644&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8725&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIdentity@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:7645&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndex@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8550&quot;</span>)</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndexConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8633&quot;</span>)</span><br><span class="line">[...]</span><br></pre></td></tr></table></figure>
+
+<p>此外，使用 <code>-L</code> 选项除了可以列出所有探测点，还可以列出局部变量。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ stap -L <span class="string">&#x27;process(&quot;postgres&quot;).function(&quot;*&quot;)&#x27;</span></span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddCheckConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8840&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$constr</span>:Constraint* <span class="variable">$recurse</span>:_Bool <span class="variable">$recursing</span>:_Bool <span class="variable">$is_readd</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$newcons</span>:List* <span class="variable">$lcon</span>:ListCell* <span class="variable">$children</span>:List* <span class="variable">$child</span>:ListCell* <span class="variable">$address</span>:ObjectAddress <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATAddForeignKeyConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8977&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$fkconstraint</span>:Constraint* <span class="variable">$recurse</span>:_Bool <span class="variable">$recursing</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$pkrel</span>:Relation <span class="variable">$pkattnum</span>:int16[] <span class="variable">$fkattnum</span>:int16[] <span class="variable">$pktypoid</span>:Oid[] <span class="variable">$fktypoid</span>:Oid[] <span class="variable">$opclasses</span>:Oid[] <span class="variable">$pfeqoperators</span>:Oid[] <span class="variable">$ppeqoperators</span>:Oid[] <span class="variable">$ffeqoperators</span>:Oid[] <span class="variable">$fkdelsetcols</span>:int16[] <span class="variable">$i</span>:int <span class="variable">$numfks</span>:int <span class="variable">$numpks</span>:int <span class="variable">$numfkdelsetcols</span>:int <span class="variable">$indexOid</span>:Oid <span class="variable">$old_check_ok</span>:_Bool <span class="variable">$address</span>:ObjectAddress <span class="variable">$old_pfeqop_item</span>:ListCell* <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATCheckPartitionsNotInUse@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6335&quot;</span>) <span class="variable">$rel</span>:Relation <span class="variable">$lockmode</span>:LOCKMODE</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATColumnChangeRequiresRewrite@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:12346&quot;</span>) <span class="variable">$expr</span>:Node* <span class="variable">$varattno</span>:AttrNumber</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATController@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:4435&quot;</span>) <span class="variable">$parsetree</span>:AlterTableStmt* <span class="variable">$rel</span>:Relation <span class="variable">$cmds</span>:List* <span class="variable">$recurse</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$context</span>:AlterTableUtilityContext* <span class="variable">$wqueue</span>:List* <span class="variable">$lcmd</span>:ListCell*</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATDetachCheckNoForeignKeyRefs@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:19184&quot;</span>) <span class="variable">$partition</span>:Relation <span class="variable">$constraints</span>:List* <span class="variable">$cell</span>:ListCell* <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddColumn@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:6644&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$cmd</span>:AlterTableCmd** <span class="variable">$recurse</span>:_Bool <span class="variable">$recursing</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$cur_pass</span>:int <span class="variable">$context</span>:AlterTableUtilityContext* <span class="variable">$myrelid</span>:Oid <span class="variable">$colDef</span>:ColumnDef* <span class="variable">$if_not_exists</span>:_Bool <span class="variable">$pgclass</span>:Relation <span class="variable">$attrdesc</span>:Relation <span class="variable">$reltup</span>:HeapTuple <span class="variable">$attribute</span>:FormData_pg_attribute <span class="variable">$newattnum</span>:int <span class="variable">$relkind</span>:char <span class="variable">$typeTuple</span>:HeapTuple <span class="variable">$typeOid</span>:Oid <span class="variable">$typmod</span>:int32 <span class="variable">$collOid</span>:Oid <span class="variable">$tform</span>:Form_pg_type <span class="variable">$defval</span>:Expr* <span class="variable">$children</span>:List* <span class="variable">$child</span>:ListCell* <span class="variable">$childcmd</span>:AlterTableCmd* <span class="variable">$aclresult</span>:AclResult <span class="variable">$address</span>:ObjectAddress <span class="variable">$tupdesc</span>:TupleDesc <span class="variable">$aattr</span>:FormData_pg_attribute*[] <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8725&quot;</span>) <span class="variable">$wqueue</span>:List** <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$newConstraint</span>:Constraint* <span class="variable">$recurse</span>:_Bool <span class="variable">$is_readd</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$address</span>:ObjectAddress <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIdentity@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:7645&quot;</span>) <span class="variable">$rel</span>:Relation <span class="variable">$colName</span>:char const* <span class="variable">$def</span>:Node* <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$attrelation</span>:Relation <span class="variable">$tuple</span>:HeapTuple <span class="variable">$attTup</span>:Form_pg_attribute <span class="variable">$attnum</span>:AttrNumber <span class="variable">$address</span>:ObjectAddress <span class="variable">$cdef</span>:ColumnDef* <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndex@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8550&quot;</span>) <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$stmt</span>:IndexStmt* <span class="variable">$is_rebuild</span>:_Bool <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$check_rights</span>:_Bool <span class="variable">$skip_build</span>:_Bool <span class="variable">$quiet</span>:_Bool <span class="variable">$address</span>:ObjectAddress</span><br><span class="line">process(<span class="string">&quot;/home/japin/Codes/postgresql/Debug/pg/bin/postgres&quot;</span>).<span class="keyword">function</span>(<span class="string">&quot;ATExecAddIndexConstraint@/home/japin/Codes/postgresql/Debug/../src/backend/commands/tablecmds.c:8633&quot;</span>) <span class="variable">$tab</span>:AlteredTableInfo* <span class="variable">$rel</span>:Relation <span class="variable">$stmt</span>:IndexStmt* <span class="variable">$lockmode</span>:LOCKMODE <span class="variable">$index_oid</span>:Oid <span class="variable">$indexRel</span>:Relation <span class="variable">$indexName</span>:char* <span class="variable">$indexInfo</span>:IndexInfo* <span class="variable">$constraintName</span>:char* <span class="variable">$constraintType</span>:char <span class="variable">$address</span>:ObjectAddress <span class="variable">$flags</span>:bits16 <span class="variable">$__func__</span>:char const[] const</span><br><span class="line">[...]</span><br></pre></td></tr></table></figure>
+
+<p>从上面的输出可以看到，所有的探测点都以 <code>process</code> 开始，这是 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 跟踪用户态程序的统一使用方法。</p>
+<h3 id="查看调用栈"><a href="#查看调用栈" class="headerlink" title="查看调用栈"></a>查看调用栈</h3><p>我们在前面使用 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 抓取了斐波那契数列的调用栈，同样地，我们在这里也从抓取 PostgreSQL 的调用栈开始。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">$ cat call-stack.stp</span><br><span class="line">probe process.function(<span class="string">&quot;*&quot;</span>) &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s -&gt; %s\n&quot;</span>, thread_indent(3), ppfunc());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.function(<span class="string">&quot;*&quot;</span>).<span class="built_in">return</span> &#123;</span><br><span class="line">    thread_indent(-3);</span><br><span class="line">&#125;</span><br><span class="line">$ sudo stap -x 493044 -o call-stack.log</span><br><span class="line">$ <span class="comment"># 在另一个中断执行查询，结束之后查看捕获的调用栈信息</span></span><br><span class="line">$ cat call-stack.log</span><br><span class="line">     0 postgres(493044):   -&gt; WaitEventSetWaitBlock</span><br><span class="line">     0 postgres(493044):   -&gt; pgstat_report_wait_end</span><br><span class="line">     0 postgres(493044):   -&gt; secure_raw_read</span><br><span class="line">     0 postgres(493044):   -&gt; ProcessClientReadInterrupt</span><br><span class="line">     0 postgres(493044):   -&gt; pq_getmessage</span><br><span class="line">    11 postgres(493044):      -&gt; resetStringInfo</span><br><span class="line">    20 postgres(493044):      -&gt; pq_getbytes</span><br><span class="line">    30 postgres(493044):      -&gt; enlargeStringInfo</span><br><span class="line">    38 postgres(493044):      -&gt; pq_getbytes</span><br><span class="line">     0 postgres(493044):   -&gt; SetCurrentStatementStartTimestamp</span><br><span class="line">    11 postgres(493044):      -&gt; GetCurrentTimestamp</span><br><span class="line">     0 postgres(493044):   -&gt; pq_getmsgstring</span><br><span class="line">    10 postgres(493044):      -&gt; pg_client_to_server</span><br><span class="line">    17 postgres(493044):         -&gt; pg_any_to_server</span><br><span class="line">    25 postgres(493044):            -&gt; pg_verify_mbstr</span><br><span class="line">    33 postgres(493044):               -&gt; pg_utf8_verifystr</span><br><span class="line">     0 postgres(493044):   -&gt; pq_getmsgend</span><br><span class="line">     0 postgres(493044):   -&gt; exec_simple_query</span><br><span class="line">    10 postgres(493044):      -&gt; pgstat_report_activity</span><br><span class="line">    18 postgres(493044):         -&gt; GetCurrentStatementStartTimestamp</span><br><span class="line">    27 postgres(493044):         -&gt; GetCurrentTimestamp</span><br><span class="line">    39 postgres(493044):      -&gt; start_xact_command</span><br><span class="line">    46 postgres(493044):         -&gt; StartTransactionCommand</span><br><span class="line">    54 postgres(493044):            -&gt; StartTransaction</span><br><span class="line">    60 postgres(493044):               -&gt; FullTransactionIdFromEpochAndXid</span><br><span class="line">    72 postgres(493044):               -&gt; GetUserIdAndSecContext</span><br><span class="line">    82 postgres(493044):               -&gt; RecoveryInProgress</span><br><span class="line">    91 postgres(493044):               -&gt; AtStart_Memory</span><br><span class="line">   101 postgres(493044):                  -&gt; AllocSetContextCreateInternal</span><br><span class="line">   111 postgres(493044):                     -&gt; MemoryContextCreate</span><br><span class="line">   121 postgres(493044):                  -&gt; MemoryContextSwitchTo</span><br><span class="line">   131 postgres(493044):               -&gt; AtStart_ResourceOwner</span><br><span class="line">   140 postgres(493044):                  -&gt; ResourceOwnerCreate</span><br><span class="line">[...]</span><br></pre></td></tr></table></figure>
+
+<h3 id="SystemTap-抓取慢查询"><a href="#SystemTap-抓取慢查询" class="headerlink" title="SystemTap 抓取慢查询"></a>SystemTap 抓取慢查询</h3><p>在生产环境，我们可以会遇到慢查询的情况，我们同样可以使用 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 来分析 PostgreSQL 中的慢查询，<a href="https://sourceware.org/systemtap/wiki/PostgresqlMarkers?action=AttachFile&do=view&target=postgresql-slowq.stp">脚本如下所示</a>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">$ cat pg_slow_query.stp</span><br><span class="line">global query_time, query_summary, threshold=0</span><br><span class="line"></span><br><span class="line">probe begin &#123;</span><br><span class="line">    threshold = <span class="variable">$1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;query__start&quot;</span>) &#123;</span><br><span class="line">    query_time[tid(), <span class="variable">$arg1</span>] = gettimeofday_s();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;query__done&quot;</span>) &#123;</span><br><span class="line">    p = tid();</span><br><span class="line">    t = query_time[p, <span class="variable">$arg1</span>]; delete query_time[p, <span class="variable">$arg1</span>];</span><br><span class="line">    <span class="keyword">if</span> (t) &#123;</span><br><span class="line">        e = (gettimeofday_s() - t);</span><br><span class="line">        <span class="keyword">if</span> (e &gt;= threshold) query_summary[p, user_string(<span class="variable">$arg1</span>)] &lt;&lt;&lt; <span class="string">e;</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">probe end &#123;</span></span><br><span class="line"><span class="string">    printf(&quot;%10s %10s %s\n&quot;, &quot;tid&quot;, &quot;time&quot;, &quot;query&quot;);</span></span><br><span class="line"><span class="string">    foreach ([p, s] in query_summary) &#123;</span></span><br><span class="line"><span class="string">        printf(&quot;%10d %10d %s\n&quot;, p, @max(query_summary[p, s]), s);</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>query__start</code> 和 <code>query__done</code> 是 PostgreSQL 预定义的探测点，参考 PostgreSQL 文档的<a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/dynamic-trace.html#DTRACE-PROBE-POINT-TABLE">动态跟踪</a>。<strong>注意：文档中使用的是 <code>-</code>，在 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本中需要将其替换为 <code>__</code>。</strong></li>
+<li><code>begin</code> 表示 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会话开始的时候，<code>end</code> 则表示会话结束的时候。</li>
+<li><code>global</code> 用于定义全局变量。</li>
+</ul>
+<p>运行的时候需要指定慢查询的时间，如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ sudo stap -x 493044 -T 60 pg_slow_query.stp 10</span><br><span class="line">       tid       time query</span><br><span class="line">    493044         14 select random(), pg_sleep(14);</span><br></pre></td></tr></table></figure>
+
+<p>上面的命令将持续监控 <code>493044</code> 进程 60 秒并输出事务运行大于 10 秒的查询。</p>
+<h3 id="SystemTap-抓取事务信息"><a href="#SystemTap-抓取事务信息" class="headerlink" title="SystemTap 抓取事务信息"></a>SystemTap 抓取事务信息</h3><p>下面的脚本可以用于跟踪一段时间内事务的提交、回滚数量。</p>
+<figure class="highlight stp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">global start, abort, commit, ts</span><br><span class="line"></span><br><span class="line">probe begin &#123;</span><br><span class="line">    ts = gettimeofday_s();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;transaction__start&quot;</span>) &#123;</span><br><span class="line">    start++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;transaction__abort&quot;</span>) &#123;</span><br><span class="line">    abort++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe process.mark(<span class="string">&quot;transaction__commit&quot;</span>) &#123;</span><br><span class="line">    commit++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">probe end &#123;</span><br><span class="line">    printf(<span class="string">&quot;\n&quot;</span>);</span><br><span class="line">    printf(<span class="string">&quot;Start          %d\n&quot;</span>, start);</span><br><span class="line">    printf(<span class="string">&quot;Abort          %d\n&quot;</span>, abort);</span><br><span class="line">    printf(<span class="string">&quot;Commit         %d\n&quot;</span>, commit);</span><br><span class="line">    printf(<span class="string">&quot;Total time (s) %d\n&quot;</span>, gettimeofday_s() - ts);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当执行之后，其输出如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ sudo stap -x 493044 txn_count.stp</span><br><span class="line">^C</span><br><span class="line">Start          3</span><br><span class="line">Abort          1</span><br><span class="line">Commit         2</span><br><span class="line">Total time (s) 11</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/SystemTap_Beginners_Guide.pdf">https://sourceware.org/systemtap/SystemTap_Beginners_Guide.pdf</a><br>[2] <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/archpaper.pdf">https://sourceware.org/systemtap/archpaper.pdf</a><br>[3] <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/tapsets/">https://sourceware.org/systemtap/tapsets/</a><br>[4] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/dynamic-trace.html">https://www.postgresql.org/docs/current/dynamic-trace.html</a></p>
+<!-- [1] https://wiki.ubuntu.com/Kernel/Systemtap -->
+
+
+<div class="just-for-fun">
+笑林广记 -
+</div>
+
+<!--
+
+### 获取内核调试符号
+
+首先，导入 GPG 密钥。
+
+#+begin_src bash
+$ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C8CAB6595FDFF622
+Executing: /tmp/apt-key-gpghome.XVqJ8DQT7K/gpg.1.sh --keyserver keyserver.ubuntu.com --recv-keys C8CAB6595FDFF622
+gpg: key C8CAB6595FDFF622: public key "Ubuntu Debug Symbol Archive Automatic Signing Key (2016) <ubuntu-archive@lists.ubuntu.com>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1
+#+end_src
+
+接着，添加软件源。
+
+#begin_src bash
+$ codename=$(lsb_release -c | awk '{print $2}')
+$ sudo tee /etc/apt/sources.list.d/ddebs.list <<EOF
+deb http://ddebs.ubuntu.com/ ${codename}      main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ ${codename}-security main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ ${codename}-updates  main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ ${codename}-proposed main restricted universe multiverse
+EOF
+$ sudo apt-get update
+$ sudo apt-get install linux-image-$(uname -r)-dbgsym
+#+end_src
+-->
+
+    </div>
+
+    
+    
+    
+      
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/" title="SystemTap 动态跟踪">https://blog.japinli.top/2023/01/systemtap-dynamic-tracing/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/SystemTap/" rel="tag"># SystemTap</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/12/git-automated-bisecting/" rel="prev" title="Git bisect 自动二分查找">
+                  <i class="fa fa-chevron-left"></i> Git bisect 自动二分查找
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">710k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">10:46</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
