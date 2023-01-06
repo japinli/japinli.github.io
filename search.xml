@@ -2490,54 +2490,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Oracle 迁移 PostgreSQL - 空字符串</title>
-    <url>/2021/09/migrate-oracle-empty-string-to-postgresql/</url>
-    <content><![CDATA[<p>Oracle 数据库中空字符串和 <code>NULL</code> 在字符串的环境下是相同的，这就意味着我们可以直接将其与字符串进行操作从而得到我们想要的结果，然而在 PostgreSQL 数据库中，任何字符串与 <code>NULL</code> 进行操作结果均为 <code>NULL</code>。因此，在迁移 <code>NULL</code> 字符串操作时，我们需要特别注意。</p>
-<span id="more"></span>
-
-<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>为了后面的演示说明，这里提供了一个简单的测试数据，如下所示。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t1 (id <span class="type">int</span>, data <span class="type">varchar</span>(<span class="number">10</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t1 <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Good&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t1 <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="keyword">NULL</span>);</span><br></pre></td></tr></table></figure>
-
-<p>接着，我们分别在 PostgreSQL 和 Oracle 数据库中执行下面的语句，可以发现它们的不同之处。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> id, data <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br></pre></td></tr></table></figure>
-
-<p>Oracle 中的执行结果如下：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> id, data <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"></span><br><span class="line">        ID DATA</span><br><span class="line"><span class="comment">---------- ----------------------------</span></span><br><span class="line">         <span class="number">1</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">         <span class="number">2</span> , ooooooh, my God<span class="operator">!</span></span><br></pre></td></tr></table></figure>
-
-<p>PostgreSQL 中的执行结果如下：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> id, data <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"> id <span class="operator">|</span>          data</span><br><span class="line"><span class="comment">----+------------------------</span></span><br><span class="line">  <span class="number">1</span> <span class="operator">|</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span></span><br><span class="line">(<span class="number">2</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
-
-<p>其结果与上文描述一致，因此我们在将字符串操作迁移到 PostgreSQL 的时候需要进行判空处理。</p>
-<h2 id="迁移"><a href="#迁移" class="headerlink" title="迁移"></a>迁移</h2><p>我们可以使用 <code>coalesce()</code> 来进行迁移处理。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> id, <span class="built_in">coalesce</span>(data, <span class="string">&#x27;&#x27;</span>) <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"> id <span class="operator">|</span>          data</span><br><span class="line"><span class="comment">----+------------------------</span></span><br><span class="line">  <span class="number">1</span> <span class="operator">|</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span> , ooooooh, my God<span class="operator">!</span></span><br><span class="line">(<span class="number">2</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
-
-<p>这种方式在 Oracle 中同样适用。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> id, <span class="built_in">coalesce</span>(data, <span class="string">&#x27;&#x27;</span>) <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"></span><br><span class="line">        ID DATA</span><br><span class="line"><span class="comment">---------- ----------------------------</span></span><br><span class="line">         <span class="number">1</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">         <span class="number">2</span> , ooooooh, my God<span class="operator">!</span></span><br></pre></td></tr></table></figure>
-
-<p>我个人觉得这种写法的可读性更好一些（此外，Oracle 中还可以使用 <code>nvl()</code> 来替代 <code>coalesce()</code> 函数）。</p>
-<h2 id="函数与存储过程"><a href="#函数与存储过程" class="headerlink" title="函数与存储过程"></a>函数与存储过程</h2><p>PostgreSQL 在使用 plpgsql 编写函数或存储过程时，字符串默认值为 <code>NULL</code>，因此，在进行字符串相关的操作时同样需要注意。例如：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">FUNCTION</span> public.tfunc()</span><br><span class="line"><span class="keyword">RETURNS</span> void</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">    t <span class="type">varchar</span>(<span class="number">10</span>);</span><br><span class="line">    r record;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">   <span class="keyword">FOR</span> r <span class="keyword">IN</span> <span class="keyword">SELECT</span> id, data <span class="operator">||</span> t <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1</span><br><span class="line">   LOOP</span><br><span class="line">       RAISE NOTICE <span class="string">&#x27;%, %&#x27;</span>, r.id, r.data;</span><br><span class="line">   <span class="keyword">END</span> LOOP;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
-
-<p>上述函数的执行结果为：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# select tfunc();</span><br><span class="line">NOTICE:  1, &lt;NULL&gt;</span><br><span class="line">NOTICE:  2, &lt;NULL&gt;</span><br><span class="line"> tfunc</span><br><span class="line">-------</span><br><span class="line"></span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://wiki.postgresql.org/wiki/Oracle_to_Postgres_Conversion#Empty_strings_and_NULL_values">https://wiki.postgresql.org/wiki/Oracle_to_Postgres_Conversion#Empty_strings_and_NULL_values</a></p>
-<div class="just-for-fun">
-笑林广记 - 强盗脚
-
-<p>乡民初次入城，见有木桶悬于城上。<br>问人曰：“此中何物？”<br>应者曰：“强盗头。”<br>及至县前，见数个木匣钉于谯楼之上，皆前官既去，而所留遗爱之靴。<br>乡民不知，乃点首曰：“城上挂的强盗头，此处一定是强盗脚了。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>Oracle</tag>
-        <tag>PostgreSQL</tag>
-        <tag>迁移</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>小米路由器刷 Breed 和 Padavan 固件</title>
     <url>/2020/07/miwifi-breed-padavan/</url>
     <content><![CDATA[<p>本文主要记录一下小米路由器 3G 刷 breed 和 padavan 的过程。</p>
@@ -2589,27 +2541,51 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>Hexo NexT (v8.x) 主题添加近期文章</title>
-    <url>/2020/08/next-8-0-0-recent-posts/</url>
-    <content><![CDATA[<p>最近将博客由 NexT-v5.x 迁移到 NexT-v8.x 版本，这其中有很多东西已将发生变化了。本文简要介绍一下如何在新版中加入近期文章的功能。NexT-v8.x 版本将模版文件由原来的 <code>swig</code> 变更为 <code>njk</code> 后缀，因此，之前的近期文章的功能不再适用，我们需要稍作修改。</p>
+    <title>Oracle 迁移 PostgreSQL - 空字符串</title>
+    <url>/2021/09/migrate-oracle-empty-string-to-postgresql/</url>
+    <content><![CDATA[<p>Oracle 数据库中空字符串和 <code>NULL</code> 在字符串的环境下是相同的，这就意味着我们可以直接将其与字符串进行操作从而得到我们想要的结果，然而在 PostgreSQL 数据库中，任何字符串与 <code>NULL</code> 进行操作结果均为 <code>NULL</code>。因此，在迁移 <code>NULL</code> 字符串操作时，我们需要特别注意。</p>
 <span id="more"></span>
 
-<h2 id="创建自定义文件"><a href="#创建自定义文件" class="headerlink" title="创建自定义文件"></a>创建自定义文件</h2><p>NexT-v8.x 支持自定义 <code>njk</code> 文件，从而避免修改 NexT 的源码，见参考链接 [<a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">2</a>]。我们在站点的 <code>source</code> 目录下创建 <code>_data/sidebar.njk</code> 文件，并加入如下内容：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&lt;!-- recent posts --&gt;</span><br><span class="line">&#123;%- if theme.recent_posts %&#125;</span><br><span class="line">    &lt;div class=&quot;links-of-blogroll motion-element &#123;&#123; &quot;links-of-blogroll-&quot; + theme.recent_posts_layout &#125;&#125;&quot;&gt;</span><br><span class="line">        &lt;div class=&quot;links-of-blogroll-title recent-posts-title&quot;&gt;</span><br><span class="line">	    &lt;i class=&quot;fa fa-history &#123;&#123; theme.recent_posts_icon | lower &#125;&#125;&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;</span><br><span class="line">            &#123;&#123; theme.recent_posts_title &#125;&#125;</span><br><span class="line">	&lt;/div&gt;</span><br><span class="line">	&lt;ul class=&quot;links-of-blogroll-list recent-posts-list&quot;&gt;</span><br><span class="line">	    &#123;%- set posts = site.posts.sort(&#x27;-date&#x27;).toArray() %&#125;</span><br><span class="line">	    &#123;%- for post in posts.slice(&#x27;0&#x27;, &#x27;5&#x27;) %&#125;</span><br><span class="line">	        &lt;li class=&quot;my-links-of-blogroll-item&quot;&gt;</span><br><span class="line">		    &lt;a href=&quot;&#123;&#123; url_for(post.path) &#125;&#125;&quot; title=&quot;&#123;&#123; post.title &#125;&#125;&quot; target=&quot;&quot;&gt;</span><br><span class="line">		    &#123;&#123; post.title &#125;&#125;</span><br><span class="line">		    &lt;/a&gt;</span><br><span class="line">		&lt;/li&gt;</span><br><span class="line">	    &#123;%- endfor %&#125;</span><br><span class="line">	&lt;/ul&gt;</span><br><span class="line">    &lt;/div&gt;</span><br><span class="line">&#123;%- endif %&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>为了后面的演示说明，这里提供了一个简单的测试数据，如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t1 (id <span class="type">int</span>, data <span class="type">varchar</span>(<span class="number">10</span>));</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t1 <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;Good&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t1 <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="keyword">NULL</span>);</span><br></pre></td></tr></table></figure>
 
-<h2 id="修改主题配置文件"><a href="#修改主题配置文件" class="headerlink" title="修改主题配置文件"></a>修改主题配置文件</h2><p>接着我们在站点目录下的主题配置文件（_config.next.yml）中加入如下内容开启近期文章功能。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">recent_posts: true</span><br><span class="line">recent_posts_title: 近期文章</span><br><span class="line">recent_posts_layout: block</span><br></pre></td></tr></table></figure>
+<p>接着，我们分别在 PostgreSQL 和 Oracle 数据库中执行下面的语句，可以发现它们的不同之处。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> id, data <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br></pre></td></tr></table></figure>
 
-<p>接着重启服务，我们便可以看到如下所示的近期文章板块。</p>
-<img src="/2020/08/next-8-0-0-recent-posts/recent-posts.jpg" class="">
+<p>Oracle 中的执行结果如下：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> id, data <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"></span><br><span class="line">        ID DATA</span><br><span class="line"><span class="comment">---------- ----------------------------</span></span><br><span class="line">         <span class="number">1</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">         <span class="number">2</span> , ooooooh, my God<span class="operator">!</span></span><br></pre></td></tr></table></figure>
 
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://theme-next.js.org/next-8-0-0-rc-1-released/">https://theme-next.js.org/next-8-0-0-rc-1-released/</a><br>[2] <a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb</a><br>[3] <a href="https://hasaik.com/posts/ab21860c.html">https://hasaik.com/posts/ab21860c.html</a></p>
+<p>PostgreSQL 中的执行结果如下：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> id, data <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"> id <span class="operator">|</span>          data</span><br><span class="line"><span class="comment">----+------------------------</span></span><br><span class="line">  <span class="number">1</span> <span class="operator">|</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span></span><br><span class="line">(<span class="number">2</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>其结果与上文描述一致，因此我们在将字符串操作迁移到 PostgreSQL 的时候需要进行判空处理。</p>
+<h2 id="迁移"><a href="#迁移" class="headerlink" title="迁移"></a>迁移</h2><p>我们可以使用 <code>coalesce()</code> 来进行迁移处理。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> id, <span class="built_in">coalesce</span>(data, <span class="string">&#x27;&#x27;</span>) <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"> id <span class="operator">|</span>          data</span><br><span class="line"><span class="comment">----+------------------------</span></span><br><span class="line">  <span class="number">1</span> <span class="operator">|</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">  <span class="number">2</span> <span class="operator">|</span> , ooooooh, my God<span class="operator">!</span></span><br><span class="line">(<span class="number">2</span> <span class="keyword">rows</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这种方式在 Oracle 中同样适用。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SQL</span><span class="operator">&gt;</span> <span class="keyword">SELECT</span> id, <span class="built_in">coalesce</span>(data, <span class="string">&#x27;&#x27;</span>) <span class="operator">||</span> <span class="string">&#x27;, ooooooh, my God!&#x27;</span> <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1;</span><br><span class="line"></span><br><span class="line">        ID DATA</span><br><span class="line"><span class="comment">---------- ----------------------------</span></span><br><span class="line">         <span class="number">1</span> Good, ooooooh, my God<span class="operator">!</span></span><br><span class="line">         <span class="number">2</span> , ooooooh, my God<span class="operator">!</span></span><br></pre></td></tr></table></figure>
+
+<p>我个人觉得这种写法的可读性更好一些（此外，Oracle 中还可以使用 <code>nvl()</code> 来替代 <code>coalesce()</code> 函数）。</p>
+<h2 id="函数与存储过程"><a href="#函数与存储过程" class="headerlink" title="函数与存储过程"></a>函数与存储过程</h2><p>PostgreSQL 在使用 plpgsql 编写函数或存储过程时，字符串默认值为 <code>NULL</code>，因此，在进行字符串相关的操作时同样需要注意。例如：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">FUNCTION</span> public.tfunc()</span><br><span class="line"><span class="keyword">RETURNS</span> void</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">    t <span class="type">varchar</span>(<span class="number">10</span>);</span><br><span class="line">    r record;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">   <span class="keyword">FOR</span> r <span class="keyword">IN</span> <span class="keyword">SELECT</span> id, data <span class="operator">||</span> t <span class="keyword">AS</span> data <span class="keyword">FROM</span> t1</span><br><span class="line">   LOOP</span><br><span class="line">       RAISE NOTICE <span class="string">&#x27;%, %&#x27;</span>, r.id, r.data;</span><br><span class="line">   <span class="keyword">END</span> LOOP;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
+
+<p>上述函数的执行结果为：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# select tfunc();</span><br><span class="line">NOTICE:  1, &lt;NULL&gt;</span><br><span class="line">NOTICE:  2, &lt;NULL&gt;</span><br><span class="line"> tfunc</span><br><span class="line">-------</span><br><span class="line"></span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://wiki.postgresql.org/wiki/Oracle_to_Postgres_Conversion#Empty_strings_and_NULL_values">https://wiki.postgresql.org/wiki/Oracle_to_Postgres_Conversion#Empty_strings_and_NULL_values</a></p>
+<div class="just-for-fun">
+笑林广记 - 强盗脚
+
+<p>乡民初次入城，见有木桶悬于城上。<br>问人曰：“此中何物？”<br>应者曰：“强盗头。”<br>及至县前，见数个木匣钉于谯楼之上，皆前官既去，而所留遗爱之靴。<br>乡民不知，乃点首曰：“城上挂的强盗头，此处一定是强盗脚了。”</p>
+</div>
 ]]></content>
       <categories>
-        <category>博客</category>
+        <category>数据库</category>
       </categories>
       <tags>
-        <tag>hexo</tag>
+        <tag>Oracle</tag>
+        <tag>PostgreSQL</tag>
+        <tag>迁移</tag>
       </tags>
   </entry>
   <entry>
@@ -2661,6 +2637,30 @@ table th:nth-of-type(2) {
         <tag>Oracle</tag>
         <tag>PostgreSQL</tag>
         <tag>迁移</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hexo NexT (v8.x) 主题添加近期文章</title>
+    <url>/2020/08/next-8-0-0-recent-posts/</url>
+    <content><![CDATA[<p>最近将博客由 NexT-v5.x 迁移到 NexT-v8.x 版本，这其中有很多东西已将发生变化了。本文简要介绍一下如何在新版中加入近期文章的功能。NexT-v8.x 版本将模版文件由原来的 <code>swig</code> 变更为 <code>njk</code> 后缀，因此，之前的近期文章的功能不再适用，我们需要稍作修改。</p>
+<span id="more"></span>
+
+<h2 id="创建自定义文件"><a href="#创建自定义文件" class="headerlink" title="创建自定义文件"></a>创建自定义文件</h2><p>NexT-v8.x 支持自定义 <code>njk</code> 文件，从而避免修改 NexT 的源码，见参考链接 [<a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">2</a>]。我们在站点的 <code>source</code> 目录下创建 <code>_data/sidebar.njk</code> 文件，并加入如下内容：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&lt;!-- recent posts --&gt;</span><br><span class="line">&#123;%- if theme.recent_posts %&#125;</span><br><span class="line">    &lt;div class=&quot;links-of-blogroll motion-element &#123;&#123; &quot;links-of-blogroll-&quot; + theme.recent_posts_layout &#125;&#125;&quot;&gt;</span><br><span class="line">        &lt;div class=&quot;links-of-blogroll-title recent-posts-title&quot;&gt;</span><br><span class="line">	    &lt;i class=&quot;fa fa-history &#123;&#123; theme.recent_posts_icon | lower &#125;&#125;&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;</span><br><span class="line">            &#123;&#123; theme.recent_posts_title &#125;&#125;</span><br><span class="line">	&lt;/div&gt;</span><br><span class="line">	&lt;ul class=&quot;links-of-blogroll-list recent-posts-list&quot;&gt;</span><br><span class="line">	    &#123;%- set posts = site.posts.sort(&#x27;-date&#x27;).toArray() %&#125;</span><br><span class="line">	    &#123;%- for post in posts.slice(&#x27;0&#x27;, &#x27;5&#x27;) %&#125;</span><br><span class="line">	        &lt;li class=&quot;my-links-of-blogroll-item&quot;&gt;</span><br><span class="line">		    &lt;a href=&quot;&#123;&#123; url_for(post.path) &#125;&#125;&quot; title=&quot;&#123;&#123; post.title &#125;&#125;&quot; target=&quot;&quot;&gt;</span><br><span class="line">		    &#123;&#123; post.title &#125;&#125;</span><br><span class="line">		    &lt;/a&gt;</span><br><span class="line">		&lt;/li&gt;</span><br><span class="line">	    &#123;%- endfor %&#125;</span><br><span class="line">	&lt;/ul&gt;</span><br><span class="line">    &lt;/div&gt;</span><br><span class="line">&#123;%- endif %&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="修改主题配置文件"><a href="#修改主题配置文件" class="headerlink" title="修改主题配置文件"></a>修改主题配置文件</h2><p>接着我们在站点目录下的主题配置文件（_config.next.yml）中加入如下内容开启近期文章功能。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">recent_posts: true</span><br><span class="line">recent_posts_title: 近期文章</span><br><span class="line">recent_posts_layout: block</span><br></pre></td></tr></table></figure>
+
+<p>接着重启服务，我们便可以看到如下所示的近期文章板块。</p>
+<img src="/2020/08/next-8-0-0-recent-posts/recent-posts.jpg" class="">
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://theme-next.js.org/next-8-0-0-rc-1-released/">https://theme-next.js.org/next-8-0-0-rc-1-released/</a><br>[2] <a href="https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb">https://theme-next.js.org/docs/advanced-settings/custom-files.html?highlight=sideb</a><br>[3] <a href="https://hasaik.com/posts/ab21860c.html">https://hasaik.com/posts/ab21860c.html</a></p>
+]]></content>
+      <categories>
+        <category>博客</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
       </tags>
   </entry>
   <entry>
@@ -2798,43 +2798,6 @@ table th:nth-of-type(2) {
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 修改配置参数</title>
-    <url>/2020/06/postgresql-alter-system/</url>
-    <content><![CDATA[<p>今天在使用 <code>ALTER SYSTEM</code> 来修改 PostgreSQL 参数时遇到无法启动数据库的问题。如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# ALTER SYSTEM SET shared_preload_libraries TO &#x27;pg_buffercache,passwordcheck&#x27;;</span><br><span class="line">ALTER SYSTEM</span><br><span class="line">postgres=# \q</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">waiting for server to shut down.... done</span><br><span class="line">server stopped</span><br><span class="line">waiting for server to start....postgres: could not access directory &quot;/Users/japinli/Codes/postgresql/pg/data&quot;: No such file or directory</span><br><span class="line">Run initdb or pg_basebackup to initialize a PostgreSQL data directory.</span><br><span class="line"> stopped waiting</span><br><span class="line">pg_ctl: could not start server</span><br><span class="line">Examine the log output.</span><br></pre></td></tr></table></figure>
-
-<p>你是否也遇到了这样的问题呢？其实这都是由于我们先入为主的思想导致的，<code>ALTER SYSTEM</code> 支持以逗号分割的列表，而这类参数的修改不需要使用引号。因此，正确的使用方式如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ALTER SYSTEM SET shared_preload_libraries TO pg_buffercache, passwordcheck;</span><br></pre></td></tr></table></figure>
-
-<span id="more"></span>
-
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>首先我们看看 pg_ctl 在启动时是如何加载 <code>shared_preload_libraries</code> 配置文件的。这里我们需要注意的是 pg_ctl 最终还是调用 postgres 来启动。通过分析我们可以发现 <code>shared_preload_libraries</code> 参数是在 <code>PostmasterMain()</code> 函数中调用 <code>process_shared_preload_libraries()</code> 来处理的，该函数定义如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">process_shared_preload_libraries</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">true</span>;</span><br><span class="line">    load_libraries(shared_preload_libraries_string,</span><br><span class="line">                   <span class="string">&quot;shared_preload_libraries&quot;</span>,</span><br><span class="line">                   <span class="literal">false</span>);</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到，<code>shared_preload_libraries</code> 是通过 <code>load_libraries()</code> 函数处理的，<code>load_libraries()</code> 函数则是通过 <code>SplitDirectoriesString()</code> 函数来处理的。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">SplitDirectoriesString</span><span class="params">(<span class="keyword">char</span> *rawstring, <span class="keyword">char</span> separator,</span></span></span><br><span class="line"><span class="params"><span class="function">                       List **namelist)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span>       *nextp = rawstring;</span><br><span class="line">    <span class="keyword">bool</span>        done = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">    *namelist = NIL;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">        nextp++;                <span class="comment">/* skip leading whitespace */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;            <span class="comment">/* allow empty string */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* At the top of the loop, we are at start of a new directory. */</span></span><br><span class="line">    <span class="keyword">do</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">char</span>       *curname;</span><br><span class="line">        <span class="keyword">char</span>       *endp;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Quoted name --- collapse quote-quote pairs */</span></span><br><span class="line">            curname = nextp + <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">for</span> (;;)</span><br><span class="line">            &#123;</span><br><span class="line">                endp = <span class="built_in">strchr</span>(nextp + <span class="number">1</span>, <span class="string">&#x27;&quot;&#x27;</span>);</span><br><span class="line">                <span class="keyword">if</span> (endp == <span class="literal">NULL</span>)</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* mismatched quotes */</span></span><br><span class="line">                <span class="keyword">if</span> (endp[<span class="number">1</span>] != <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">                    <span class="keyword">break</span>;      <span class="comment">/* found end of quoted name */</span></span><br><span class="line">                <span class="comment">/* Collapse adjacent quotes into one quote, and look again */</span></span><br><span class="line">                memmove(endp, endp + <span class="number">1</span>, <span class="built_in">strlen</span>(endp));</span><br><span class="line">                nextp = endp;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/* endp now points at the terminating quote */</span></span><br><span class="line">            nextp = endp + <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Unquoted name --- extends to separator or end of string */</span></span><br><span class="line">            curname = endp = nextp;</span><br><span class="line">            <span class="keyword">while</span> (*nextp &amp;&amp; *nextp != separator)</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="comment">/* trailing whitespace should not be included in name */</span></span><br><span class="line">                <span class="keyword">if</span> (!scanner_isspace(*nextp))</span><br><span class="line">                    endp = nextp + <span class="number">1</span>;</span><br><span class="line">                nextp++;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (curname == endp)</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* empty unquoted name not allowed */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">            nextp++;            <span class="comment">/* skip trailing whitespace */</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == separator)</span><br><span class="line">        &#123;</span><br><span class="line">            nextp++;</span><br><span class="line">            <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">                nextp++;        <span class="comment">/* skip leading whitespace for next */</span></span><br><span class="line">            <span class="comment">/* we expect another name, so done remains false */</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">            done = <span class="literal">true</span>;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;       <span class="comment">/* invalid syntax */</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Now safe to overwrite separator with a null */</span></span><br><span class="line">        *endp = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Truncate path if it&#x27;s overlength */</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">strlen</span>(curname) &gt;= MAXPGPATH)</span><br><span class="line">            curname[MAXPGPATH - <span class="number">1</span>] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Finished isolating current name --- add it to list</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        curname = pstrdup(curname);</span><br><span class="line">        canonicalize_path(curname);</span><br><span class="line">        *namelist = lappend(*namelist, curname);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Loop back if we didn&#x27;t reach end of string */</span></span><br><span class="line">    &#125; <span class="keyword">while</span> (!done);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从上面的 22-38 行代码，我们可以看到，postgres 在处理带有双引号的内容是将其作为一个整体来处理的，因此，我们的 <code>shared_preload_libraries</code> 配置无法通过。</p>
-<p>关于 <code>shared_preload_libraries</code> 的处理流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; PostmasterMain()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; process_shared_preload_libraries()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; load_libraries()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; SplitDirectoriesString()</span><br></pre></td></tr></table></figure>
-
-<p>那么为什么 <code>ALTER SYSTEM</code> 在写入时要加上双引号呢？我们先看看 <code>share_preload_libraries</code> 参数的相关设置。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &#123;<span class="string">&quot;shared_preload_libraries&quot;</span>, PGC_POSTMASTER, CLIENT_CONN_PRELOAD,</span><br><span class="line">        gettext_noop(<span class="string">&quot;Lists shared libraries to preload into server.&quot;</span>),</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</span><br><span class="line">    &#125;,</span><br><span class="line">    &amp;shared_preload_libraries_string,</span><br><span class="line">    <span class="string">&quot;&quot;</span>,</span><br><span class="line">    <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
-
-<p>参数 <code>shared_preload_libraries</code> 的 <code>flag</code> 为 <code>GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</code>，而我们使用的 <code>&#39;pg_buffercache,passwordcheck&#39;</code> 是作为一个整体，而不是 LIST 来处理的，因此，在写入是由于有特殊的分割符，所以就需要加上双引号，从而导致错误。</p>
-<p>关于 <code>ALTER SYSTEM</code> 命令的处理可以查看 <code>gram.y</code> 中的 <code>AlterSystemStmt</code> 定义，随后接着分析 <code>AlterSystemSetConfigFile()</code> 函数，其处理流程大致如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; AlterSystemSetConfigFile()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; ExtractSetVariableArgs()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; ExtractSetVariableArgs()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; flatten_set_variable_args()</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/sql-altersystem.html">https://www.postgresql.org/docs/10/sql-altersystem.html</a></p>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL RelCache 和 SysCache 缓存</title>
     <url>/2022/07/postgres-relcache-and-syscache/</url>
     <content><![CDATA[<p>PostgreSQL 数据库大部分操作都依赖于系统表，因此为了加速访问，PostgreSQL 针对系统表提供了两种缓存：RelCache 和 SysCache。RelCache 和 SysCache 都是进程本地的，每个 backend 进程启动的时候都将创建自己的 RelCache 和 SysCache。本文将简要介绍一下这两类缓存。</p>
@@ -2943,6 +2906,43 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 修改配置参数</title>
+    <url>/2020/06/postgresql-alter-system/</url>
+    <content><![CDATA[<p>今天在使用 <code>ALTER SYSTEM</code> 来修改 PostgreSQL 参数时遇到无法启动数据库的问题。如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">postgres=# ALTER SYSTEM SET shared_preload_libraries TO &#x27;pg_buffercache,passwordcheck&#x27;;</span><br><span class="line">ALTER SYSTEM</span><br><span class="line">postgres=# \q</span><br><span class="line">$ pg_ctl restart</span><br><span class="line">waiting for server to shut down.... done</span><br><span class="line">server stopped</span><br><span class="line">waiting for server to start....postgres: could not access directory &quot;/Users/japinli/Codes/postgresql/pg/data&quot;: No such file or directory</span><br><span class="line">Run initdb or pg_basebackup to initialize a PostgreSQL data directory.</span><br><span class="line"> stopped waiting</span><br><span class="line">pg_ctl: could not start server</span><br><span class="line">Examine the log output.</span><br></pre></td></tr></table></figure>
+
+<p>你是否也遇到了这样的问题呢？其实这都是由于我们先入为主的思想导致的，<code>ALTER SYSTEM</code> 支持以逗号分割的列表，而这类参数的修改不需要使用引号。因此，正确的使用方式如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ALTER SYSTEM SET shared_preload_libraries TO pg_buffercache, passwordcheck;</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>首先我们看看 pg_ctl 在启动时是如何加载 <code>shared_preload_libraries</code> 配置文件的。这里我们需要注意的是 pg_ctl 最终还是调用 postgres 来启动。通过分析我们可以发现 <code>shared_preload_libraries</code> 参数是在 <code>PostmasterMain()</code> 函数中调用 <code>process_shared_preload_libraries()</code> 来处理的，该函数定义如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">process_shared_preload_libraries</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">true</span>;</span><br><span class="line">    load_libraries(shared_preload_libraries_string,</span><br><span class="line">                   <span class="string">&quot;shared_preload_libraries&quot;</span>,</span><br><span class="line">                   <span class="literal">false</span>);</span><br><span class="line">    process_shared_preload_libraries_in_progress = <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，<code>shared_preload_libraries</code> 是通过 <code>load_libraries()</code> 函数处理的，<code>load_libraries()</code> 函数则是通过 <code>SplitDirectoriesString()</code> 函数来处理的。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">SplitDirectoriesString</span><span class="params">(<span class="keyword">char</span> *rawstring, <span class="keyword">char</span> separator,</span></span></span><br><span class="line"><span class="params"><span class="function">                       List **namelist)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">char</span>       *nextp = rawstring;</span><br><span class="line">    <span class="keyword">bool</span>        done = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">    *namelist = NIL;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">        nextp++;                <span class="comment">/* skip leading whitespace */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;            <span class="comment">/* allow empty string */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* At the top of the loop, we are at start of a new directory. */</span></span><br><span class="line">    <span class="keyword">do</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">char</span>       *curname;</span><br><span class="line">        <span class="keyword">char</span>       *endp;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Quoted name --- collapse quote-quote pairs */</span></span><br><span class="line">            curname = nextp + <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">for</span> (;;)</span><br><span class="line">            &#123;</span><br><span class="line">                endp = <span class="built_in">strchr</span>(nextp + <span class="number">1</span>, <span class="string">&#x27;&quot;&#x27;</span>);</span><br><span class="line">                <span class="keyword">if</span> (endp == <span class="literal">NULL</span>)</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* mismatched quotes */</span></span><br><span class="line">                <span class="keyword">if</span> (endp[<span class="number">1</span>] != <span class="string">&#x27;&quot;&#x27;</span>)</span><br><span class="line">                    <span class="keyword">break</span>;      <span class="comment">/* found end of quoted name */</span></span><br><span class="line">                <span class="comment">/* Collapse adjacent quotes into one quote, and look again */</span></span><br><span class="line">                memmove(endp, endp + <span class="number">1</span>, <span class="built_in">strlen</span>(endp));</span><br><span class="line">                nextp = endp;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/* endp now points at the terminating quote */</span></span><br><span class="line">            nextp = endp + <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">/* Unquoted name --- extends to separator or end of string */</span></span><br><span class="line">            curname = endp = nextp;</span><br><span class="line">            <span class="keyword">while</span> (*nextp &amp;&amp; *nextp != separator)</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="comment">/* trailing whitespace should not be included in name */</span></span><br><span class="line">                <span class="keyword">if</span> (!scanner_isspace(*nextp))</span><br><span class="line">                    endp = nextp + <span class="number">1</span>;</span><br><span class="line">                nextp++;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (curname == endp)</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;   <span class="comment">/* empty unquoted name not allowed */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">            nextp++;            <span class="comment">/* skip trailing whitespace */</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (*nextp == separator)</span><br><span class="line">        &#123;</span><br><span class="line">            nextp++;</span><br><span class="line">            <span class="keyword">while</span> (scanner_isspace(*nextp))</span><br><span class="line">                nextp++;        <span class="comment">/* skip leading whitespace for next */</span></span><br><span class="line">            <span class="comment">/* we expect another name, so done remains false */</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (*nextp == <span class="string">&#x27;\0&#x27;</span>)</span><br><span class="line">            done = <span class="literal">true</span>;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;       <span class="comment">/* invalid syntax */</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Now safe to overwrite separator with a null */</span></span><br><span class="line">        *endp = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Truncate path if it&#x27;s overlength */</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">strlen</span>(curname) &gt;= MAXPGPATH)</span><br><span class="line">            curname[MAXPGPATH - <span class="number">1</span>] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Finished isolating current name --- add it to list</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        curname = pstrdup(curname);</span><br><span class="line">        canonicalize_path(curname);</span><br><span class="line">        *namelist = lappend(*namelist, curname);</span><br><span class="line"></span><br><span class="line">        <span class="comment">/* Loop back if we didn&#x27;t reach end of string */</span></span><br><span class="line">    &#125; <span class="keyword">while</span> (!done);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的 22-38 行代码，我们可以看到，postgres 在处理带有双引号的内容是将其作为一个整体来处理的，因此，我们的 <code>shared_preload_libraries</code> 配置无法通过。</p>
+<p>关于 <code>shared_preload_libraries</code> 的处理流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; PostmasterMain()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; process_shared_preload_libraries()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; load_libraries()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; SplitDirectoriesString()</span><br></pre></td></tr></table></figure>
+
+<p>那么为什么 <code>ALTER SYSTEM</code> 在写入时要加上双引号呢？我们先看看 <code>share_preload_libraries</code> 参数的相关设置。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &#123;<span class="string">&quot;shared_preload_libraries&quot;</span>, PGC_POSTMASTER, CLIENT_CONN_PRELOAD,</span><br><span class="line">        gettext_noop(<span class="string">&quot;Lists shared libraries to preload into server.&quot;</span>),</span><br><span class="line">        <span class="literal">NULL</span>,</span><br><span class="line">        GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</span><br><span class="line">    &#125;,</span><br><span class="line">    &amp;shared_preload_libraries_string,</span><br><span class="line">    <span class="string">&quot;&quot;</span>,</span><br><span class="line">    <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span></span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+
+<p>参数 <code>shared_preload_libraries</code> 的 <code>flag</code> 为 <code>GUC_LIST_INPUT | GUC_LIST_QUOTE | GUC_SUPERUSER_ONLY</code>，而我们使用的 <code>&#39;pg_buffercache,passwordcheck&#39;</code> 是作为一个整体，而不是 LIST 来处理的，因此，在写入是由于有特殊的分割符，所以就需要加上双引号，从而导致错误。</p>
+<p>关于 <code>ALTER SYSTEM</code> 命令的处理可以查看 <code>gram.y</code> 中的 <code>AlterSystemStmt</code> 定义，随后接着分析 <code>AlterSystemSetConfigFile()</code> 函数，其处理流程大致如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-&gt; AlterSystemSetConfigFile()</span><br><span class="line">    |</span><br><span class="line">    +-&gt; ExtractSetVariableArgs()</span><br><span class="line">         |</span><br><span class="line">         +-&gt; ExtractSetVariableArgs()</span><br><span class="line">              |</span><br><span class="line">              +-&gt; flatten_set_variable_args()</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/10/sql-altersystem.html">https://www.postgresql.org/docs/10/sql-altersystem.html</a></p>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -4043,37 +4043,6 @@ Date:   Wed Feb 5 16:59:29 2020 -0300
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 类型转换时无效的类型输入</title>
-    <url>/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/</url>
-    <content><![CDATA[<p>最近在做 Oracle 迁移的时候发现一个类型错误，如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ERROR:  invalid input syntax for type numeric: &quot;null&quot;</span><br></pre></td></tr></table></figure>
-
-<p>这个问题其实很简单，就是原始数据里面包含 <code>&#39;null&#39;</code> 的字符串导致的。解决这个问题的办法就是将数据中为 <code>&#39;null&#39;</code> 的异常数据转换为正常数据。</p>
-<span id="more"></span>
-
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>这个问题是我们想要将 <code>varchar</code> 类型的字段转为 <code>numeric</code> 类型时出现的。原始数据有大约 60w 行记录，其中大部分都是可以之间通过 <code>cast</code> 转换为 <code>numeric</code> 类型的。通过下面的查询我们可以看到有 4 条记录存储了 <code>null</code> 字符串。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SELECT id, total_year FROM contract_export WHERE total_year !~ &#x27;[0-9.]+&#x27;;</span><br><span class="line">        id        | total_year</span><br><span class="line">------------------+------------</span><br><span class="line"> PG202006173J2995 | null</span><br><span class="line"> PG202007074K5842 | null</span><br><span class="line"> PG202005181L4194 | null</span><br><span class="line"> PG202005186D1908 | null</span><br><span class="line">(4 rows)</span><br></pre></td></tr></table></figure>
-
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>既然是数据异常，那么我们就要想法将异常数据转换为正常数据，这个可能就需要根据业务来确定异常的数据该如何进行转换。不过可以确定的是，我们可以通过 <code>CASE WHEN</code> 语句来处理异常数据。那么如果异常的数据过多怎么办？我们是否需要提供很多的 <code>WHEN</code> 分支呢？</p>
-<p>这里我们就需要查看异常数据是否有共性？如果有共性，那么我们可以通过正则表达式将其刷选出来。如果异常数据没有共性呢？那么我们是否可以方向思考呢？通过正常数据的共性来匹配正常数据，从而达到刷选异常数据的目的。</p>
-<p>这个问题的解决方法其实在上面的 SQL 查询中已经给出了，我们可以使用下面的语句来进行处理。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="keyword">LIKE</span> <span class="string">&#x27;%null%&#x27;</span> <span class="keyword">THEN</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">     <span class="keyword">ELSE</span> total_year</span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="operator">!</span><span class="operator">~</span> <span class="string">&#x27;[0-9.]+&#x27;</span> <span class="keyword">THEN</span> total_year</span><br><span class="line">	 <span class="keyword">ELSE</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br></pre></td></tr></table></figure>
-
-<p>为了防止其出现 <code>NULL</code> 值导致类型转换失败，我们可以使用 <code>COALESCE</code> 来处理 <code>NULL</code> 值。</p>
-<div class="just-for-fun">
-笑林广记 - 狗父
-
-<p>陆某，善说话，有邻妇性不好笑，<br>其友谓之曰：“汝能说一字令彼妇笑，又说一字令彼妇骂，则吾愿以酒菜享汝。”<br>一日，妇立门前，适门前卧一犬，陆向之长跪曰：“爷！”<br>妇见之不觉好笑，陆复仰首向妇曰：“娘！”<br>妇闻之大骂。</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 行类型规则导出错误</title>
     <url>/2022/01/postgresql-invalid-dump-for-rules/</url>
     <content><![CDATA[<p>最近在浏览邮件列表时发现通过 pg_dump 导出带有行类型的规则导出之后无法导入到数据库中，已确认为 bug，目前已被修复。</p>
@@ -4131,6 +4100,90 @@ Date:   Thu Jan 13 17:49:25 2022 -0500
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 类型转换时无效的类型输入</title>
+    <url>/2021/05/postgresql-invalid-input-syntax-for-type-numeric-null/</url>
+    <content><![CDATA[<p>最近在做 Oracle 迁移的时候发现一个类型错误，如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ERROR:  invalid input syntax for type numeric: &quot;null&quot;</span><br></pre></td></tr></table></figure>
+
+<p>这个问题其实很简单，就是原始数据里面包含 <code>&#39;null&#39;</code> 的字符串导致的。解决这个问题的办法就是将数据中为 <code>&#39;null&#39;</code> 的异常数据转换为正常数据。</p>
+<span id="more"></span>
+
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>这个问题是我们想要将 <code>varchar</code> 类型的字段转为 <code>numeric</code> 类型时出现的。原始数据有大约 60w 行记录，其中大部分都是可以之间通过 <code>cast</code> 转换为 <code>numeric</code> 类型的。通过下面的查询我们可以看到有 4 条记录存储了 <code>null</code> 字符串。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SELECT id, total_year FROM contract_export WHERE total_year !~ &#x27;[0-9.]+&#x27;;</span><br><span class="line">        id        | total_year</span><br><span class="line">------------------+------------</span><br><span class="line"> PG202006173J2995 | null</span><br><span class="line"> PG202007074K5842 | null</span><br><span class="line"> PG202005181L4194 | null</span><br><span class="line"> PG202005186D1908 | null</span><br><span class="line">(4 rows)</span><br></pre></td></tr></table></figure>
+
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>既然是数据异常，那么我们就要想法将异常数据转换为正常数据，这个可能就需要根据业务来确定异常的数据该如何进行转换。不过可以确定的是，我们可以通过 <code>CASE WHEN</code> 语句来处理异常数据。那么如果异常的数据过多怎么办？我们是否需要提供很多的 <code>WHEN</code> 分支呢？</p>
+<p>这里我们就需要查看异常数据是否有共性？如果有共性，那么我们可以通过正则表达式将其刷选出来。如果异常数据没有共性呢？那么我们是否可以方向思考呢？通过正常数据的共性来匹配正常数据，从而达到刷选异常数据的目的。</p>
+<p>这个问题的解决方法其实在上面的 SQL 查询中已经给出了，我们可以使用下面的语句来进行处理。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="keyword">LIKE</span> <span class="string">&#x27;%null%&#x27;</span> <span class="keyword">THEN</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">     <span class="keyword">ELSE</span> total_year</span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span></span><br><span class="line">  id,</span><br><span class="line">  (<span class="keyword">CASE</span></span><br><span class="line">     <span class="keyword">WHEN</span> total_year <span class="operator">!</span><span class="operator">~</span> <span class="string">&#x27;[0-9.]+&#x27;</span> <span class="keyword">THEN</span> total_year</span><br><span class="line">	 <span class="keyword">ELSE</span> <span class="string">&#x27;0&#x27;</span></span><br><span class="line">   <span class="keyword">END</span>)::<span class="type">numeric</span></span><br><span class="line"><span class="keyword">FROM</span></span><br><span class="line">  contract_export;</span><br></pre></td></tr></table></figure>
+
+<p>为了防止其出现 <code>NULL</code> 值导致类型转换失败，我们可以使用 <code>COALESCE</code> 来处理 <code>NULL</code> 值。</p>
+<div class="just-for-fun">
+笑林广记 - 狗父
+
+<p>陆某，善说话，有邻妇性不好笑，<br>其友谓之曰：“汝能说一字令彼妇笑，又说一字令彼妇骂，则吾愿以酒菜享汝。”<br>一日，妇立门前，适门前卧一犬，陆向之长跪曰：“爷！”<br>妇见之不觉好笑，陆复仰首向妇曰：“娘！”<br>妇闻之大骂。</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 使用 JDBC 调用存储过程错误</title>
+    <url>/2021/11/postgresql-jdbc-call-procedure/</url>
+    <content><![CDATA[<p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
+<span id="more"></span>
+
+<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在将 Oracle 中的存储过程迁移到 PostgreSQL 中，我们遇到了一个如下的存储过程（经过了简化）：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> proc(a <span class="keyword">INOUT</span> <span class="type">bigint</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span>(a);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
+
+<p>随后在 Java 程序中使用 JDBC 去调用这个存储过程，调用代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">CallableStatement proc = conn.prepareCall(<span class="string">&quot;&#123;call proc( ? )&#125;&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>运行时程序报如下错误：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2674)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2364)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:354)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:484)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:404)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:162)</span><br><span class="line">        at org.postgresql.jdbc.PgCallableStatement.executeWithFlags(PgCallableStatement.java:83)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.execute(PgPreparedStatement.java:151)</span><br><span class="line">        at PGTest.main(PGTest.java:52)</span><br><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br></pre></td></tr></table></figure>
+
+<p>错误提示我们调用的是一个存储过程，应该使用 <code>CALL</code> 来调用存储过程？WTF? 难道我在程序里使用的不是 <code>CALL</code> 么？真的是老眼昏花了吗？</p>
+<p>经过一番尝试之后发现还是不能解决这个问题，当时由于敢进度，就选择了曲线救国的思路，将存储过程改为函数，折腾了一番之后总算是可以用了。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>晚上回来继续研究，这次选择了查看<a href="https://jdbc.postgresql.org/documentation/head/callproc.html">官方文档</a>，浏览了一下发现 PostgreSQL 的 JDBC 在处理存储过程没有返回值的时候需要设置 <code>escapeSyntaxCallMode</code> 参数。如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Ensure EscapeSyntaxCallmode property set to support procedures if no return value</span></span><br><span class="line">props.setProperty(<span class="string">&quot;escapeSyntaxCallMode&quot;</span>, <span class="string">&quot;callIfNoReturn&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>根据注释来看，设置 <code>escapeSyntaxCallMode</code> 为 <code>callIfNoReturn</code> 可以确保存储过程在没有返回值的时候依然正常工作，经验证，通过这个设置，存储过程便能正确执行了。</p>
+<p>这个问题虽然不大，但是对于不懂 Java 的我来说定位还是比较费事的，不过还好 PostgreSQL 的 jdbc 文档比较完善，虽然走了一些弯路，从这个也能看出，官方文档才是第一手资料，其他的都是浮云啊。</p>
+<p>此外，<a href="https://jdbc.postgresql.org/documentation/head/connect.html">这里</a> 包含了 PostgreSQL 数据库 jdbc 连接的所有参数信息。拿上面的 <code>escapeSyntaxCallMode</code> 来说，您可以看到如下内容：</p>
+<blockquote>
+<ul>
+<li><p>escapeSyntaxCallMode = String</p>
+<p>Specifies how the driver transforms JDBC escape call syntax into underlying SQL, for invoking procedures or functions. In escapeSyntaxCallMode=select mode (the default), the driver always uses a SELECT statement (allowing function invocation only). In escapeSyntaxCallMode=callIfNoReturn mode, the driver uses a CALL statement (allowing procedure invocation) if there is no return parameter specified, otherwise the driver uses a SELECT statement. In escapeSyntaxCallMode=call mode, the driver always uses a CALL statement (allowing procedure invocation only).</p>
+<p>The default is select</p>
+</li>
+</ul>
+</blockquote>
+<p>从上面的说明可以看到，<code>escapeSyntaxCallMode</code> 参数制定了如何调用底层的函数和存储过程，它有三种模式：</p>
+<ul>
+<li><strong>select</strong> - 默认值，jdbc 驱动使用 <code>SELECT</code> 来调用函数和存储过程。</li>
+<li><strong>callIfNoReturn</strong> - 当存储过程没有返回值时使用 <code>CALL</code> 来调用，其他情况则使用 <code>SELECT</code> 来调用。</li>
+<li><strong>call</strong> - 所有的函数和存储过程都使用 <code>CALL</code> 来调用。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://jdbc.postgresql.org/documentation/head/callproc.html">https://jdbc.postgresql.org/documentation/head/callproc.html</a><br>[2] <a href="https://jdbc.postgresql.org/documentation/head/connect.html">https://jdbc.postgresql.org/documentation/head/connect.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 进士第
+
+<p>一介弟横行于乡，怨家骂曰：“兄登黄甲，与汝何干，而豪横若此？”<br>答曰：“尔不见匾额上面写着‘进士第（弟）’么？”</p>
+</div>
+]]></content>
+      <categories>
+        <category>编程</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+        <tag>Java</tag>
+        <tag>JDBC</tag>
       </tags>
   </entry>
   <entry>
@@ -4218,59 +4271,6 @@ Date:   Thu Jan 13 17:49:25 2022 -0500
       </categories>
       <tags>
         <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 使用 JDBC 调用存储过程错误</title>
-    <url>/2021/11/postgresql-jdbc-call-procedure/</url>
-    <content><![CDATA[<p>最近在迁移 Oracle 数据库到 PostgreSQL 时遇到了 PostgreSQL 中调用存储过程异常的情况。本文简要记录以下定位及其修复过程。</p>
-<span id="more"></span>
-
-<h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>在将 Oracle 中的存储过程迁移到 PostgreSQL 中，我们遇到了一个如下的存储过程（经过了简化）：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">PROCEDURE</span> proc(a <span class="keyword">INOUT</span> <span class="type">bigint</span>)</span><br><span class="line"><span class="keyword">AS</span> $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span>(a);</span><br><span class="line">    <span class="keyword">COMMIT</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpgsql;</span><br></pre></td></tr></table></figure>
-
-<p>随后在 Java 程序中使用 JDBC 去调用这个存储过程，调用代码如下所示：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">CallableStatement proc = conn.prepareCall(<span class="string">&quot;&#123;call proc( ? )&#125;&quot;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>运行时程序报如下错误：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2674)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2364)</span><br><span class="line">        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:354)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:484)</span><br><span class="line">        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:404)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:162)</span><br><span class="line">        at org.postgresql.jdbc.PgCallableStatement.executeWithFlags(PgCallableStatement.java:83)</span><br><span class="line">        at org.postgresql.jdbc.PgPreparedStatement.execute(PgPreparedStatement.java:151)</span><br><span class="line">        at PGTest.main(PGTest.java:52)</span><br><span class="line">org.postgresql.util.PSQLException: ERROR: proc(integer) is a procedure</span><br><span class="line">  Hint: To call a procedure, use CALL.</span><br><span class="line">  Position: 15</span><br></pre></td></tr></table></figure>
-
-<p>错误提示我们调用的是一个存储过程，应该使用 <code>CALL</code> 来调用存储过程？WTF? 难道我在程序里使用的不是 <code>CALL</code> 么？真的是老眼昏花了吗？</p>
-<p>经过一番尝试之后发现还是不能解决这个问题，当时由于敢进度，就选择了曲线救国的思路，将存储过程改为函数，折腾了一番之后总算是可以用了。</p>
-<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>晚上回来继续研究，这次选择了查看<a href="https://jdbc.postgresql.org/documentation/head/callproc.html">官方文档</a>，浏览了一下发现 PostgreSQL 的 JDBC 在处理存储过程没有返回值的时候需要设置 <code>escapeSyntaxCallMode</code> 参数。如下所示：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Ensure EscapeSyntaxCallmode property set to support procedures if no return value</span></span><br><span class="line">props.setProperty(<span class="string">&quot;escapeSyntaxCallMode&quot;</span>, <span class="string">&quot;callIfNoReturn&quot;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>根据注释来看，设置 <code>escapeSyntaxCallMode</code> 为 <code>callIfNoReturn</code> 可以确保存储过程在没有返回值的时候依然正常工作，经验证，通过这个设置，存储过程便能正确执行了。</p>
-<p>这个问题虽然不大，但是对于不懂 Java 的我来说定位还是比较费事的，不过还好 PostgreSQL 的 jdbc 文档比较完善，虽然走了一些弯路，从这个也能看出，官方文档才是第一手资料，其他的都是浮云啊。</p>
-<p>此外，<a href="https://jdbc.postgresql.org/documentation/head/connect.html">这里</a> 包含了 PostgreSQL 数据库 jdbc 连接的所有参数信息。拿上面的 <code>escapeSyntaxCallMode</code> 来说，您可以看到如下内容：</p>
-<blockquote>
-<ul>
-<li><p>escapeSyntaxCallMode = String</p>
-<p>Specifies how the driver transforms JDBC escape call syntax into underlying SQL, for invoking procedures or functions. In escapeSyntaxCallMode=select mode (the default), the driver always uses a SELECT statement (allowing function invocation only). In escapeSyntaxCallMode=callIfNoReturn mode, the driver uses a CALL statement (allowing procedure invocation) if there is no return parameter specified, otherwise the driver uses a SELECT statement. In escapeSyntaxCallMode=call mode, the driver always uses a CALL statement (allowing procedure invocation only).</p>
-<p>The default is select</p>
-</li>
-</ul>
-</blockquote>
-<p>从上面的说明可以看到，<code>escapeSyntaxCallMode</code> 参数制定了如何调用底层的函数和存储过程，它有三种模式：</p>
-<ul>
-<li><strong>select</strong> - 默认值，jdbc 驱动使用 <code>SELECT</code> 来调用函数和存储过程。</li>
-<li><strong>callIfNoReturn</strong> - 当存储过程没有返回值时使用 <code>CALL</code> 来调用，其他情况则使用 <code>SELECT</code> 来调用。</li>
-<li><strong>call</strong> - 所有的函数和存储过程都使用 <code>CALL</code> 来调用。</li>
-</ul>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://jdbc.postgresql.org/documentation/head/callproc.html">https://jdbc.postgresql.org/documentation/head/callproc.html</a><br>[2] <a href="https://jdbc.postgresql.org/documentation/head/connect.html">https://jdbc.postgresql.org/documentation/head/connect.html</a></p>
-<div class="just-for-fun">
-笑林广记 - 进士第
-
-<p>一介弟横行于乡，怨家骂曰：“兄登黄甲，与汝何干，而豪横若此？”<br>答曰：“尔不见匾额上面写着‘进士第（弟）’么？”</p>
-</div>
-]]></content>
-      <categories>
-        <category>编程</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-        <tag>Java</tag>
-        <tag>JDBC</tag>
       </tags>
   </entry>
   <entry>
@@ -5168,6 +5168,71 @@ Date:   Mon Jan 17 10:16:53 2022 +0900
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 扩展 - pg_dirtyread 读取未回收数据</title>
+    <url>/2023/01/postgresql-read-dirty-data/</url>
+    <content><![CDATA[<p>pg_dirtyread 扩展提供了从 PostgreSQL 数据库中读取未回收的数据的能力。它支持 PostgreSQL 9.2 及更高版本（在 9.2 上，至少需要 9.2.9）。</p>
+<span id="more"></span>
+
+<h2 id="编译安装"><a href="#编译安装" class="headerlink" title="编译安装"></a>编译安装</h2><p>pg_dirtyread 编译需要使用到 pg_config 来获取 PostgreSQL 编译连接信息，使用下面的命令即可完成编译安装。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ make</span><br><span class="line">$ make install</span><br></pre></td></tr></table></figure>
+
+<p>如果您的 pg_config 不在 <code>PATH</code> 环境变量中，可以使用下面的命令编译安装。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ make PG_CONFIG=/path/to/pg_config</span><br><span class="line">$ make install PG_CONFIG=/path/to/pg_config</span><br></pre></td></tr></table></figure>
+
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>当安装 pg_dirtyread 插件之后，我们需要在数据库中导入该插件方可使用，使用超级用户执行下面的 SQL 即可完成。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION pg_dirtyread;</span><br></pre></td></tr></table></figure>
+
+<p>pg_dirtyread 的使用方法如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;tablename&#x27;</span>) <span class="keyword">AS</span> t(col1 type1, col2 type2, ...);</span><br></pre></td></tr></table></figure>
+
+<p><code>pg_dirtyread()</code> 函数返回的是 <code>RECORD</code> 类型，因此有必要附加一个描述表模式的表别名子句。列按名称匹配，因此可以在别名中省略某些列，或重新排列列。</p>
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>我们使用下面的 SQL 创建一个表，同时禁用该表上的 autovacuum 操作。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> foo (bar <span class="type">bigint</span>, baz text)</span><br><span class="line">  <span class="keyword">WITH</span> (autovacuum_enabled <span class="operator">=</span> <span class="literal">false</span>, toast.autovacuum_enabled <span class="operator">=</span> <span class="literal">false</span>);</span><br></pre></td></tr></table></figure>
+
+<p>接着在表中插入数据，随后在删除部分数据。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> foo <span class="keyword">SELECT</span> id, md5(id::text) <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">10</span>) id;</span><br><span class="line"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> foo <span class="keyword">WHERE</span> bar <span class="operator">%</span> <span class="number">3</span> <span class="operator">=</span> <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我们使用 pg_dirtyread 插件来读取已经删除的数据，先导入 pg_dirtyread 插件。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION pg_dirtyread;</span><br></pre></td></tr></table></figure>
+
+<p>接着使用 <code>pg_dirtyread()</code> 函数读取数据。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;foo&#x27;</span>) <span class="keyword">AS</span> t(bar <span class="type">bigint</span>, baz text);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"> bar |               baz</span><br><span class="line">-----+----------------------------------</span><br><span class="line">   1 | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line">   2 | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line">   3 | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line">   4 | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line">   5 | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line">   6 | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line">   7 | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line">   8 | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line">   9 | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line">  10 | d3d9446802a44259755d38e6d163e820</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p>pg_dirtyread 也支持系统列（如 <code>ctid</code>、<code>xmax</code> 等）的读取，除了 PostgreSQL 提供的系统列，pg_dirtyread 还提供了一个 <code>dead</code> 系统列，他用于标识该元组是否被删除。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;foo&#x27;</span>)</span><br><span class="line">  <span class="keyword">AS</span> t(tableoid oid, ctid tid, xmin xid, xmax xid, cmin cid, dead <span class="type">boolean</span>, bar <span class="type">bigint</span>, baz text);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"> tableoid |  ctid  | xmin | xmax | cmin | dead | bar |               baz</span><br><span class="line">----------+--------+------+------+------+------+-----+----------------------------------</span><br><span class="line">    16406 | (0,1)  |  761 |    0 |    0 | f    |   1 | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line">    16406 | (0,2)  |  761 |    0 |    0 | f    |   2 | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line">    16406 | (0,3)  |  761 |  762 |    0 | t    |   3 | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line">    16406 | (0,4)  |  761 |    0 |    0 | f    |   4 | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line">    16406 | (0,5)  |  761 |    0 |    0 | f    |   5 | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line">    16406 | (0,6)  |  761 |  762 |    0 | t    |   6 | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line">    16406 | (0,7)  |  761 |    0 |    0 | f    |   7 | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line">    16406 | (0,8)  |  761 |    0 |    0 | f    |   8 | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line">    16406 | (0,9)  |  761 |  762 |    0 | t    |   9 | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line">    16406 | (0,10) |  761 |    0 |    0 | f    |  10 | d3d9446802a44259755d38e6d163e820</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 在 16devel 中，如果删除了立即去查询可能会发现已经被删除的元组其 <code>dead</code> 为 <code>f</code> 的情况。这是由于 <code>GlobalVisDataRels</code> 没有更新导致的，如果我们在 <code>foo</code> 上执行一个查询，结果就正确的。</p>
+<p>如果表没有被重写（如 <code>VACUUM FULL</code> 和 <code>CLUSTER</code>），那么我们还可以读取已删除的列的数据。我们使用 <code>dropped_N</code> 访问第 <code>N</code> 列，它从 1 开始计数。PostgreSQL 删除了原始列的类型信息，因此如果在表别名中指定了正确的类型，则只能进行少量完整性检查；检查的是类型长度、类型对齐、类型修饰符和按值传递。</p>
+<p>首先，我们删除 <code>baz</code> 列，随后再删除部分数据。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> foo <span class="keyword">DROP</span> <span class="keyword">COLUMN</span> baz;</span><br><span class="line"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> foo <span class="keyword">WHERE</span> bar <span class="operator">%</span> <span class="number">4</span> <span class="operator">=</span> <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+
+<p>接着通过 <code>pg_dirtyread()</code> 函数来读取被删除的列数据。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;foo&#x27;</span>)</span><br><span class="line">  <span class="keyword">AS</span> t(tableoid oid, ctid tid, xmin xid, xmax xid, cmin cid, dead <span class="type">boolean</span>, bar <span class="type">bigint</span>, dropped_2 text);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"> tableoid |  ctid  | xmin | xmax | cmin | dead | bar |            dropped_2</span><br><span class="line">----------+--------+------+------+------+------+-----+----------------------------------</span><br><span class="line">    16406 | (0,1)  |  761 |    0 |    0 | f    |   1 | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line">    16406 | (0,2)  |  761 |    0 |    0 | f    |   2 | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line">    16406 | (0,3)  |  761 |  762 |    0 | t    |   3 | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line">    16406 | (0,4)  |  761 |  765 |    0 | t    |   4 | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line">    16406 | (0,5)  |  761 |    0 |    0 | f    |   5 | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line">    16406 | (0,6)  |  761 |  762 |    0 | t    |   6 | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line">    16406 | (0,7)  |  761 |    0 |    0 | f    |   7 | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line">    16406 | (0,8)  |  761 |  765 |    0 | t    |   8 | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line">    16406 | (0,9)  |  761 |  762 |    0 | t    |   9 | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line">    16406 | (0,10) |  761 |    0 |    0 | f    |  10 | d3d9446802a44259755d38e6d163e820</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p>pg_dirtyread 插件可以帮助我们获取到被误删的数据，不过必须具有以下前提：</p>
+<ul>
+<li>数据是通过 <code>DELETE</code> 方式删除的，<code>TRUNCATE</code> 或者 <code>DROP</code> 这种方式删除的数据无法通过 pg_dirtyread 读取。</li>
+<li><code>DELETE</code> 删除的数据没有进行 <code>VACUUM</code> 回收。</li>
+<li>如果表被重写，则无法通过 pg_dirtyread 获取已删除列的数据。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://github.com/df7cb/pg_dirtyread">https://github.com/df7cb/pg_dirtyread</a></p>
+<div class="just-for-fun">
+笑林广记 - 呵欠
+
+<p>一耳聋人探友。犬见之吠声不绝。其人茫然不觉。入见主人。<br>揖毕告曰：“府上尊犬，想是昨夜不曾睡来。”<br>主人问：“何以见得？”<br>答曰：“见了小弟，只是打呵欠。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>PostgreSQL 的 repeat 函数</title>
     <url>/2022/07/postgresql-repeat-function/</url>
     <content><![CDATA[<p>PostgreSQL 的 <code>repeat()</code> 函数用于重复生成给定的字符串。例如：</p>
@@ -5977,92 +6042,6 @@ Date:   Mon Jan 17 10:16:53 2022 +0900
       </tags>
   </entry>
   <entry>
-    <title>PostgreSQL 子事务日志管理器</title>
-    <url>/2022/09/postgresql-subtrans/</url>
-    <content><![CDATA[<p>本文简要记录一下 PostgreSQL 中有关子事务相关的处理，PostgreSQL 中子事务（<code>pg_subtrans</code>）的管理与事务管理（<code>pg_xact</code>）类似，它存储了每个事务的父事务 ID。它是实现嵌套事务的基本组成部分。主事务（即顶层事务）的父事务 ID 为 <code>InvalidTransactionId</code>，每个子事务都有其直接的父事务 ID。因此，我们可以通过子事务遍历很容易找到父事务 ID，反之则不然。</p>
-<p><code>pg_subtrans</code> 只记录当前已打开的事务，因此无需为崩溃或重启持久化数据。在重启时，PostgreSQL 会将当前获取的页面清零。</p>
-<span id="more"></span>
-
-<h2 id="页面布局"><a href="#页面布局" class="headerlink" title="页面布局"></a>页面布局</h2><p>PostgreSQL 将 <code>pg_subtrans</code> 目录下的文件视为一个 hash 表，可以通过事务的 ID 快速获取其直接的父事务 ID，通过这种方式一直往上遍历可以获取到主事务 ID。</p>
-<p>PostgreSQL 将子事务信息按页面进行分块，并且 32 个页面组成一个段文件（即磁盘文件）。由于事务 ID 是 32 位无符号数，因此每个页面可以存储 <code>BLKSZ / sizeof(TransactionId)</code> 个事务的信息。如下图所示，我们采用 8K 的页面，则每个页面可以存储 <code>8192 / 4 = 2048</code> 个事务的信息。例如当前事务 ID 为 741，则我们可以通过 <code>741 * 4 = 0x00000b94</code> 得到其父事务 ID 为 <code>0x000002e4 = 740</code>，同样地，我们可以得到 740 的父事务 ID 为 739，而 739 的父事务 ID 为 0，即 739 是一个主事务，其关系为 <code>741 -&gt; 740 -&gt; 739</code>。</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-layout.png" class="">
-
-<p>上面的计算中我们忽略了页面编号的计算，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L51">子事务管理器提供了 <code>TransactionIdToPage</code> 和 <code>TransactionIdToEntry</code> 宏来帮助计算页面号和页面偏移量</a>，其定义如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* We need four bytes per xact. */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SUBTRANS_XACTS_PER_PAGE (BLCKSZ / sizeof(TransactionId))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToPage(xid) ((xid) / (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToEntry(xid) ((xid) % (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="代码逻辑"><a href="#代码逻辑" class="headerlink" title="代码逻辑"></a>代码逻辑</h2><p>PostgreSQL 使用子事务来实现 <a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 功能，内部则使用<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L183"><code>TransactionStateData</code></a> 结构来描述事务的状态。下面将结合实际情况分析一下子事务的工作原理。首先，使用下面的命令创建示例表。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(id <span class="type">int</span>, info text);</span><br></pre></td></tr></table></figure>
-
-<p>当我们使用 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 开启事务时，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L3665"><code>BeginTransactionBlock()</code></a> 函数将 <code>TransactionState-&gt;blockState</code> 设置为 <code>TBLOCK_BEGIN</code> 用以表明我们正式进入一个事务块，当执行完 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 时，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/tcop/postgres.c#L2714"><code>finish_xact_command()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数切换 <code>TransactionState-&gt;blockState</code> 状态为 <code>TBLOCK_INPROCESS</code> 以表明我们事务块正在运行中。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; BeginTransactionBlock  (TBLOCK_STARTED =&gt; TBLOCK_BEGIN)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand  (TBLOCK_START =&gt; TBLOCK_INPROCESS)</span><br></pre></td></tr></table></figure>
-
-<p>现在我们在执行下面的语句插入一条记录。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;A&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>由于这是当前事务中的第一次修改，因此，<a href="https://github.com/postgres/postgres/blob/REL_14_5//src/backend/access/heap/heapam.c#L2069"><code>heap_insert()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L431"><code>GetCurrentTransactionId()</code></a> 来获取一个事务 ID，如果当前事务已经分配了事务 ID，则直接返回，否则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L560"><code>AssignTransactionId()</code></a> 分配一个新的事务 ID（需要在 <code>XidGenLock</code> 获得 <code>LW_EXCLUSIVE</code> 锁），并保存到 <code>TransactionState-&gt;fullTransactionId</code> 中。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
-
-<p>接下来，我们通过 <code>SAVEPOINT s1</code> 创建一个子事务（保存点），函数 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 将t通过 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L5142"><code>PushTransactoin()</code></a> 函数新建一个子事务状态对象，并将当前的事务对象压栈，随后，将新建的子事务对象设置为当前事务对象。当执行完 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 函数之后，其事务状态信息如下图所示：</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-savepoint1.png" class="">
-
-<p><strong>注意：</strong> PostgreSQL 一个事务最大支持 <code>2^32 - 1</code> 个子事务。</p>
-<p>紧接着，<code>SAVEPOINT s1</code> 语句完成需要调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数提交，由于当前需要开启子事务，因此 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4799"><code>StartSubTransaction()</code></a> 函数进入到子事务状态。最后，事务状态信息如下图所示：</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-savepoint2.png" class="">
-
-<p><a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 语句的执行流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; DefineSavepoint</span><br><span class="line">  |                                    +-&gt; PushTransaction</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; StartSubtransaction</span><br></pre></td></tr></table></figure>
-
-<p>现在，我们下面的语句在子事务中插入一条记录新的记录。</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;B&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>其整体的执行流程与主事务的大致相同，不同在于获取事务 ID 之后的处理方式。当前事务状态的父事务不为空，因此，该事务为子事务，在调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/varsup.c#L37"><code>GetNewTransactionId()</code></a> 获得事务 ID 之后，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数在 <code>pg_subtrans</code> 中记录父事务的事务 ID。当执行完插入后，事务状态信息如下图所示（更新了子事务状态的 <code>FullTransactionId</code> 字段）：</p>
-<img src="/2022/09/postgresql-subtrans/subtrans-savepoint3.png" class="">
-
-<p>其执行流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  |                                                     +-&gt; SubTransSetParent  (update pg_subtrans information)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
-
-<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数为每个子事务记录其直接父事务的事务 ID，其代码如下所示：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Record the parent of a subtransaction in the subtrans log.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">SubTransSetParent</span><span class="params">(TransactionId xid, TransactionId parent)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span>			pageno = TransactionIdToPage(xid);</span><br><span class="line">	<span class="keyword">int</span>			entryno = TransactionIdToEntry(xid);</span><br><span class="line">	<span class="keyword">int</span>			slotno;</span><br><span class="line">	TransactionId *ptr;</span><br><span class="line"></span><br><span class="line">	Assert(TransactionIdIsValid(parent));</span><br><span class="line">	Assert(TransactionIdFollows(xid, parent));</span><br><span class="line"></span><br><span class="line">	LWLockAcquire(SubtransSLRULock, LW_EXCLUSIVE);</span><br><span class="line"></span><br><span class="line">	slotno = SimpleLruReadPage(SubTransCtl, pageno, <span class="literal">true</span>, xid);</span><br><span class="line">	ptr = (TransactionId *) SubTransCtl-&gt;shared-&gt;page_buffer[slotno];</span><br><span class="line">	ptr += entryno;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * It&#x27;s possible we&#x27;ll try to set the parent xid multiple times but we</span></span><br><span class="line"><span class="comment">	 * shouldn&#x27;t ever be changing the xid from one valid xid to another valid</span></span><br><span class="line"><span class="comment">	 * xid, which would corrupt the data structure.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (*ptr != parent)</span><br><span class="line">	&#123;</span><br><span class="line">		Assert(*ptr == InvalidTransactionId);</span><br><span class="line">		*ptr = parent;</span><br><span class="line">		SubTransCtl-&gt;shared-&gt;page_dirty[slotno] = <span class="literal">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	LWLockRelease(SubtransSLRULock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>它根据子事务的 ID 获取到对应的页面编号和页内偏移，随后读取相应的页面并将父事务 ID 写入，此时的信息仅在共享内存中，通过 <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html"><code>CHECKPOINT</code></a> 可以将其刷盘。</p>
-<p>最后，我们来看看事务的提交过程，当我们执行 <a href="https://www.postgresql.org/docs/14/sql-commit.html"><code>COMMIT</code></a> 时，其执行流程如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommitSubTransaction</span><br><span class="line">                    +-&gt; PopTransaction</span><br><span class="line">              +-&gt; CommitTransaction</span><br></pre></td></tr></table></figure>
-
-<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将循环执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4842"><code>CommitSubTransaction()</code></a> 函数来提交子事务；随后，如果是需要提交主事务，则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CommitTransaction()</code></a> 函数进行提交（这里面涉及到了 WAL 日志以及 CLOG 相关的更新，感兴趣的朋友可以去看看）主事务。</p>
-<p>如果我们执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CHECKPOINT</code></a>，那么我们在 <code>$PGDATA/pg_subtrans</code> 目录下可以看到上述子事务的相关信息。</p>
-<!--
-$ hexdump -C 0000
-00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-*
-00000b80  00 00 00 00 00 00 00 00  d7 02 00 00 00 00 00 00  |................|
-00000b90  e3 02 00 00 e4 02 00 00  00 00 00 00 00 00 00 00  |................|
-00000ba0  00 00 00 00 00 00 00 00  e9 02 00 00 00 00 00 00  |................|
-00000bb0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-00000bc0  00 00 00 00 00 00 00 00  ee 02 00 00 00 00 00 00  |................|
-00000bd0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-*
-00002000
--->
-
-<img src="/2022/09/postgresql-subtrans/subtrans-page-dump.png" class="">
-
-<p><code>0x00000bc8</code> 对应的事务 ID 为 <code>int(0xbc8) / 4 = 754</code>，而他的父事务 ID 为 <code>0x02ee = 750</code>，750 事务在 0 号页面的 <code>hex(750 * 4) = 0xbb8</code>，全为 0，因此，事务 750 是主事务，这与上面的实际情况一致。</p>
-<p>到此，关于 PostgreSQL 的子事务基本上就了解的差不多了，这部分内容其实相对还是比较简单的，<code>pg_xact</code> 的内容就要比 <code>pg_subtrans</code> 稍微复杂一些。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/14/sql-begin.html">https://www.postgresql.org/docs/14/sql-begin.html</a><br>[2] <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html">https://www.postgresql.org/docs/14/sql-checkpoint.html</a><br>[3] <a href="https://www.postgresql.org/docs/14/sql-commit.html">https://www.postgresql.org/docs/14/sql-commit.html</a><br>[4] <a href="https://www.postgresql.org/docs/14/sql-savepoint.html">https://www.postgresql.org/docs/14/sql-savepoint.html</a><br>[5] <a href="https://github.com/postgres/postgres/tree/REL_14_5">https://github.com/postgres/postgres/tree/REL_14_5</a></p>
-<div class="just-for-fun">
-笑林广记 - 薑字塔
-
-<p>一富翁问“薑”字如何写，对以草字头，次一字，次田字，又一字，又田字，又一字。<br>其人写草壹田壹田壹，写讫玩之，骂曰：“天杀的，如何诳我，分明作耍我造成一座塔了。”</p>
-</div>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>PostgreSQL 系统属性添加</title>
     <url>/2019/08/postgresql-system-attribute/</url>
     <content><![CDATA[<p>PostgreSQL 在插入数据的时候除了维护用户的属性列外，还有几个隐藏的系统属性列，如 <code>ctid</code>、<code>xmin</code> 和 <code>xmax</code> 等。如下图所示：</p>
@@ -6169,6 +6148,92 @@ table th:nth-of-type(2) {
       <tags>
         <tag>PostgreSQL</tag>
         <tag>源码分析</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>PostgreSQL 子事务日志管理器</title>
+    <url>/2022/09/postgresql-subtrans/</url>
+    <content><![CDATA[<p>本文简要记录一下 PostgreSQL 中有关子事务相关的处理，PostgreSQL 中子事务（<code>pg_subtrans</code>）的管理与事务管理（<code>pg_xact</code>）类似，它存储了每个事务的父事务 ID。它是实现嵌套事务的基本组成部分。主事务（即顶层事务）的父事务 ID 为 <code>InvalidTransactionId</code>，每个子事务都有其直接的父事务 ID。因此，我们可以通过子事务遍历很容易找到父事务 ID，反之则不然。</p>
+<p><code>pg_subtrans</code> 只记录当前已打开的事务，因此无需为崩溃或重启持久化数据。在重启时，PostgreSQL 会将当前获取的页面清零。</p>
+<span id="more"></span>
+
+<h2 id="页面布局"><a href="#页面布局" class="headerlink" title="页面布局"></a>页面布局</h2><p>PostgreSQL 将 <code>pg_subtrans</code> 目录下的文件视为一个 hash 表，可以通过事务的 ID 快速获取其直接的父事务 ID，通过这种方式一直往上遍历可以获取到主事务 ID。</p>
+<p>PostgreSQL 将子事务信息按页面进行分块，并且 32 个页面组成一个段文件（即磁盘文件）。由于事务 ID 是 32 位无符号数，因此每个页面可以存储 <code>BLKSZ / sizeof(TransactionId)</code> 个事务的信息。如下图所示，我们采用 8K 的页面，则每个页面可以存储 <code>8192 / 4 = 2048</code> 个事务的信息。例如当前事务 ID 为 741，则我们可以通过 <code>741 * 4 = 0x00000b94</code> 得到其父事务 ID 为 <code>0x000002e4 = 740</code>，同样地，我们可以得到 740 的父事务 ID 为 739，而 739 的父事务 ID 为 0，即 739 是一个主事务，其关系为 <code>741 -&gt; 740 -&gt; 739</code>。</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-layout.png" class="">
+
+<p>上面的计算中我们忽略了页面编号的计算，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L51">子事务管理器提供了 <code>TransactionIdToPage</code> 和 <code>TransactionIdToEntry</code> 宏来帮助计算页面号和页面偏移量</a>，其定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* We need four bytes per xact. */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SUBTRANS_XACTS_PER_PAGE (BLCKSZ / sizeof(TransactionId))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToPage(xid) ((xid) / (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> TransactionIdToEntry(xid) ((xid) % (TransactionId) SUBTRANS_XACTS_PER_PAGE)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="代码逻辑"><a href="#代码逻辑" class="headerlink" title="代码逻辑"></a>代码逻辑</h2><p>PostgreSQL 使用子事务来实现 <a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 功能，内部则使用<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L183"><code>TransactionStateData</code></a> 结构来描述事务的状态。下面将结合实际情况分析一下子事务的工作原理。首先，使用下面的命令创建示例表。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl(id <span class="type">int</span>, info text);</span><br></pre></td></tr></table></figure>
+
+<p>当我们使用 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 开启事务时，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L3665"><code>BeginTransactionBlock()</code></a> 函数将 <code>TransactionState-&gt;blockState</code> 设置为 <code>TBLOCK_BEGIN</code> 用以表明我们正式进入一个事务块，当执行完 <a href="https://www.postgresql.org/docs/14/sql-begin.html"><code>BEGIN</code></a> 时，<a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/tcop/postgres.c#L2714"><code>finish_xact_command()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数切换 <code>TransactionState-&gt;blockState</code> 状态为 <code>TBLOCK_INPROCESS</code> 以表明我们事务块正在运行中。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; BeginTransactionBlock  (TBLOCK_STARTED =&gt; TBLOCK_BEGIN)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand  (TBLOCK_START =&gt; TBLOCK_INPROCESS)</span><br></pre></td></tr></table></figure>
+
+<p>现在我们在执行下面的语句插入一条记录。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="string">&#x27;A&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>由于这是当前事务中的第一次修改，因此，<a href="https://github.com/postgres/postgres/blob/REL_14_5//src/backend/access/heap/heapam.c#L2069"><code>heap_insert()</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L431"><code>GetCurrentTransactionId()</code></a> 来获取一个事务 ID，如果当前事务已经分配了事务 ID，则直接返回，否则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L560"><code>AssignTransactionId()</code></a> 分配一个新的事务 ID（需要在 <code>XidGenLock</code> 获得 <code>LW_EXCLUSIVE</code> 锁），并保存到 <code>TransactionState-&gt;fullTransactionId</code> 中。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我们通过 <code>SAVEPOINT s1</code> 创建一个子事务（保存点），函数 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 将t通过 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L5142"><code>PushTransactoin()</code></a> 函数新建一个子事务状态对象，并将当前的事务对象压栈，随后，将新建的子事务对象设置为当前事务对象。当执行完 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4114"><code>DefineSavepoint()</code></a> 函数之后，其事务状态信息如下图所示：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint1.png" class="">
+
+<p><strong>注意：</strong> PostgreSQL 一个事务最大支持 <code>2^32 - 1</code> 个子事务。</p>
+<p>紧接着，<code>SAVEPOINT s1</code> 语句完成需要调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数提交，由于当前需要开启子事务，因此 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4799"><code>StartSubTransaction()</code></a> 函数进入到子事务状态。最后，事务状态信息如下图所示：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint2.png" class="">
+
+<p><a href="https://www.postgresql.org/docs/14/sql-savepoint.html"><code>SAVEPOINT</code></a> 语句的执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; PortalRunMulti</span><br><span class="line">  |            +-&gt; PortalRunUtility</span><br><span class="line">  |                  +-&gt; ProcessUtility</span><br><span class="line">  |                        +-&gt; standard_ProcessUtility</span><br><span class="line">  |                              +-&gt; DefineSavepoint</span><br><span class="line">  |                                    +-&gt; PushTransaction</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; StartSubtransaction</span><br></pre></td></tr></table></figure>
+
+<p>现在，我们下面的语句在子事务中插入一条记录新的记录。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl <span class="keyword">VALUES</span> (<span class="number">2</span>, <span class="string">&#x27;B&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>其整体的执行流程与主事务的大致相同，不同在于获取事务 ID 之后的处理方式。当前事务状态的父事务不为空，因此，该事务为子事务，在调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/varsup.c#L37"><code>GetNewTransactionId()</code></a> 获得事务 ID 之后，它将调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数在 <code>pg_subtrans</code> 中记录父事务的事务 ID。当执行完插入后，事务状态信息如下图所示（更新了子事务状态的 <code>FullTransactionId</code> 字段）：</p>
+<img src="/2022/09/postgresql-subtrans/subtrans-savepoint3.png" class="">
+
+<p>其执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; PortalRun</span><br><span class="line">  |     +-&gt; [...]</span><br><span class="line">  |           +-&gt; ExecModifyTable</span><br><span class="line">  |                 +-&gt; ExecInsert</span><br><span class="line">  |                       +-&gt; table_tuple_insert</span><br><span class="line">  |                             +-&gt; heapam_tuple_insert</span><br><span class="line">  |                                   +-&gt; heap_insert</span><br><span class="line">  |                                         +-&gt; GetCurrentTransactionId</span><br><span class="line">  |                                               +-&gt; AssignTransactionid</span><br><span class="line">  |                                                     +-&gt; GetNewTransactionId  (requires LW_EXCLUSIVE on XidGenLock)</span><br><span class="line">  |                                                     +-&gt; SubTransSetParent  (update pg_subtrans information)</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommandCounterIncrement</span><br></pre></td></tr></table></figure>
+
+<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/subtrans.c#L70"><code>SubTransSetParent()</code></a> 函数为每个子事务记录其直接父事务的事务 ID，其代码如下所示：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Record the parent of a subtransaction in the subtrans log.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">SubTransSetParent</span><span class="params">(TransactionId xid, TransactionId parent)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span>			pageno = TransactionIdToPage(xid);</span><br><span class="line">	<span class="keyword">int</span>			entryno = TransactionIdToEntry(xid);</span><br><span class="line">	<span class="keyword">int</span>			slotno;</span><br><span class="line">	TransactionId *ptr;</span><br><span class="line"></span><br><span class="line">	Assert(TransactionIdIsValid(parent));</span><br><span class="line">	Assert(TransactionIdFollows(xid, parent));</span><br><span class="line"></span><br><span class="line">	LWLockAcquire(SubtransSLRULock, LW_EXCLUSIVE);</span><br><span class="line"></span><br><span class="line">	slotno = SimpleLruReadPage(SubTransCtl, pageno, <span class="literal">true</span>, xid);</span><br><span class="line">	ptr = (TransactionId *) SubTransCtl-&gt;shared-&gt;page_buffer[slotno];</span><br><span class="line">	ptr += entryno;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * It&#x27;s possible we&#x27;ll try to set the parent xid multiple times but we</span></span><br><span class="line"><span class="comment">	 * shouldn&#x27;t ever be changing the xid from one valid xid to another valid</span></span><br><span class="line"><span class="comment">	 * xid, which would corrupt the data structure.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (*ptr != parent)</span><br><span class="line">	&#123;</span><br><span class="line">		Assert(*ptr == InvalidTransactionId);</span><br><span class="line">		*ptr = parent;</span><br><span class="line">		SubTransCtl-&gt;shared-&gt;page_dirty[slotno] = <span class="literal">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	LWLockRelease(SubtransSLRULock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>它根据子事务的 ID 获取到对应的页面编号和页内偏移，随后读取相应的页面并将父事务 ID 写入，此时的信息仅在共享内存中，通过 <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html"><code>CHECKPOINT</code></a> 可以将其刷盘。</p>
+<p>最后，我们来看看事务的提交过程，当我们执行 <a href="https://www.postgresql.org/docs/14/sql-commit.html"><code>COMMIT</code></a> 时，其执行流程如下所示：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">exec_simple_query</span><br><span class="line">  +-&gt; finish_xact_command</span><br><span class="line">        +-&gt; CommitTransactionCommand</span><br><span class="line">              +-&gt; CommitSubTransaction</span><br><span class="line">                    +-&gt; PopTransaction</span><br><span class="line">              +-&gt; CommitTransaction</span><br></pre></td></tr></table></figure>
+
+<p><a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2956"><code>CommitTransactionCommand</code></a> 函数将循环执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L4842"><code>CommitSubTransaction()</code></a> 函数来提交子事务；随后，如果是需要提交主事务，则调用 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CommitTransaction()</code></a> 函数进行提交（这里面涉及到了 WAL 日志以及 CLOG 相关的更新，感兴趣的朋友可以去看看）主事务。</p>
+<p>如果我们执行 <a href="https://github.com/postgres/postgres/blob/REL_14_5/src/backend/access/transam/xact.c#L2069"><code>CHECKPOINT</code></a>，那么我们在 <code>$PGDATA/pg_subtrans</code> 目录下可以看到上述子事务的相关信息。</p>
+<!--
+$ hexdump -C 0000
+00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00000b80  00 00 00 00 00 00 00 00  d7 02 00 00 00 00 00 00  |................|
+00000b90  e3 02 00 00 e4 02 00 00  00 00 00 00 00 00 00 00  |................|
+00000ba0  00 00 00 00 00 00 00 00  e9 02 00 00 00 00 00 00  |................|
+00000bb0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+00000bc0  00 00 00 00 00 00 00 00  ee 02 00 00 00 00 00 00  |................|
+00000bd0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00002000
+-->
+
+<img src="/2022/09/postgresql-subtrans/subtrans-page-dump.png" class="">
+
+<p><code>0x00000bc8</code> 对应的事务 ID 为 <code>int(0xbc8) / 4 = 754</code>，而他的父事务 ID 为 <code>0x02ee = 750</code>，750 事务在 0 号页面的 <code>hex(750 * 4) = 0xbb8</code>，全为 0，因此，事务 750 是主事务，这与上面的实际情况一致。</p>
+<p>到此，关于 PostgreSQL 的子事务基本上就了解的差不多了，这部分内容其实相对还是比较简单的，<code>pg_xact</code> 的内容就要比 <code>pg_subtrans</code> 稍微复杂一些。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a href="https://www.postgresql.org/docs/14/sql-begin.html">https://www.postgresql.org/docs/14/sql-begin.html</a><br>[2] <a href="https://www.postgresql.org/docs/14/sql-checkpoint.html">https://www.postgresql.org/docs/14/sql-checkpoint.html</a><br>[3] <a href="https://www.postgresql.org/docs/14/sql-commit.html">https://www.postgresql.org/docs/14/sql-commit.html</a><br>[4] <a href="https://www.postgresql.org/docs/14/sql-savepoint.html">https://www.postgresql.org/docs/14/sql-savepoint.html</a><br>[5] <a href="https://github.com/postgres/postgres/tree/REL_14_5">https://github.com/postgres/postgres/tree/REL_14_5</a></p>
+<div class="just-for-fun">
+笑林广记 - 薑字塔
+
+<p>一富翁问“薑”字如何写，对以草字头，次一字，次田字，又一字，又田字，又一字。<br>其人写草壹田壹田壹，写讫玩之，骂曰：“天杀的，如何诳我，分明作耍我造成一座塔了。”</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -6851,6 +6916,24 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </tags>
   </entry>
   <entry>
+    <title>PostgreSQL 中 ROUND 函数的使用</title>
+    <url>/2019/03/sql-rounding/</url>
+    <content><![CDATA[<p>在某些情况下我们可能需要对实数进行四舍五入，在 SQL 中我们可以通过 <code>ROUND</code> 函数来实现。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># SELECT ROUND(123.456)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line">   123</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line"># SELECT ROUND(123.567)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line">   124</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<p>我们还可以给 <code>ROUND</code> 函数指定第二个参数，它表示四舍五入的位置。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># SELECT ROUND(123.456, 1)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line"> 123.5</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line"># SELECT ROUND(123.567, -2)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line">   100</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>数据库</category>
+      </categories>
+      <tags>
+        <tag>PostgreSQL</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>LaTeX 查看命令的定义</title>
     <url>/2019/04/show-LaTeX-command-definition/</url>
     <content><![CDATA[<p>最近在使用 LaTeX 撰写文档时需要重定义一个命令的，但是我想要知道该命令的原始定义时怎样的，经过查找发现 LaTeX 在这方面做得还是很不错的。目前，我知道有两种方式可以获取命令的定义：(a) 在文档中使用 <code>\show\command</code>；(b) 在命令行中使用 <code>texdef command</code>。</p>
@@ -6877,24 +6960,6 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
       </categories>
       <tags>
         <tag>LaTeX</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PostgreSQL 中 ROUND 函数的使用</title>
-    <url>/2019/03/sql-rounding/</url>
-    <content><![CDATA[<p>在某些情况下我们可能需要对实数进行四舍五入，在 SQL 中我们可以通过 <code>ROUND</code> 函数来实现。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># SELECT ROUND(123.456)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line">   123</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line"># SELECT ROUND(123.567)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line">   124</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-
-<span id="more"></span>
-
-<p>我们还可以给 <code>ROUND</code> 函数指定第二个参数，它表示四舍五入的位置。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># SELECT ROUND(123.456, 1)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line"> 123.5</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line"># SELECT ROUND(123.567, -2)</span><br><span class="line"> round</span><br><span class="line">-------</span><br><span class="line">   100</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
-]]></content>
-      <categories>
-        <category>数据库</category>
-      </categories>
-      <tags>
-        <tag>PostgreSQL</tag>
       </tags>
   </entry>
   <entry>
@@ -7050,6 +7115,39 @@ index 16ab2238e7..6c19749194 100644
       </tags>
   </entry>
   <entry>
+    <title>Tmux 内存泄露</title>
+    <url>/2022/10/tmux-memory-leak/</url>
+    <content><![CDATA[<p>内存泄露又来啦！这次的主角是 tmux。我在升级 tmux 到 3.4 之后，并在 tmux 绘画中使用 fzf 时，出现了如下内存泄露。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">=================================================================</span><br><span class="line">==367944==ERROR: LeakSanitizer: detected memory leaks</span><br><span class="line"></span><br><span class="line">Direct leak of 2 byte(s) in 1 object(s) allocated from:</span><br><span class="line">    #0 0x4855e4 in strdup (/usr/local/bin/tmux+0x4855e4)</span><br><span class="line">    #1 0x84d104 in xstrdup /home/japin/Codes/tmux/xmalloc.c:93:12</span><br><span class="line">    #2 0x5170d8 in cmd_parse_from_arguments /home/japin/Codes/tmux/cmd-parse.y:1075:11</span><br><span class="line">    #3 0x4e10df in client_main /home/japin/Codes/tmux/client.c:267:8</span><br><span class="line">    #4 0x768190 in main /home/japin/Codes/tmux/tmux.c:519:7</span><br><span class="line">    #5 0x7fe9db1fe082 in __libc_start_main /build/glibc-SzIz7B/glibc-2.31/csu/../csu/libc-start.c:308:16</span><br><span class="line"></span><br><span class="line">SUMMARY: AddressSanitizer: 2 byte(s) leaked in 1 allocation(s).</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>我使用的是提交号为 <a href="https://github.com/tmux/tmux/commit/5ce34add77fa3517a01e63b915c5f4e3241af470">5ce34add</a> 的 Tmux 编译安装。下面基本环境信息。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ uname -sp &amp;&amp; tmux -V &amp;&amp; <span class="built_in">echo</span> <span class="variable">$TERM</span></span><br><span class="line">Linux x86_64</span><br><span class="line">tmux next-3.4</span><br><span class="line">xterm-256color</span><br><span class="line"></span><br><span class="line">$ fzf --version</span><br><span class="line">0.34.0 (04d0b02)</span><br><span class="line"></span><br><span class="line">$ tmux -Ltest -f/dev/null new</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们在 tmux 会话中执行 <code>fzf-tmux</code> 就出现了本文一开始的内存泄露问题。从错误日志可以看到问题出在 tmux 的 <code>cmd_parse_from_arguments()</code> 函数中。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">struct cmd_parse_result *</span></span><br><span class="line"><span class="function"><span class="title">cmd_parse_from_arguments</span><span class="params">(struct args_value *values, u_int count,</span></span></span><br><span class="line"><span class="params"><span class="function">    struct cmd_parse_input *pi)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++) &#123;</span><br><span class="line">        end = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (values[i].type == ARGS_STRING) &#123;</span><br><span class="line">            copy = xstrdup(values[i].<span class="built_in">string</span>);</span><br><span class="line">            size = <span class="built_in">strlen</span>(copy);</span><br><span class="line">            <span class="keyword">if</span> (size != <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;;&#x27;</span>) &#123;</span><br><span class="line">                copy[--size] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line">                <span class="keyword">if</span> (size &gt; <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;\\&#x27;</span>)</span><br><span class="line">                    copy[size - <span class="number">1</span>] = <span class="string">&#x27;;&#x27;</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                    end = <span class="number">1</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!end || size != <span class="number">0</span>) &#123;</span><br><span class="line">                arg = xcalloc(<span class="number">1</span>, <span class="keyword">sizeof</span> *arg);</span><br><span class="line">                arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line">                arg-&gt;<span class="built_in">string</span> = copy;</span><br><span class="line">                TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry); <span class="comment">/* 添加到 cmd-&gt;arguments 中 */</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/*</span></span><br><span class="line"><span class="comment">             * 如果进入到这里，那么 copy 的内存就泄露了，而当我执行 fzf-tmux 时，</span></span><br><span class="line"><span class="comment">             * 正好进入到这里，从而导致内存泄露。</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        [...]</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    cmd_parse_free_commands(cmds); <span class="comment">/* 此处释放内存 */</span></span><br><span class="line">    [...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="修复"><a href="#修复" class="headerlink" title="修复"></a>修复</h2><p>通过上面的分析，我们可以在条件 <code>!end || size != 0</code> 之后加上一个分支用于释放 <code>copy</code> 的内存，如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="comment">diff --git a/cmd-parse.y b/cmd-parse.y</span></span><br><span class="line"><span class="comment">index 1d69277083..cdf026f3de 100644</span></span><br><span class="line"><span class="comment">--- a/cmd-parse.y</span></span><br><span class="line"><span class="comment">+++ b/cmd-parse.y</span></span><br><span class="line"><span class="meta">@@ -1086,7 +1086,8 @@</span> cmd_parse_from_arguments(struct args_value *values, u_int count,</span><br><span class="line"> 				arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line"> 				arg-&gt;string = copy;</span><br><span class="line"> 				TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry);</span><br><span class="line"><span class="deletion">-			&#125;</span></span><br><span class="line"><span class="addition">+			&#125; else</span></span><br><span class="line"><span class="addition">+				free(copy);</span></span><br><span class="line"> 		&#125; else if (values[i].type == ARGS_COMMANDS) &#123;</span><br><span class="line"> 			arg = xcalloc(1, sizeof *arg);</span><br><span class="line"> 			arg-&gt;type = CMD_PARSE_PARSED_COMMANDS;</span><br></pre></td></tr></table></figure>
+
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://github.com/tmux/tmux/pull/3358">https://github.com/tmux/tmux/pull/3358</a><br>[2] <a href="https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e">https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e</a></p>
+<div class="just-for-fun">
+笑林广记 - 抛锚
+
+<p>道士、和尚、胡子三人过江。忽遇狂风大作，舟将颠覆，僧道慌甚，急把经卷投入江中，求神救护。<br>而胡子无可掷得，惟将胡须逐根拔下，投于江内。<br>僧道问曰：“你拔胡须何用？”<br>其人曰：“我在此抛毛（锚）。”</p>
+</div>
+
+
+]]></content>
+      <categories>
+        <category>杂项</category>
+      </categories>
+      <tags>
+        <tag>tmux</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>【译】PostgreSQL 查询结果转为 JSON 格式</title>
     <url>/2019/09/turning-query-results-into-json-in-postgresql/</url>
     <content><![CDATA[<img src="/2019/09/turning-query-results-into-json-in-postgresql/postgresql-weekly.png" class="">
@@ -7101,36 +7199,41 @@ index 16ab2238e7..6c19749194 100644
       </tags>
   </entry>
   <entry>
-    <title>Tmux 内存泄露</title>
-    <url>/2022/10/tmux-memory-leak/</url>
-    <content><![CDATA[<p>内存泄露又来啦！这次的主角是 tmux。我在升级 tmux 到 3.4 之后，并在 tmux 绘画中使用 fzf 时，出现了如下内存泄露。</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">=================================================================</span><br><span class="line">==367944==ERROR: LeakSanitizer: detected memory leaks</span><br><span class="line"></span><br><span class="line">Direct leak of 2 byte(s) in 1 object(s) allocated from:</span><br><span class="line">    #0 0x4855e4 in strdup (/usr/local/bin/tmux+0x4855e4)</span><br><span class="line">    #1 0x84d104 in xstrdup /home/japin/Codes/tmux/xmalloc.c:93:12</span><br><span class="line">    #2 0x5170d8 in cmd_parse_from_arguments /home/japin/Codes/tmux/cmd-parse.y:1075:11</span><br><span class="line">    #3 0x4e10df in client_main /home/japin/Codes/tmux/client.c:267:8</span><br><span class="line">    #4 0x768190 in main /home/japin/Codes/tmux/tmux.c:519:7</span><br><span class="line">    #5 0x7fe9db1fe082 in __libc_start_main /build/glibc-SzIz7B/glibc-2.31/csu/../csu/libc-start.c:308:16</span><br><span class="line"></span><br><span class="line">SUMMARY: AddressSanitizer: 2 byte(s) leaked in 1 allocation(s).</span><br></pre></td></tr></table></figure>
-
+    <title>Ubuntu 修改 I/O 调度算法</title>
+    <url>/2019/03/ubuntu-modify-io-scheduler/</url>
+    <content><![CDATA[<p>Linux I/O 调度器控制着内核读写磁盘的工作方式。系统管理员可以通过更改调度器来自定义磁盘调度算法，从而优化系统性能。有三种调度程序可供选择，每种调度程序都有其优点。这些调度器是：</p>
+<ul>
+<li><p><strong>Noop</strong> - 电梯调度算法，最简单的调度算法，该算法基于先进先出队列 (FIFO) 实现，所有的 I/O 请求都符合先进先出规则，适合于 SSD 设备。</p>
+</li>
+<li><p><strong>Deadline</strong> - 绝对保障算法，它为读和写分别创建了 FIFO 队列，当内核收到请时，先尝试合并，不能合并则尝试排序或放入队列中，并且尽量保证在请求到达最终期限时进行调度，避免有一些请求长时间不能得到处理。该调度器适合虚拟机所在宿主机器或 I/O 压力比较重的场景，例如数据库服务器。</p>
+</li>
+<li><p><strong>Completely Fair Queuing, CFQ</strong> - 绝对公平调度算法，它为每个进程和线程单独创建一个队列来管理该进程的 I/O 请求，然后为每个队列分配访问磁盘的时间片。时间片的长度以及允许队列提交的请求数取决于给定进程的 I/O 优先级。该调度器比较适合于通用服务器。</p>
+</li>
+</ul>
 <span id="more"></span>
 
-<h2 id="重现"><a href="#重现" class="headerlink" title="重现"></a>重现</h2><p>我使用的是提交号为 <a href="https://github.com/tmux/tmux/commit/5ce34add77fa3517a01e63b915c5f4e3241af470">5ce34add</a> 的 Tmux 编译安装。下面基本环境信息。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ uname -sp &amp;&amp; tmux -V &amp;&amp; <span class="built_in">echo</span> <span class="variable">$TERM</span></span><br><span class="line">Linux x86_64</span><br><span class="line">tmux next-3.4</span><br><span class="line">xterm-256color</span><br><span class="line"></span><br><span class="line">$ fzf --version</span><br><span class="line">0.34.0 (04d0b02)</span><br><span class="line"></span><br><span class="line">$ tmux -Ltest -f/dev/null new</span><br></pre></td></tr></table></figure>
+<h2 id="查询当前调度器"><a href="#查询当前调度器" class="headerlink" title="查询当前调度器"></a>查询当前调度器</h2><p>首先，我们需要知道系统目前使用的是哪种 I/O 调度器。假设我们有一块名为 <code>sda</code> 的磁盘，那么我们可以通过如下命令查看该磁盘使用的调度器类别。</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat /sys/block/sda/queue/scheduler</span></span><br><span class="line">noop [deadline] cfq</span><br></pre></td></tr></table></figure>
 
-<p>接着，我们在 tmux 会话中执行 <code>fzf-tmux</code> 就出现了本文一开始的内存泄露问题。从错误日志可以看到问题出在 tmux 的 <code>cmd_parse_from_arguments()</code> 函数中。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function">struct cmd_parse_result *</span></span><br><span class="line"><span class="function"><span class="title">cmd_parse_from_arguments</span><span class="params">(struct args_value *values, u_int count,</span></span></span><br><span class="line"><span class="params"><span class="function">    struct cmd_parse_input *pi)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; count; i++) &#123;</span><br><span class="line">        end = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (values[i].type == ARGS_STRING) &#123;</span><br><span class="line">            copy = xstrdup(values[i].<span class="built_in">string</span>);</span><br><span class="line">            size = <span class="built_in">strlen</span>(copy);</span><br><span class="line">            <span class="keyword">if</span> (size != <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;;&#x27;</span>) &#123;</span><br><span class="line">                copy[--size] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line">                <span class="keyword">if</span> (size &gt; <span class="number">0</span> &amp;&amp; copy[size - <span class="number">1</span>] == <span class="string">&#x27;\\&#x27;</span>)</span><br><span class="line">                    copy[size - <span class="number">1</span>] = <span class="string">&#x27;;&#x27;</span>;</span><br><span class="line">                <span class="keyword">else</span></span><br><span class="line">                    end = <span class="number">1</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!end || size != <span class="number">0</span>) &#123;</span><br><span class="line">                arg = xcalloc(<span class="number">1</span>, <span class="keyword">sizeof</span> *arg);</span><br><span class="line">                arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line">                arg-&gt;<span class="built_in">string</span> = copy;</span><br><span class="line">                TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry); <span class="comment">/* 添加到 cmd-&gt;arguments 中 */</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">/*</span></span><br><span class="line"><span class="comment">             * 如果进入到这里，那么 copy 的内存就泄露了，而当我执行 fzf-tmux 时，</span></span><br><span class="line"><span class="comment">             * 正好进入到这里，从而导致内存泄露。</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        [...]</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    cmd_parse_free_commands(cmds); <span class="comment">/* 此处释放内存 */</span></span><br><span class="line">    [...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从上面可以看到我们的系统在 <code>sda</code> 磁盘上支持 <code>noop</code>，<code>deadline</code> 和 <code>cfq</code> 三种调度器，而默认采用的是 <code>deadline</code> 调度器。</p>
+<h2 id="修改调度器"><a href="#修改调度器" class="headerlink" title="修改调度器"></a>修改调度器</h2><p>Ubuntu 系统提供了两种方式来修改调度器：a) 临时修改；b) 永久修改。临时修改的方式在系统重启后将会恢复到默认设置。通常，我们可以通过临时修改的方式来确定哪种调度器能带来更大的性能提升，然后在永久的修改为这种调度器。</p>
+<p>我们可以通过下面的命令将系统的调度器临时的修改为 <code>noop</code> 类型：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo <span class="built_in">echo</span> noop &gt; /sys/block/sda/queue/scheduler</span></span><br></pre></td></tr></table></figure>
 
-<h2 id="修复"><a href="#修复" class="headerlink" title="修复"></a>修复</h2><p>通过上面的分析，我们可以在条件 <code>!end || size != 0</code> 之后加上一个分支用于释放 <code>copy</code> 的内存，如下所示：</p>
-<figure class="highlight diff"><table><tr><td class="code"><pre><span class="line"><span class="comment">diff --git a/cmd-parse.y b/cmd-parse.y</span></span><br><span class="line"><span class="comment">index 1d69277083..cdf026f3de 100644</span></span><br><span class="line"><span class="comment">--- a/cmd-parse.y</span></span><br><span class="line"><span class="comment">+++ b/cmd-parse.y</span></span><br><span class="line"><span class="meta">@@ -1086,7 +1086,8 @@</span> cmd_parse_from_arguments(struct args_value *values, u_int count,</span><br><span class="line"> 				arg-&gt;type = CMD_PARSE_STRING;</span><br><span class="line"> 				arg-&gt;string = copy;</span><br><span class="line"> 				TAILQ_INSERT_TAIL(&amp;cmd-&gt;arguments, arg, entry);</span><br><span class="line"><span class="deletion">-			&#125;</span></span><br><span class="line"><span class="addition">+			&#125; else</span></span><br><span class="line"><span class="addition">+				free(copy);</span></span><br><span class="line"> 		&#125; else if (values[i].type == ARGS_COMMANDS) &#123;</span><br><span class="line"> 			arg = xcalloc(1, sizeof *arg);</span><br><span class="line"> 			arg-&gt;type = CMD_PARSE_PARSED_COMMANDS;</span><br></pre></td></tr></table></figure>
+<p>通过上述方式修改不需要重启机器而是立马生效。如果你需要永久的修改调度器，那么你需要修改 GRUB 的配置文件，即编辑配置文件 <code>/etc/default/grub</code> 修改</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash&quot;</span><br></pre></td></tr></table></figure>
 
-<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a href="https://github.com/tmux/tmux/pull/3358">https://github.com/tmux/tmux/pull/3358</a><br>[2] <a href="https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e">https://github.com/tmux/tmux/commit/2111142cf1715eeac174cd5c71ed90f00595b17e</a></p>
-<div class="just-for-fun">
-笑林广记 - 抛锚
+<p>为</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash elevator=noop&quot;</span><br></pre></td></tr></table></figure>
 
-<p>道士、和尚、胡子三人过江。忽遇狂风大作，舟将颠覆，僧道慌甚，急把经卷投入江中，求神救护。<br>而胡子无可掷得，惟将胡须逐根拔下，投于江内。<br>僧道问曰：“你拔胡须何用？”<br>其人曰：“我在此抛毛（锚）。”</p>
-</div>
-
-
+<p>通过这种方式修改我们需要重启机器以使修改生效，当然我们可以结合临时修改的方式，从而避免重启。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 谭峰，张文升《PostgreSQL 实战》<br>[2] <a href="https://www.techrepublic.com/article/how-to-change-the-linux-io-scheduler-to-fit-your-needs/">How to change the linux io scheduler to fit your needs</a></p>
 ]]></content>
       <categories>
         <category>杂项</category>
       </categories>
       <tags>
-        <tag>tmux</tag>
+        <tag>Ubuntu</tag>
       </tags>
   </entry>
   <entry>
@@ -7190,44 +7293,6 @@ index 16ab2238e7..6c19749194 100644
       <tags>
         <tag>PostgreSQL</tag>
         <tag>翻译</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Ubuntu 修改 I/O 调度算法</title>
-    <url>/2019/03/ubuntu-modify-io-scheduler/</url>
-    <content><![CDATA[<p>Linux I/O 调度器控制着内核读写磁盘的工作方式。系统管理员可以通过更改调度器来自定义磁盘调度算法，从而优化系统性能。有三种调度程序可供选择，每种调度程序都有其优点。这些调度器是：</p>
-<ul>
-<li><p><strong>Noop</strong> - 电梯调度算法，最简单的调度算法，该算法基于先进先出队列 (FIFO) 实现，所有的 I/O 请求都符合先进先出规则，适合于 SSD 设备。</p>
-</li>
-<li><p><strong>Deadline</strong> - 绝对保障算法，它为读和写分别创建了 FIFO 队列，当内核收到请时，先尝试合并，不能合并则尝试排序或放入队列中，并且尽量保证在请求到达最终期限时进行调度，避免有一些请求长时间不能得到处理。该调度器适合虚拟机所在宿主机器或 I/O 压力比较重的场景，例如数据库服务器。</p>
-</li>
-<li><p><strong>Completely Fair Queuing, CFQ</strong> - 绝对公平调度算法，它为每个进程和线程单独创建一个队列来管理该进程的 I/O 请求，然后为每个队列分配访问磁盘的时间片。时间片的长度以及允许队列提交的请求数取决于给定进程的 I/O 优先级。该调度器比较适合于通用服务器。</p>
-</li>
-</ul>
-<span id="more"></span>
-
-<h2 id="查询当前调度器"><a href="#查询当前调度器" class="headerlink" title="查询当前调度器"></a>查询当前调度器</h2><p>首先，我们需要知道系统目前使用的是哪种 I/O 调度器。假设我们有一块名为 <code>sda</code> 的磁盘，那么我们可以通过如下命令查看该磁盘使用的调度器类别。</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> cat /sys/block/sda/queue/scheduler</span></span><br><span class="line">noop [deadline] cfq</span><br></pre></td></tr></table></figure>
-
-<p>从上面可以看到我们的系统在 <code>sda</code> 磁盘上支持 <code>noop</code>，<code>deadline</code> 和 <code>cfq</code> 三种调度器，而默认采用的是 <code>deadline</code> 调度器。</p>
-<h2 id="修改调度器"><a href="#修改调度器" class="headerlink" title="修改调度器"></a>修改调度器</h2><p>Ubuntu 系统提供了两种方式来修改调度器：a) 临时修改；b) 永久修改。临时修改的方式在系统重启后将会恢复到默认设置。通常，我们可以通过临时修改的方式来确定哪种调度器能带来更大的性能提升，然后在永久的修改为这种调度器。</p>
-<p>我们可以通过下面的命令将系统的调度器临时的修改为 <code>noop</code> 类型：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> sudo <span class="built_in">echo</span> noop &gt; /sys/block/sda/queue/scheduler</span></span><br></pre></td></tr></table></figure>
-
-<p>通过上述方式修改不需要重启机器而是立马生效。如果你需要永久的修改调度器，那么你需要修改 GRUB 的配置文件，即编辑配置文件 <code>/etc/default/grub</code> 修改</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash&quot;</span><br></pre></td></tr></table></figure>
-
-<p>为</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=&quot;quiet splash elevator=noop&quot;</span><br></pre></td></tr></table></figure>
-
-<p>通过这种方式修改我们需要重启机器以使修改生效，当然我们可以结合临时修改的方式，从而避免重启。</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] 谭峰，张文升《PostgreSQL 实战》<br>[2] <a href="https://www.techrepublic.com/article/how-to-change-the-linux-io-scheduler-to-fit-your-needs/">How to change the linux io scheduler to fit your needs</a></p>
-]]></content>
-      <categories>
-        <category>杂项</category>
-      </categories>
-      <tags>
-        <tag>Ubuntu</tag>
       </tags>
   </entry>
   <entry>
@@ -9806,7 +9871,9 @@ index 16ab2238e7..6c19749194 100644
 
 
 <div class="just-for-fun">
-笑林广记 -
+笑林广记 - 讳聋哑
+
+<p>聋、哑二人各欲自讳。<br>一日聋见哑者，恳其唱曲，哑者知其聋也，乃以嘴唇开合而手拍板作按节状，聋者侧听良久。<br>见其唇住即大赞曰：“妙绝妙绝，许久不听佳音，今日一发更进了。”</p>
 </div>
 
 <!--

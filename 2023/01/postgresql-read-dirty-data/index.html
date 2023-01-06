@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="pg_dirtyread 扩展提供了从 PostgreSQL 数据库中读取未回收的数据的能力。它支持 PostgreSQL 9.2 及更高版本（在 9.2 上，至少需要 9.2.9）。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 扩展 - pg_dirtyread 读取未回收数据">
+<meta property="og:url" content="https://blog.japinli.top/2023/01/postgresql-read-dirty-data/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="pg_dirtyread 扩展提供了从 PostgreSQL 数据库中读取未回收的数据的能力。它支持 PostgreSQL 9.2 及更高版本（在 9.2 上，至少需要 9.2.9）。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-01-06T13:13:59.000Z">
+<meta property="article:modified_time" content="2023-01-06T13:30:38.327Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2023/01/postgresql-read-dirty-data/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2023/01/postgresql-read-dirty-data/","path":"2023/01/postgresql-read-dirty-data/","title":"PostgreSQL 扩展 - pg_dirtyread 读取未回收数据"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 扩展 - pg_dirtyread 读取未回收数据 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">139</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85"><span class="nav-number">1.</span> <span class="nav-text">编译安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8"><span class="nav-number">2.</span> <span class="nav-text">使用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B"><span class="nav-number">3.</span> <span class="nav-text">示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">139</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2023/01/postgresql-read-dirty-data/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 扩展 - pg_dirtyread 读取未回收数据
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-01-06 21:13:59" itemprop="dateCreated datePublished" datetime="2023-01-06T21:13:59+08:00">2023-01-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>pg_dirtyread 扩展提供了从 PostgreSQL 数据库中读取未回收的数据的能力。它支持 PostgreSQL 9.2 及更高版本（在 9.2 上，至少需要 9.2.9）。</p>
+<span id="more"></span>
+
+<h2 id="编译安装"><a href="#编译安装" class="headerlink" title="编译安装"></a>编译安装</h2><p>pg_dirtyread 编译需要使用到 pg_config 来获取 PostgreSQL 编译连接信息，使用下面的命令即可完成编译安装。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ make</span><br><span class="line">$ make install</span><br></pre></td></tr></table></figure>
+
+<p>如果您的 pg_config 不在 <code>PATH</code> 环境变量中，可以使用下面的命令编译安装。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ make PG_CONFIG=/path/to/pg_config</span><br><span class="line">$ make install PG_CONFIG=/path/to/pg_config</span><br></pre></td></tr></table></figure>
+
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><p>当安装 pg_dirtyread 插件之后，我们需要在数据库中导入该插件方可使用，使用超级用户执行下面的 SQL 即可完成。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION pg_dirtyread;</span><br></pre></td></tr></table></figure>
+
+<p>pg_dirtyread 的使用方法如下所示：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;tablename&#x27;</span>) <span class="keyword">AS</span> t(col1 type1, col2 type2, ...);</span><br></pre></td></tr></table></figure>
+
+<p><code>pg_dirtyread()</code> 函数返回的是 <code>RECORD</code> 类型，因此有必要附加一个描述表模式的表别名子句。列按名称匹配，因此可以在别名中省略某些列，或重新排列列。</p>
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>我们使用下面的 SQL 创建一个表，同时禁用该表上的 autovacuum 操作。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> foo (bar <span class="type">bigint</span>, baz text)</span><br><span class="line">  <span class="keyword">WITH</span> (autovacuum_enabled <span class="operator">=</span> <span class="literal">false</span>, toast.autovacuum_enabled <span class="operator">=</span> <span class="literal">false</span>);</span><br></pre></td></tr></table></figure>
+
+<p>接着在表中插入数据，随后在删除部分数据。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> foo <span class="keyword">SELECT</span> id, md5(id::text) <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">10</span>) id;</span><br><span class="line"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> foo <span class="keyword">WHERE</span> bar <span class="operator">%</span> <span class="number">3</span> <span class="operator">=</span> <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+
+<p>接下来，我们使用 pg_dirtyread 插件来读取已经删除的数据，先导入 pg_dirtyread 插件。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION pg_dirtyread;</span><br></pre></td></tr></table></figure>
+
+<p>接着使用 <code>pg_dirtyread()</code> 函数读取数据。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;foo&#x27;</span>) <span class="keyword">AS</span> t(bar <span class="type">bigint</span>, baz text);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"> bar |               baz</span><br><span class="line">-----+----------------------------------</span><br><span class="line">   1 | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line">   2 | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line">   3 | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line">   4 | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line">   5 | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line">   6 | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line">   7 | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line">   8 | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line">   9 | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line">  10 | d3d9446802a44259755d38e6d163e820</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p>pg_dirtyread 也支持系统列（如 <code>ctid</code>、<code>xmax</code> 等）的读取，除了 PostgreSQL 提供的系统列，pg_dirtyread 还提供了一个 <code>dead</code> 系统列，他用于标识该元组是否被删除。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;foo&#x27;</span>)</span><br><span class="line">  <span class="keyword">AS</span> t(tableoid oid, ctid tid, xmin xid, xmax xid, cmin cid, dead <span class="type">boolean</span>, bar <span class="type">bigint</span>, baz text);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"> tableoid |  ctid  | xmin | xmax | cmin | dead | bar |               baz</span><br><span class="line">----------+--------+------+------+------+------+-----+----------------------------------</span><br><span class="line">    16406 | (0,1)  |  761 |    0 |    0 | f    |   1 | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line">    16406 | (0,2)  |  761 |    0 |    0 | f    |   2 | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line">    16406 | (0,3)  |  761 |  762 |    0 | t    |   3 | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line">    16406 | (0,4)  |  761 |    0 |    0 | f    |   4 | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line">    16406 | (0,5)  |  761 |    0 |    0 | f    |   5 | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line">    16406 | (0,6)  |  761 |  762 |    0 | t    |   6 | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line">    16406 | (0,7)  |  761 |    0 |    0 | f    |   7 | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line">    16406 | (0,8)  |  761 |    0 |    0 | f    |   8 | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line">    16406 | (0,9)  |  761 |  762 |    0 | t    |   9 | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line">    16406 | (0,10) |  761 |    0 |    0 | f    |  10 | d3d9446802a44259755d38e6d163e820</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p><strong>备注：</strong> 在 16devel 中，如果删除了立即去查询可能会发现已经被删除的元组其 <code>dead</code> 为 <code>f</code> 的情况。这是由于 <code>GlobalVisDataRels</code> 没有更新导致的，如果我们在 <code>foo</code> 上执行一个查询，结果就正确的。</p>
+<p>如果表没有被重写（如 <code>VACUUM FULL</code> 和 <code>CLUSTER</code>），那么我们还可以读取已删除的列的数据。我们使用 <code>dropped_N</code> 访问第 <code>N</code> 列，它从 1 开始计数。PostgreSQL 删除了原始列的类型信息，因此如果在表别名中指定了正确的类型，则只能进行少量完整性检查；检查的是类型长度、类型对齐、类型修饰符和按值传递。</p>
+<p>首先，我们删除 <code>baz</code> 列，随后再删除部分数据。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> foo <span class="keyword">DROP</span> <span class="keyword">COLUMN</span> baz;</span><br><span class="line"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> foo <span class="keyword">WHERE</span> bar <span class="operator">%</span> <span class="number">4</span> <span class="operator">=</span> <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+
+<p>接着通过 <code>pg_dirtyread()</code> 函数来读取被删除的列数据。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_dirtyread(<span class="string">&#x27;foo&#x27;</span>)</span><br><span class="line">  <span class="keyword">AS</span> t(tableoid oid, ctid tid, xmin xid, xmax xid, cmin cid, dead <span class="type">boolean</span>, bar <span class="type">bigint</span>, dropped_2 text);</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"> tableoid |  ctid  | xmin | xmax | cmin | dead | bar |            dropped_2</span><br><span class="line">----------+--------+------+------+------+------+-----+----------------------------------</span><br><span class="line">    16406 | (0,1)  |  761 |    0 |    0 | f    |   1 | c4ca4238a0b923820dcc509a6f75849b</span><br><span class="line">    16406 | (0,2)  |  761 |    0 |    0 | f    |   2 | c81e728d9d4c2f636f067f89cc14862c</span><br><span class="line">    16406 | (0,3)  |  761 |  762 |    0 | t    |   3 | eccbc87e4b5ce2fe28308fd9f2a7baf3</span><br><span class="line">    16406 | (0,4)  |  761 |  765 |    0 | t    |   4 | a87ff679a2f3e71d9181a67b7542122c</span><br><span class="line">    16406 | (0,5)  |  761 |    0 |    0 | f    |   5 | e4da3b7fbbce2345d7772b0674a318d5</span><br><span class="line">    16406 | (0,6)  |  761 |  762 |    0 | t    |   6 | 1679091c5a880faf6fb5e6087eb1b2dc</span><br><span class="line">    16406 | (0,7)  |  761 |    0 |    0 | f    |   7 | 8f14e45fceea167a5a36dedd4bea2543</span><br><span class="line">    16406 | (0,8)  |  761 |  765 |    0 | t    |   8 | c9f0f895fb98ab9159f51fd0297e236d</span><br><span class="line">    16406 | (0,9)  |  761 |  762 |    0 | t    |   9 | 45c48cce2e2d7fbdea1afc51c7c6ad26</span><br><span class="line">    16406 | (0,10) |  761 |    0 |    0 | f    |  10 | d3d9446802a44259755d38e6d163e820</span><br><span class="line">(10 rows)</span><br></pre></td></tr></table></figure>
+
+<p>pg_dirtyread 插件可以帮助我们获取到被误删的数据，不过必须具有以下前提：</p>
+<ul>
+<li>数据是通过 <code>DELETE</code> 方式删除的，<code>TRUNCATE</code> 或者 <code>DROP</code> 这种方式删除的数据无法通过 pg_dirtyread 读取。</li>
+<li><code>DELETE</code> 删除的数据没有进行 <code>VACUUM</code> 回收。</li>
+<li>如果表被重写，则无法通过 pg_dirtyread 获取已删除列的数据。</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://github.com/df7cb/pg_dirtyread">https://github.com/df7cb/pg_dirtyread</a></p>
+<div class="just-for-fun">
+笑林广记 - 呵欠
+
+<p>一耳聋人探友。犬见之吠声不绝。其人茫然不觉。入见主人。<br>揖毕告曰：“府上尊犬，想是昨夜不曾睡来。”<br>主人问：“何以见得？”<br>答曰：“见了小弟，只是打呵欠。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2023/01/postgresql-read-dirty-data/" title="PostgreSQL 扩展 - pg_dirtyread 读取未回收数据">https://blog.japinli.top/2023/01/postgresql-read-dirty-data/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/01/systemtap-dynamic-tracing/" rel="prev" title="SystemTap 动态跟踪">
+                  <i class="fa fa-chevron-left"></i> SystemTap 动态跟踪
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">714k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">10:49</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
