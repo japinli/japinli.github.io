@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="PostgreSQL 数据库提供了 timestamp 和 timestamptz 两种时间戳，它们的区别在于后者是带了时区信息，而前者没有时区信息。本文将对两种类型的时间戳进行分析。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL 中 timestamp 与 timestamptz 的区别">
+<meta property="og:url" content="https://blog.japinli.top/2023/03/postgresql-timestamp/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="PostgreSQL 数据库提供了 timestamp 和 timestamptz 两种时间戳，它们的区别在于后者是带了时区信息，而前者没有时区信息。本文将对两种类型的时间戳进行分析。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-03-10T03:29:30.000Z">
+<meta property="article:modified_time" content="2023-03-10T04:12:37.204Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2023/03/postgresql-timestamp/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2023/03/postgresql-timestamp/","path":"2023/03/postgresql-timestamp/","title":"PostgreSQL 中 timestamp 与 timestamptz 的区别"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL 中 timestamp 与 timestamptz 的区别 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">141</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B"><span class="nav-number">1.</span> <span class="nav-text">示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">141</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2023/03/postgresql-timestamp/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL 中 timestamp 与 timestamptz 的区别
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-03-10 11:29:30" itemprop="dateCreated datePublished" datetime="2023-03-10T11:29:30+08:00">2023-03-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>PostgreSQL 数据库提供了 <code>timestamp</code> 和 <code>timestamptz</code> 两种时间戳，它们的区别在于后者是带了时区信息，而前者没有时区信息。本文将对两种类型的时间戳进行分析。</p>
+<span id="more"></span>
+
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p>我们先来看一个简单的示例。创建一个名为 <code>test</code> 的测试表，该表包含两个字段，分别为 <code>timestamp</code> 类型和 <code>timestamptz</code> 类型。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">TABLE</span> test (t1 <span class="type">timestamp</span>, t2 timestamptz);</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span></span><br><span class="line">postgres<span class="operator">=</span># \d test</span><br><span class="line">                          <span class="keyword">Table</span> &quot;public.test&quot;</span><br><span class="line"> <span class="keyword">Column</span> <span class="operator">|</span>            Type             <span class="operator">|</span> <span class="keyword">Collation</span> <span class="operator">|</span> Nullable <span class="operator">|</span> <span class="keyword">Default</span></span><br><span class="line"><span class="comment">--------+-----------------------------+-----------+----------+---------</span></span><br><span class="line"> t1     <span class="operator">|</span> <span class="type">timestamp</span> <span class="keyword">without</span> <span class="type">time</span> zone <span class="operator">|</span>           <span class="operator">|</span>          <span class="operator">|</span></span><br><span class="line"> t2     <span class="operator">|</span> <span class="type">timestamp</span> <span class="keyword">with</span> <span class="type">time</span> zone    <span class="operator">|</span>           <span class="operator">|</span>          <span class="operator">|</span></span><br></pre></td></tr></table></figure>
+
+<p>接着我们在当前时区下插入一条记录。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">show</span> timezone;</span><br><span class="line">   TimeZone</span><br><span class="line"><span class="comment">---------------</span></span><br><span class="line"> Asia<span class="operator">/</span>Shanghai</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">INSERT</span> <span class="keyword">INTO</span> test <span class="keyword">SELECT</span> t, t <span class="keyword">FROM</span> now() t;</span><br><span class="line"><span class="keyword">INSERT</span> <span class="number">0</span> <span class="number">1</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> test;</span><br><span class="line">             t1             <span class="operator">|</span>              t2</span><br><span class="line"><span class="comment">----------------------------+-------------------------------</span></span><br><span class="line"> <span class="number">2023</span><span class="number">-03</span><span class="number">-10</span> <span class="number">10</span>:<span class="number">38</span>:<span class="number">33.718548</span> <span class="operator">|</span> <span class="number">2023</span><span class="number">-03</span><span class="number">-10</span> <span class="number">10</span>:<span class="number">38</span>:<span class="number">33.718548</span><span class="operator">+</span><span class="number">08</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>目前看来一切都正常，那么我们切换一个时区会发生什么情况呢？</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SET</span> timezone <span class="keyword">TO</span> <span class="string">&#x27;Europe/Dublin&#x27;</span>;</span><br><span class="line"><span class="keyword">SET</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SHOW</span> timezone;</span><br><span class="line">   TimeZone</span><br><span class="line"><span class="comment">---------------</span></span><br><span class="line"> Europe<span class="operator">/</span>Dublin</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> test;</span><br><span class="line">             t1             <span class="operator">|</span>              t2</span><br><span class="line"><span class="comment">----------------------------+-------------------------------</span></span><br><span class="line"> <span class="number">2023</span><span class="number">-03</span><span class="number">-10</span> <span class="number">10</span>:<span class="number">38</span>:<span class="number">33.718548</span> <span class="operator">|</span> <span class="number">2023</span><span class="number">-03</span><span class="number">-10</span> <span class="number">02</span>:<span class="number">38</span>:<span class="number">33.718548</span><span class="operator">+</span><span class="number">00</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，不带时区的时间戳在不同时区读取出来的时间是一样的，而带时区的时间戳则会在不同的时区下有不同的时间。</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>Unix 时间戳是从 1970 年 1 月 1 日 UTC 的 Unix 纪元开始，我们可以通过 <code>extract</code> 函数查看 Unix 时间戳。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">postgres=<span class="comment"># SELECT extract(epoch from t1) ts1, extract(epoch from t2) ts2 FROM test;</span></span><br><span class="line">        ts1        |        ts2</span><br><span class="line">-------------------+-------------------</span><br><span class="line"> 1678444713.718548 | 1678415913.718548</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
+
+<p>PostgreSQL 对于时间戳类型是按值存储的，即它是以一个 8 字节的整数类型存储在磁盘上的。您可以使用下面的命令查看 <code>test</code> 表的物理存储（我已经切换到了 <code>PGDATA</code> 所在目录）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">postgres=# SELECT pg_relation_filepath(&#x27;test&#x27;::regclass);</span><br><span class="line"> pg_relation_filepath</span><br><span class="line">----------------------</span><br><span class="line"> base/5/16428</span><br><span class="line">(1 row)</span><br><span class="line"></span><br><span class="line">postgres=# \! hexdump -C base/5/16428</span><br><span class="line">00000000  00 00 00 00 60 32 5d 01  00 00 00 00 1c 00 d8 1f  |....`2].........|</span><br><span class="line">00000010  00 20 04 20 00 00 00 00  d8 9f 50 00 00 00 00 00  |. . ......P.....|</span><br><span class="line">00000020  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|</span><br><span class="line">*</span><br><span class="line">00001fd0  00 00 00 00 00 00 00 00  fa 02 00 00 00 00 00 00  |................|</span><br><span class="line">00001fe0  00 00 00 00 00 00 00 00  01 00 02 00 00 09 18 00  |................|</span><br><span class="line">00001ff0  14 d3 b7 21 88 99 02 00  14 b3 1a 6d 81 99 02 00  |...!.......m....|</span><br><span class="line">00002000</span><br></pre></td></tr></table></figure>
+
+<p>我们将最后两个 8 字节转换为整数分别为 <code>0x0002998821b7d314 = 731759913718548</code>，<code>0x000299816d1ab314 = 731731113718548</code>（小端序），这里看到的值与我们获取到的时间戳不一致。这是应该 PostgreSQL 在存储时间戳时对其进行了转换，PostgreSQL 将 Unix 时间戳转换为了 PostgreSQL 的时间戳（基于 2000 年 1 月 1 日），同时保存到微秒级别，您可以在 <code>GetCurrentTimestap()</code> 函数中看到。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * GetCurrentTimestamp -- get the current operating system time</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Result is in the form of a TimestampTz value, and is expressed to the</span></span><br><span class="line"><span class="comment"> * full precision of the gettimeofday() syscall</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function">TimestampTz</span></span><br><span class="line"><span class="function"><span class="title">GetCurrentTimestamp</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    TimestampTz result;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">tp</span>;</span></span><br><span class="line"></span><br><span class="line">    gettimeofday(&amp;tp, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line">    result = (TimestampTz) tp.tv_sec -</span><br><span class="line">        ((POSTGRES_EPOCH_JDATE - UNIX_EPOCH_JDATE) * SECS_PER_DAY);</span><br><span class="line">    result = (result * USECS_PER_SEC) + tp.tv_usec;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中使用到的宏定义如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Julian-date equivalents of Day 0 in Unix and Postgres reckoning */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> UNIX_EPOCH_JDATE        2440588 <span class="comment">/* == date2j(1970, 1, 1) */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> POSTGRES_EPOCH_JDATE    2451545 <span class="comment">/* == date2j(2000, 1, 1) */</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SECS_PER_DAY    86400</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> USECS_PER_SEC   INT64CONST(1000000)</span></span><br></pre></td></tr></table></figure>
+
+<p>有了这些内容，我们便可以通过物理存储的 PostgreSQL 时间戳信息推算出 Unix 时间戳。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">731759913718548 / 1000000.0 + (2451545 - 2440588) * 86400 = 1678444713.718548</span><br><span class="line">731731113718548 / 1000000.0 + (2451545 - 2440588) * 86400 = 1678415913.718548</span><br></pre></td></tr></table></figure>
+
+<p>这与我们通过 SQL 计算的结果完全吻合。这里解释了物理存储，还有一个问题是我们插入的是相同的时间戳，为什么在底层存储的时候却变成了两个不同的时间戳呢？</p>
+<p>这里我们可以肯定是和 <code>timestamp</code> 和 <code>timestamptz</code> 的类型有关了。那么 PostgreSQL 是什么时候做的转换呢？<br>timestamp2tm</p>
+<p>通过调试分析，我注意到在 <code>ExecProject()</code> 函数在根据投影信息生成一个元组时调用了 <code>timestamptz_timestamp()</code> 函数将一个带时区的时间戳转换为了<strong>不带</strong>时区的时间戳。在上面的示例中即将带时区的 PostgreSQL 时间戳 <code>731731113718548</code> 转换为了<strong>不带</strong>时区的 PostgreSQL 时间戳 <code>731759913718548</code>，由于我在东八取，因此要比 GMT 时区快 8 个小时 <code>(731759913718548 - 731731113718548) / (60 * 60 * 1000000) = 8</code> 正好是 8 个小时（时间戳是基于 UTC 的，它与 GMT 时区重合，因此需要获取会话的时区对其进行调整）。我们在来看看 <code>timestamptz_timestamp()</code> 函数的实现。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* timestamptz_timestamp()</span></span><br><span class="line"><span class="comment"> * Convert timestamp at GMT to local timestamp</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function">Datum</span></span><br><span class="line"><span class="function"><span class="title">timestamptz_timestamp</span><span class="params">(PG_FUNCTION_ARGS)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    TimestampTz timestamp = PG_GETARG_TIMESTAMPTZ(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    PG_RETURN_TIMESTAMP(timestamptz2timestamp(timestamp));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> Timestamp</span></span><br><span class="line"><span class="function"><span class="title">timestamptz2timestamp</span><span class="params">(TimestampTz timestamp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    Timestamp   result;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">pg_tm</span> <span class="title">tt</span>,</span></span><br><span class="line"><span class="class">               *<span class="title">tm</span> =</span> &amp;tt;</span><br><span class="line">    <span class="keyword">fsec_t</span>      fsec;</span><br><span class="line">    <span class="keyword">int</span>         tz;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (TIMESTAMP_NOT_FINITE(timestamp))</span><br><span class="line">        result = timestamp;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (timestamp2tm(timestamp, &amp;tz, tm, &amp;fsec, <span class="literal">NULL</span>, <span class="literal">NULL</span>) != <span class="number">0</span>)</span><br><span class="line">            ereport(ERROR,</span><br><span class="line">                    (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),</span><br><span class="line">                     errmsg(<span class="string">&quot;timestamp out of range&quot;</span>)));</span><br><span class="line">        <span class="keyword">if</span> (tm2timestamp(tm, fsec, <span class="literal">NULL</span>, &amp;result) != <span class="number">0</span>)</span><br><span class="line">            ereport(ERROR,</span><br><span class="line">                    (errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),</span><br><span class="line">                     errmsg(<span class="string">&quot;timestamp out of range&quot;</span>)));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中核心的函数是 <code>timestamp2tm()</code> 和 <code>tm2timestamp()</code> 这两个函数。<code>timestamp2tm()</code> 函数将 PostgreSQL 时间戳转换为 POSIX 时间结构，它会根据会话级别的 <code>timezone</code> 来转换时间，随后在通过 <code>tm2timestamp()</code> 将 POSIX 时间结构转换为 PostgreSQL 时间戳。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.unixtimestamp.com/">https://www.unixtimestamp.com/</a><br>[2] <a target="_blank" rel="noopener" href="https://www.timeanddate.com/time/gmt-utc-time.html">https://www.timeanddate.com/time/gmt-utc-time.html</a><br>[3] <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/datatype-datetime.html">https://www.postgresql.org/docs/current/datatype-datetime.html</a></p>
+<div class="just-for-fun">
+笑林广记 - 问路
+
+<p>一近视眼迷路，见道旁石上栖歇一鸦，疑是人也，遂再三诘之。<br>少顷，鸦飞去，其人曰：“我问你不答应，你的帽子被风吹去了，我也不对你说。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2023/03/postgresql-timestamp/" title="PostgreSQL 中 timestamp 与 timestamptz 的区别">https://blog.japinli.top/2023/03/postgresql-timestamp/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/03/postgresql-partition-columns/" rel="prev" title="PostgreSQL 获取分区键信息">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 获取分区键信息
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">722k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">10:56</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
