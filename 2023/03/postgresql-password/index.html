@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="本文将简单的聊聊 PostgreSQL 的密码存储以及认证过程。在 PostgreSQL 10 之前，密码存储是采用明文和 MD5 进行存储的，在 10 版本之后则采用 MD5 和 SCRAM 进行存储，废弃了明文存储。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="聊聊 PostgreSQL 中的密码">
+<meta property="og:url" content="https://blog.japinli.top/2023/03/postgresql-password/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="本文将简单的聊聊 PostgreSQL 的密码存储以及认证过程。在 PostgreSQL 10 之前，密码存储是采用明文和 MD5 进行存储的，在 10 版本之后则采用 MD5 和 SCRAM 进行存储，废弃了明文存储。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2023/03/postgresql-password/pg-password.png">
+<meta property="og:image" content="https://blog.japinli.top/2023/03/postgresql-password/pg-md5-password.png">
+<meta property="og:image" content="https://blog.japinli.top/2023/03/postgresql-password/pg-md5-auth.png">
+<meta property="og:image" content="https://blog.japinli.top/2023/03/postgresql-password/pg-scram-password.png">
+<meta property="og:image" content="https://blog.japinli.top/2023/03/postgresql-password/scram-build-verifier.png">
+<meta property="og:image" content="https://blog.japinli.top/2023/03/postgresql-password/pg-scram-auth.png">
+<meta property="article:published_time" content="2023-03-29T14:41:49.000Z">
+<meta property="article:modified_time" content="2023-03-29T06:48:50.834Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2023/03/postgresql-password/pg-password.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2023/03/postgresql-password/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2023/03/postgresql-password/","path":"2023/03/postgresql-password/","title":"聊聊 PostgreSQL 中的密码"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>聊聊 PostgreSQL 中的密码 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">142</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%86%E7%A0%81%E5%AD%98%E5%82%A8"><span class="nav-number">1.</span> <span class="nav-text">密码存储</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%86%E7%A0%81%E8%AE%A4%E8%AF%81"><span class="nav-number">2.</span> <span class="nav-text">密码认证</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#scram-sha-256"><span class="nav-number">3.</span> <span class="nav-text">scram-sha-256</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Client-Signature"><span class="nav-number">3.1.</span> <span class="nav-text">Client Signature</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Server-Signature"><span class="nav-number">3.2.</span> <span class="nav-text">Server Signature</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">142</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2023/03/postgresql-password/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          聊聊 PostgreSQL 中的密码
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-03-29 22:41:49" itemprop="dateCreated datePublished" datetime="2023-03-29T22:41:49+08:00">2023-03-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>16k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>15 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>本文将简单的聊聊 PostgreSQL 的密码存储以及认证过程。在 PostgreSQL 10 之前，密码存储是采用明文和 MD5 进行存储的，在 10 版本之后则采用 MD5 和 SCRAM 进行存储，废弃了明文存储。</p>
+<img src="/2023/03/postgresql-password/pg-password.png" class="">
+
+<span id="more"></span>
+
+<h2 id="密码存储"><a href="#密码存储" class="headerlink" title="密码存储"></a>密码存储</h2><p>下图是 PostgreSQL 10 之前的密码存储原理图。</p>
+<img src="/2023/03/postgresql-password/pg-md5-password.png" class="">
+
+<p>我们可以通过下面的 SQL 语句来进行验证。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">USER</span> japin <span class="keyword">WITH</span> PASSWORD <span class="string">&#x27;123456&#x27;</span>;</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">USER</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> rolname, rolpassword <span class="keyword">FROM</span> pg_authid <span class="keyword">WHERE</span> rolname <span class="operator">=</span> <span class="string">&#x27;japin&#x27;</span>;</span><br><span class="line"> rolname <span class="operator">|</span>             rolpassword</span><br><span class="line"><span class="comment">---------+-------------------------------------</span></span><br><span class="line"> japin   <span class="operator">|</span> md5e01ae1cb17dfc0143ffb8dacc27d3c95</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> <span class="string">&#x27;japin&#x27;</span> <span class="keyword">AS</span> rolename, <span class="string">&#x27;md5&#x27;</span> <span class="operator">||</span> md5(<span class="string">&#x27;123456&#x27;</span><span class="operator">||</span><span class="string">&#x27;japin&#x27;</span>) <span class="keyword">AS</span> rolpasswd;</span><br><span class="line"> rolename <span class="operator">|</span>              rolpasswd</span><br><span class="line"><span class="comment">----------+-------------------------------------</span></span><br><span class="line"> japin    <span class="operator">|</span> md5e01ae1cb17dfc0143ffb8dacc27d3c95</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到 PostgreSQL 是使用的用户密码加上用户名信息计算 md5 值，然后存储在数据库中的。需要注意的时，PostgreSQL 也支持明文存储用户密码，如下所示。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">CREATE</span> <span class="keyword">USER</span> u01 <span class="keyword">WITH</span> UNENCRYPTED PASSWORD <span class="string">&#x27;123456&#x27;</span>;</span><br><span class="line"><span class="keyword">CREATE</span> ROLE</span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> rolname, rolpassword <span class="keyword">FROM</span> pg_authid <span class="keyword">WHERE</span> rolname <span class="operator">=</span> <span class="string">&#x27;u01&#x27;</span>;</span><br><span class="line"> rolname <span class="operator">|</span> rolpassword</span><br><span class="line"><span class="comment">---------+-------------</span></span><br><span class="line"> u01     <span class="operator">|</span> <span class="number">123456</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下都是加密存储的，这个是通过参数 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/9.6/runtime-config-connection.html#GUC-PASSWORD-ENCRYPTION"><code>password_encryption</code></a> 决定的。</p>
+<p>下面的代码是关于 PostgreSQL 如何处理密码存储的（<a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL9_6_STABLE/src/backend/commands/user.c#L68">源码在这里</a>）。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Oid</span></span><br><span class="line"><span class="function"><span class="title">CreateRole</span><span class="params">(CreateRoleStmt *stmt)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">	<span class="keyword">bool</span>		encrypt_password = Password_encryption; <span class="comment">/* encrypt password? */</span></span><br><span class="line">	<span class="keyword">char</span>		encrypted_password[MD5_PASSWD_LEN + <span class="number">1</span>];</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Extract options from the statement node tree */</span></span><br><span class="line">	foreach(option, stmt-&gt;options)</span><br><span class="line">	&#123;</span><br><span class="line">		DefElem    *defel = (DefElem *) lfirst(option);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (<span class="built_in">strcmp</span>(defel-&gt;defname, <span class="string">&quot;password&quot;</span>) == <span class="number">0</span> ||</span><br><span class="line">			<span class="built_in">strcmp</span>(defel-&gt;defname, <span class="string">&quot;encryptedPassword&quot;</span>) == <span class="number">0</span> ||</span><br><span class="line">			<span class="built_in">strcmp</span>(defel-&gt;defname, <span class="string">&quot;unencryptedPassword&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">		&#123;</span><br><span class="line">			<span class="keyword">if</span> (dpassword)</span><br><span class="line">				ereport(ERROR,</span><br><span class="line">						(errcode(ERRCODE_SYNTAX_ERROR),</span><br><span class="line">						 errmsg(<span class="string">&quot;conflicting or redundant options&quot;</span>)));</span><br><span class="line">			dpassword = defel;</span><br><span class="line">			<span class="keyword">if</span> (<span class="built_in">strcmp</span>(defel-&gt;defname, <span class="string">&quot;encryptedPassword&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">				encrypt_password = <span class="literal">true</span>;</span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">if</span> (<span class="built_in">strcmp</span>(defel-&gt;defname, <span class="string">&quot;unencryptedPassword&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">				encrypt_password = <span class="literal">false</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		[...]</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (dpassword &amp;&amp; dpassword-&gt;arg)</span><br><span class="line">		password = strVal(dpassword-&gt;arg);</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Call the password checking hook if there is one defined</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (check_password_hook &amp;&amp; password)</span><br><span class="line">		(*check_password_hook) (stmt-&gt;role,</span><br><span class="line">								password,</span><br><span class="line">			   isMD5(password) ? PASSWORD_TYPE_MD5 : PASSWORD_TYPE_PLAINTEXT,</span><br><span class="line">								validUntil_datum,</span><br><span class="line">								validUntil_null);</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (password)</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">if</span> (!encrypt_password || isMD5(password))</span><br><span class="line">			new_record[Anum_pg_authid_rolpassword - <span class="number">1</span>] =</span><br><span class="line">				CStringGetTextDatum(password);</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">		&#123;</span><br><span class="line">			<span class="keyword">if</span> (!pg_md5_encrypt(password, stmt-&gt;role, <span class="built_in">strlen</span>(stmt-&gt;role),</span><br><span class="line">								encrypted_password))</span><br><span class="line">				elog(ERROR, <span class="string">&quot;password encryption failed&quot;</span>);</span><br><span class="line">			new_record[Anum_pg_authid_rolpassword - <span class="number">1</span>] =</span><br><span class="line">				CStringGetTextDatum(encrypted_password);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">		new_record_nulls[Anum_pg_authid_rolpassword - <span class="number">1</span>] = <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="密码认证"><a href="#密码认证" class="headerlink" title="密码认证"></a>密码认证</h2><p>下图 PostgreSQL 中基于 MD5 的密码认证流程。</p>
+<img src="/2023/03/postgresql-password/pg-md5-auth.png" class="">
+
+<ol>
+<li>客户端程序首先发送连接请求。</li>
+<li>服务在接收到客户端的连接请求之后将生成一个随机的 salt 值发送给客户端用于计算密码的 MD5 值。</li>
+<li>客户端根据用户密码和用户信息计算出 MD5 值，随后在利用来自服务器端的 salt 计算出 MD5 值用于服务器校验。</li>
+<li>服务器通过数据库中存储的用户密码 MD5 值以及其生成的 salt 再次计算 MD5 值并与来自客户端的 MD5 值进行比较，相同则说明用户密码正确，登陆成功。</li>
+</ol>
+<p>服务器在接收到客户端的连接请求之后将创建一个进程来处理连接，并通过 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL9_6_STABLE/src/backend/libpq/auth.c#L314"><code>ClientAuthentication()</code></a> 函数处理。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">ClientAuthentication</span><span class="params">(Port *port)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">int</span>			status = STATUS_ERROR;</span><br><span class="line">	<span class="keyword">char</span>	   *logdetail = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Get the authentication method to use for this frontend/database</span></span><br><span class="line"><span class="comment">	 * combination.  Note: we do not parse the file at this point; this has</span></span><br><span class="line"><span class="comment">	 * already been done elsewhere.  hba.c dropped an error message into the</span></span><br><span class="line"><span class="comment">	 * server logfile if parsing the hba config file failed.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	hba_getauthmethod(port);</span><br><span class="line"></span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Now proceed to do the actual authentication check</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">switch</span> (port-&gt;hba-&gt;auth_method)</span><br><span class="line">	&#123;</span><br><span class="line">		[...]</span><br><span class="line"></span><br><span class="line">		<span class="keyword">case</span> uaMD5:</span><br><span class="line">			<span class="keyword">if</span> (Db_user_namespace)</span><br><span class="line">				ereport(FATAL,</span><br><span class="line">						(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),</span><br><span class="line">						 errmsg(<span class="string">&quot;MD5 authentication is not supported when \&quot;db_user_namespace\&quot; is enabled&quot;</span>)));</span><br><span class="line">			sendAuthRequest(port, AUTH_REQ_MD5);</span><br><span class="line">			status = recv_and_check_password_packet(port, &amp;logdetail);</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">		[...]</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (ClientAuthentication_hook)</span><br><span class="line">		(*ClientAuthentication_hook) (port, status);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (status == STATUS_OK)</span><br><span class="line">		sendAuthRequest(port, AUTH_REQ_OK);</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">		auth_failed(port, status, logdetail);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>函数 <code>sendAuthRequest()</code> 则负责发送认证的方式，如下所示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Send an authentication request packet to the frontend.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">sendAuthRequest</span><span class="params">(Port *port, AuthRequest areq)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	StringInfoData buf;</span><br><span class="line"></span><br><span class="line">	CHECK_FOR_INTERRUPTS();</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 消息头以及认证类型 */</span></span><br><span class="line">	pq_beginmessage(&amp;buf, <span class="string">&#x27;R&#x27;</span>);</span><br><span class="line">	pq_sendint(&amp;buf, (int32) areq, <span class="keyword">sizeof</span>(int32));</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * 对于 MD5 认证，发送 salt，md5Salt 是在 ConnCreate() 函数中由 RandomSalt()</span></span><br><span class="line"><span class="comment">	 * 函数预先生成的。</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (areq == AUTH_REQ_MD5)</span><br><span class="line">		pq_sendbytes(&amp;buf, port-&gt;md5Salt, <span class="number">4</span>);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">if</span> defined(ENABLE_GSS) || defined(ENABLE_SSPI)</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Add the authentication data for the next step of the GSSAPI or SSPI</span></span><br><span class="line"><span class="comment">	 * negotiation.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> (areq == AUTH_REQ_GSS_CONT)</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">if</span> (port-&gt;gss-&gt;outbuf.length &gt; <span class="number">0</span>)</span><br><span class="line">		&#123;</span><br><span class="line">			elog(DEBUG4, <span class="string">&quot;sending GSS token of length %u&quot;</span>,</span><br><span class="line">				 (<span class="keyword">unsigned</span> <span class="keyword">int</span>) port-&gt;gss-&gt;outbuf.length);</span><br><span class="line"></span><br><span class="line">			pq_sendbytes(&amp;buf, port-&gt;gss-&gt;outbuf.value, port-&gt;gss-&gt;outbuf.length);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	pq_endmessage(&amp;buf);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Flush message so client will see it, except for AUTH_REQ_OK, which need</span></span><br><span class="line"><span class="comment">	 * not be sent until we are ready for queries.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (areq != AUTH_REQ_OK)</span><br><span class="line">		pq_flush();</span><br><span class="line"></span><br><span class="line">	CHECK_FOR_INTERRUPTS();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>函数 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL9_6_STABLE/src/interfaces/libpq/fe-auth.c#L501"><code>pg_password_sendauth()</code></a> 用于计算用户密码 MD5 值并发送到服务器发，如下所示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">pg_password_sendauth</span><span class="params">(PGconn *conn, <span class="keyword">const</span> <span class="keyword">char</span> *password, AuthRequest areq)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span>			ret;</span><br><span class="line">	<span class="keyword">char</span>	   *crypt_pwd = <span class="literal">NULL</span>;</span><br><span class="line">	<span class="keyword">const</span> <span class="keyword">char</span> *pwd_to_send;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Encrypt the password if needed. */</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span> (areq)</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="keyword">case</span> AUTH_REQ_MD5:</span><br><span class="line">			&#123;</span><br><span class="line">				<span class="keyword">char</span>	   *crypt_pwd2;</span><br><span class="line"></span><br><span class="line">				<span class="comment">/* Allocate enough space for two MD5 hashes */</span></span><br><span class="line">				crypt_pwd = <span class="built_in">malloc</span>(<span class="number">2</span> * (MD5_PASSWD_LEN + <span class="number">1</span>));</span><br><span class="line">				<span class="keyword">if</span> (!crypt_pwd)</span><br><span class="line">				&#123;</span><br><span class="line">					printfPQExpBuffer(&amp;conn-&gt;errorMessage,</span><br><span class="line">									  libpq_gettext(<span class="string">&quot;out of memory\n&quot;</span>));</span><br><span class="line">					<span class="keyword">return</span> STATUS_ERROR;</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				<span class="comment">/* 先对密码和用户名计算 MD5 值 */</span></span><br><span class="line">				crypt_pwd2 = crypt_pwd + MD5_PASSWD_LEN + <span class="number">1</span>;</span><br><span class="line">				<span class="keyword">if</span> (!pg_md5_encrypt(password, conn-&gt;pguser,</span><br><span class="line">									<span class="built_in">strlen</span>(conn-&gt;pguser), crypt_pwd2))</span><br><span class="line">				&#123;</span><br><span class="line">					<span class="built_in">free</span>(crypt_pwd);</span><br><span class="line">					<span class="keyword">return</span> STATUS_ERROR;</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="comment">/* 随后里面服务器发送的 salt 在计算 MD5 值，注意去除了 md5 前缀 */</span></span><br><span class="line">				<span class="keyword">if</span> (!pg_md5_encrypt(crypt_pwd2 + <span class="built_in">strlen</span>(<span class="string">&quot;md5&quot;</span>), conn-&gt;md5Salt,</span><br><span class="line">									<span class="keyword">sizeof</span>(conn-&gt;md5Salt), crypt_pwd))</span><br><span class="line">				&#123;</span><br><span class="line">					<span class="built_in">free</span>(crypt_pwd);</span><br><span class="line">					<span class="keyword">return</span> STATUS_ERROR;</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				pwd_to_send = crypt_pwd;</span><br><span class="line">				<span class="keyword">break</span>;</span><br><span class="line">			&#125;</span><br><span class="line">		<span class="keyword">case</span> AUTH_REQ_PASSWORD:</span><br><span class="line">			pwd_to_send = password;</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line">		<span class="keyword">default</span>:</span><br><span class="line">			<span class="keyword">return</span> STATUS_ERROR;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">/* Packet has a message type as of protocol 3.0 */</span></span><br><span class="line">	<span class="comment">/* 发送给服务器 */</span></span><br><span class="line">	<span class="keyword">if</span> (PG_PROTOCOL_MAJOR(conn-&gt;pversion) &gt;= <span class="number">3</span>)</span><br><span class="line">		ret = pqPacketSend(conn, <span class="string">&#x27;p&#x27;</span>, pwd_to_send, <span class="built_in">strlen</span>(pwd_to_send) + <span class="number">1</span>);</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">		ret = pqPacketSend(conn, <span class="number">0</span>, pwd_to_send, <span class="built_in">strlen</span>(pwd_to_send) + <span class="number">1</span>);</span><br><span class="line">	<span class="keyword">if</span> (crypt_pwd)</span><br><span class="line">		<span class="built_in">free</span>(crypt_pwd);</span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后通过 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL9_6_STABLE/src/backend/libpq/auth.c#L732"><code>recv_and_check_password_packet()</code></a> 来接收客户端的密码信息并验证密码的有效性。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">recv_and_check_password_packet</span><span class="params">(Port *port, <span class="keyword">char</span> **logdetail)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">char</span>	   *passwd;</span><br><span class="line">	<span class="keyword">int</span>			result;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 接收客户端密码信息 */</span></span><br><span class="line">	passwd = recv_password_packet(port);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (passwd == <span class="literal">NULL</span>)</span><br><span class="line">		<span class="keyword">return</span> STATUS_EOF;		<span class="comment">/* client wouldn&#x27;t send password */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 执行具体的密码验证工作 */</span></span><br><span class="line">	result = md5_crypt_verify(port, port-&gt;user_name, passwd, logdetail);</span><br><span class="line"></span><br><span class="line">	pfree(passwd);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里就不在展开 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL9_6_STABLE/src/backend/libpq/crypt.c#L32"><code>md5_crypt_verify()</code></a> 函数了，感兴趣的朋友可以直接去阅读<a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL9_6_STABLE/src/backend/libpq/crypt.c#L32">源码</a>。</p>
+<h2 id="scram-sha-256"><a href="#scram-sha-256" class="headerlink" title="scram-sha-256"></a>scram-sha-256</h2><p>MD5 是一种单向哈希方式，因此可以采用暴力破解和彩虹表字典攻击等方式进行破解，安全性相对较低。SCRAM 是 <strong>S</strong>alted <strong>C</strong>hallenge <strong>R</strong>esponse <strong>A</strong>uthentication <strong>M</strong>ethod 的缩写，使用的是挑战响应机制，每次认证过程都要生成一个服务器端随机数，并在密码哈希计算中加入盐值来防止撞库攻击，提高了安全性。SCRAM 在 <a target="_blank" rel="noopener" href="https://www.rfc-editor.org/rfc/rfc5802">RFC5802</a> 中给出了详细的说明，包括认证的步骤，发送的消息内容等。</p>
+<p>我们已经知道 PostgreSQL 是如何使用 MD5 算法存储的密码了，由于给定的 MD5 哈希值构造字符串太容易了，因此 PostgreSQL 在 10 版本中引入了 scram-sha-256 加密算法。接下来我们就来看看它的原理已经实现（注意，PostgreSQL 10 版本同样移除了明文存储密码的功能）。</p>
+<p>默认情况下，PostgreSQL 10 版本的 <code>password_encryption</code> 依然是 <code>md5</code>，在 PostgreSQL 14 中则切换为了 <code>scram-sha-256</code>。您可以使用下面的命令来修改密码策略。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">show</span> password_encryption ;</span><br><span class="line"> password_encryption</span><br><span class="line"><span class="comment">---------------------</span></span><br><span class="line"> md5</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">ALTER</span> <span class="keyword">SYSTEM</span> <span class="keyword">SET</span> password_encryption <span class="keyword">TO</span> <span class="string">&#x27;scram-sha-256&#x27;</span>;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">SYSTEM</span></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> pg_reload_conf();</span><br><span class="line"> pg_reload_conf</span><br><span class="line"><span class="comment">----------------</span></span><br><span class="line"> t</span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span># <span class="keyword">show</span> password_encryption;</span><br><span class="line"> password_encryption</span><br><span class="line"><span class="comment">---------------------</span></span><br><span class="line"> scram<span class="operator">-</span>sha<span class="number">-256</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>接着我们同样创建一个用户来观察一下密码的存储结构。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">SELECT</span> rolname, rolpassword <span class="keyword">FROM</span> pg_authid <span class="keyword">WHERE</span> rolname <span class="operator">=</span> <span class="string">&#x27;japin&#x27;</span>;</span><br><span class="line"> rolname <span class="operator">|</span>                                                              rolpassword</span><br><span class="line"><span class="comment">---------+---------------------------------------------------------------------------------------------------------------------------------------</span></span><br><span class="line"> japin   <span class="operator">|</span> SCRAM<span class="operator">-</span>SHA<span class="number">-256</span>$<span class="number">4096</span>:cUy1lgsS7PnQv4k3p8fE4A<span class="operator">=</span><span class="operator">=</span>$LfgSXaK4NJBN4WHxBDlohQT<span class="operator">/</span>zrmMSsdgMrbWsgeodJY<span class="operator">=</span>:SRIYmyTyciPRuQJHJb<span class="operator">+</span>bAcXY0Kn6aOuZ9ztAS34GXDU<span class="operator">=</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br></pre></td></tr></table></figure>
+
+<p>从上面的结果可以看到，密码的存储更为复杂了，我们可以将其拆分为 5 个部分。</p>
+<img src="/2023/03/postgresql-password/pg-scram-password.png" class="">
+
+<ul>
+<li>DIGEST - 密码摘要算法，其中 <code>SCRAM</code> 是固定的，后面的则是具体的 HASH 摘要算法。</li>
+<li>ITERATIONS - 迭代次数。</li>
+<li>SALT - 由服务器生产的 salt，见 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/backend/utils/misc/backend_random.c#L52"><code>pg_backend_random()</code></a> 函数（当使用 <code>\password</code> 修改密码是则由 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/interfaces/libpq/fe-auth-scram.c#L676"><code>pg_frontend_random()</code></a> 函数生成）。</li>
+<li>STORED_KEY - 加密后的用户密码信息，用于验证用户。</li>
+<li>SERVER_KEY - 加密后的服务器信息，用于验证服务器。</li>
+</ul>
+<p>PostgreSQL 使用函数 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/common/scram-common.c#L186"><code>scram_build_verifier()</code></a> 来创建 SCRAM-SHA-256 密码，其流程如下图所示。</p>
+<img src="/2023/03/postgresql-password/scram-build-verifier.png" class="">
+
+<p>与 SALT 的生成类似，scram-sha-256 的密码可能是 psql 通过 <code>\password</code> 命令使用函数 <a href=""><code>pg_fe_scram_build_verifier()</code></a> 生成。下面是 <code>scram_build_verifier()</code> 函数的源码。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">char</span> *</span></span><br><span class="line"><span class="function"><span class="title">scram_build_verifier</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *salt, <span class="keyword">int</span> saltlen, <span class="keyword">int</span> iterations,</span></span></span><br><span class="line"><span class="params"><span class="function">					 <span class="keyword">const</span> <span class="keyword">char</span> *password)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	uint8		salted_password[SCRAM_KEY_LEN];</span><br><span class="line">	uint8		stored_key[SCRAM_KEY_LEN];</span><br><span class="line">	uint8		server_key[SCRAM_KEY_LEN];</span><br><span class="line">	<span class="keyword">char</span>	   *result;</span><br><span class="line">	<span class="keyword">char</span>	   *p;</span><br><span class="line">	<span class="keyword">int</span>			maxlen;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (iterations &lt;= <span class="number">0</span>)</span><br><span class="line">		iterations = SCRAM_DEFAULT_ITERATIONS;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Calculate StoredKey and ServerKey */</span></span><br><span class="line">	scram_SaltedPassword(password, salt, saltlen, iterations,</span><br><span class="line">						 salted_password);</span><br><span class="line">	scram_ClientKey(salted_password, stored_key);</span><br><span class="line">	scram_H(stored_key, SCRAM_KEY_LEN, stored_key);</span><br><span class="line"></span><br><span class="line">	scram_ServerKey(salted_password, server_key);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*----------</span></span><br><span class="line"><span class="comment">	 * The format is:</span></span><br><span class="line"><span class="comment">	 * SCRAM-SHA-256$&lt;iteration count&gt;:&lt;salt&gt;$&lt;StoredKey&gt;:&lt;ServerKey&gt;</span></span><br><span class="line"><span class="comment">	 *----------</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	maxlen = <span class="built_in">strlen</span>(<span class="string">&quot;SCRAM-SHA-256&quot;</span>) + <span class="number">1</span></span><br><span class="line">		+ <span class="number">10</span> + <span class="number">1</span>				<span class="comment">/* iteration count */</span></span><br><span class="line">		+ pg_b64_enc_len(saltlen) + <span class="number">1</span>	<span class="comment">/* Base64-encoded salt */</span></span><br><span class="line">		+ pg_b64_enc_len(SCRAM_KEY_LEN) + <span class="number">1</span> <span class="comment">/* Base64-encoded StoredKey */</span></span><br><span class="line">		+ pg_b64_enc_len(SCRAM_KEY_LEN) + <span class="number">1</span>;	<span class="comment">/* Base64-encoded ServerKey */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> FRONTEND</span></span><br><span class="line">	result = <span class="built_in">malloc</span>(maxlen);</span><br><span class="line">	<span class="keyword">if</span> (!result)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	result = palloc(maxlen);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	p = result + <span class="built_in">sprintf</span>(result, <span class="string">&quot;SCRAM-SHA-256$%d:&quot;</span>, iterations);</span><br><span class="line"></span><br><span class="line">	p += pg_b64_encode(salt, saltlen, p);</span><br><span class="line">	*(p++) = <span class="string">&#x27;$&#x27;</span>;</span><br><span class="line">	p += pg_b64_encode((<span class="keyword">char</span> *) stored_key, SCRAM_KEY_LEN, p);</span><br><span class="line">	*(p++) = <span class="string">&#x27;:&#x27;</span>;</span><br><span class="line">	p += pg_b64_encode((<span class="keyword">char</span> *) server_key, SCRAM_KEY_LEN, p);</span><br><span class="line">	*(p++) = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">	Assert(p - result &lt;= maxlen);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在了解了 SCRAM 密码的存储之后，我们接着来看看 SCRAM 是如何进行认证的。下图是整个 SCRAM 的大致认证流程。</p>
+<img src="/2023/03/postgresql-password/pg-scram-auth.png" class="">
+
+<ol>
+<li>客户端请求连接到服务器。</li>
+<li>服务器接收到来自客户端的连接请求，确定当前的认证类型为 SCRAM，并将其返回给客户端。</li>
+<li>客户端进入 SCRAM 认证流程，生成 <code>client nonce</code> 发送给服务器。</li>
+<li>服务器接收到客户端的 <code>client nonce</code> 之后将生成 <code>server nonce</code>并附加到 <code>client nonce</code> 之后，与 <code>salt</code> 和 <code>iterations</code> 一同发送给客户端。</li>
+<li>客户端在接收到服务器的发送来的 <code>nonce</code> 之后进行验证，随后根据 <code>salt</code>，<code>iterations</code> 以及用户的明文密码计算 <code>client signature</code> 并发送给服务器进行验证。</li>
+<li>服务器验证通过之后将生成 <code>server signature</code> 并发送给客户端进行验证。</li>
+</ol>
+<p>接下来我们详细看看客户端和服务器是如何验证用户信息的。我们知道服务存储了密码的加密算法、<code>iterations</code>、<code>salt</code>、<code>stored key</code> 和 <code>server key</code>，密码验证就是基于这些信息在加上用户明文密码完成的。</p>
+<p><code>client nonce</code> 和 <code>server nonce</code> 分别由 <code>pg_frontend_random()</code> 和 <code>pg_backend_random()</code> 生成，本质上就是两个随机字串。最为重要的还是 <code>client signature</code> 和 <code>server signature</code>。</p>
+<h3 id="Client-Signature"><a href="#Client-Signature" class="headerlink" title="Client Signature"></a>Client Signature</h3><p>在 SCRAM 认证流程图中，我们可以看到 <code>client signature</code> 是由 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/interfaces/libpq/fe-auth-scram.c#L353"><code>build_client_final_message()</code></a> 函数生成的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">char</span> *</span></span><br><span class="line"><span class="function"><span class="title">build_client_final_message</span><span class="params">(fe_scram_state *state, PQExpBuffer errormessage)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	PQExpBufferData buf;</span><br><span class="line">	uint8		client_proof[SCRAM_KEY_LEN];</span><br><span class="line">	<span class="keyword">char</span>	   *result;</span><br><span class="line"></span><br><span class="line">	initPQExpBuffer(&amp;buf);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Construct client-final-message-without-proof.  We need to remember it</span></span><br><span class="line"><span class="comment">	 * for verifying the server proof in the final step of authentication.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	appendPQExpBuffer(&amp;buf, <span class="string">&quot;c=biws,r=%s&quot;</span>, state-&gt;nonce);</span><br><span class="line">	<span class="keyword">if</span> (PQExpBufferDataBroken(buf))</span><br><span class="line">		<span class="keyword">goto</span> oom_error;</span><br><span class="line"></span><br><span class="line">	state-&gt;client_final_message_without_proof = strdup(buf.data);</span><br><span class="line">	<span class="keyword">if</span> (state-&gt;client_final_message_without_proof == <span class="literal">NULL</span>)</span><br><span class="line">		<span class="keyword">goto</span> oom_error;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Append proof to it, to form client-final-message. */</span></span><br><span class="line">	<span class="comment">/* 生成 client signature */</span></span><br><span class="line">	calculate_client_proof(state,</span><br><span class="line">						   state-&gt;client_final_message_without_proof,</span><br><span class="line">						   client_proof);</span><br><span class="line"></span><br><span class="line">	appendPQExpBuffer(&amp;buf, <span class="string">&quot;,p=&quot;</span>);</span><br><span class="line">	<span class="keyword">if</span> (!enlargePQExpBuffer(&amp;buf, pg_b64_enc_len(SCRAM_KEY_LEN)))</span><br><span class="line">		<span class="keyword">goto</span> oom_error;</span><br><span class="line">	buf.len += pg_b64_encode((<span class="keyword">char</span> *) client_proof,</span><br><span class="line">							 SCRAM_KEY_LEN,</span><br><span class="line">							 buf.data + buf.len);</span><br><span class="line">	buf.data[buf.len] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">	result = strdup(buf.data);</span><br><span class="line">	<span class="keyword">if</span> (result == <span class="literal">NULL</span>)</span><br><span class="line">		<span class="keyword">goto</span> oom_error;</span><br><span class="line"></span><br><span class="line">	termPQExpBuffer(&amp;buf);</span><br><span class="line">	<span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">oom_error:</span><br><span class="line">	termPQExpBuffer(&amp;buf);</span><br><span class="line">	printfPQExpBuffer(errormessage,</span><br><span class="line">					  libpq_gettext(<span class="string">&quot;out of memory\n&quot;</span>));</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>build_client_final_message()</code> 函数的主要工作是构建客户端 SCRAM 认证的最终消息，在该消息后面可以附带 <code>proof</code> 信息，这个 <code>proof</code> 信息便是用于认证用户的，它由 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/interfaces/libpq/fe-auth-scram.c#L560"><code>calculate_client_proof()</code></a> 函数通过用户密码、<code>salt</code> 和 <code>iterations</code> 构建，如下所示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span></span></span><br><span class="line"><span class="function"><span class="title">calculate_client_proof</span><span class="params">(fe_scram_state *state,</span></span></span><br><span class="line"><span class="params"><span class="function">					   <span class="keyword">const</span> <span class="keyword">char</span> *client_final_message_without_proof,</span></span></span><br><span class="line"><span class="params"><span class="function">					   uint8 *result)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	uint8		StoredKey[SCRAM_KEY_LEN];</span><br><span class="line">	uint8		ClientKey[SCRAM_KEY_LEN];</span><br><span class="line">	uint8		ClientSignature[SCRAM_KEY_LEN];</span><br><span class="line">	<span class="keyword">int</span>			i;</span><br><span class="line">	scram_HMAC_ctx ctx;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Calculate SaltedPassword, and store it in &#x27;state&#x27; so that we can reuse</span></span><br><span class="line"><span class="comment">	 * it later in verify_server_signature.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	scram_SaltedPassword(state-&gt;password, state-&gt;salt, state-&gt;saltlen,</span><br><span class="line">						 state-&gt;iterations, state-&gt;SaltedPassword);</span><br><span class="line"></span><br><span class="line">	scram_ClientKey(state-&gt;SaltedPassword, ClientKey);</span><br><span class="line">	scram_H(ClientKey, SCRAM_KEY_LEN, StoredKey);</span><br><span class="line"></span><br><span class="line">	scram_HMAC_init(&amp;ctx, StoredKey, SCRAM_KEY_LEN);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;client_first_message_bare,</span><br><span class="line">					  <span class="built_in">strlen</span>(state-&gt;client_first_message_bare));</span><br><span class="line">	scram_HMAC_update(&amp;ctx, <span class="string">&quot;,&quot;</span>, <span class="number">1</span>);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;server_first_message,</span><br><span class="line">					  <span class="built_in">strlen</span>(state-&gt;server_first_message));</span><br><span class="line">	scram_HMAC_update(&amp;ctx, <span class="string">&quot;,&quot;</span>, <span class="number">1</span>);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  client_final_message_without_proof,</span><br><span class="line">					  <span class="built_in">strlen</span>(client_final_message_without_proof));</span><br><span class="line">	scram_HMAC_final(ClientSignature, &amp;ctx);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; SCRAM_KEY_LEN; i++)</span><br><span class="line">		result[i] = ClientKey[i] ^ ClientSignature[i];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当您看到上面的代码是否有种似成相识的感觉，没错，它与 <code>scram_build_verifier()</code> 函数有些许类似，即计算 <code>StoredKey</code> 这部分代码是相同的，而后面的代码则结合认证过程中的消息计算 <code>ClientSignature</code>，最后将 <code>ClientKey</code> 和 <code>ClientSignature</code> 进行异或并发送给服务器。服务器在接收到该 <code>proof</code> 信息之后将通过 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/backend/libpq/auth-scram.c#L910"><code>verify_client_proof()</code></a> 函数结合 <code>proof</code> 信息和服务器存储的 <code>StoredKey</code> 反推出 <code>client key</code>，随后在根据推导出来的 <code>ClientKey</code> 计算客户端认证的 <code>StoredKey</code> 并与服务器存储的 <code>StoredKey</code> 进行比较，相同则认证成功，不同则认证失败。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">static bool</span><br><span class="line">verify_client_proof(scram_state *state)</span><br><span class="line">&#123;</span><br><span class="line">	uint8		ClientSignature[SCRAM_KEY_LEN];</span><br><span class="line">	uint8		ClientKey[SCRAM_KEY_LEN];</span><br><span class="line">	uint8		client_StoredKey[SCRAM_KEY_LEN];</span><br><span class="line">	scram_HMAC_ctx ctx;</span><br><span class="line">	int			i;</span><br><span class="line"></span><br><span class="line">	/* calculate ClientSignature */</span><br><span class="line">	scram_HMAC_init(&amp;ctx, state-&gt;StoredKey, SCRAM_KEY_LEN);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;client_first_message_bare,</span><br><span class="line">					  strlen(state-&gt;client_first_message_bare));</span><br><span class="line">	scram_HMAC_update(&amp;ctx, &quot;,&quot;, 1);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;server_first_message,</span><br><span class="line">					  strlen(state-&gt;server_first_message));</span><br><span class="line">	scram_HMAC_update(&amp;ctx, &quot;,&quot;, 1);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;client_final_message_without_proof,</span><br><span class="line">					  strlen(state-&gt;client_final_message_without_proof));</span><br><span class="line">	scram_HMAC_final(ClientSignature, &amp;ctx);</span><br><span class="line"></span><br><span class="line">	/* Extract the ClientKey that the client calculated from the proof */</span><br><span class="line">	for (i = 0; i &lt; SCRAM_KEY_LEN; i++)</span><br><span class="line">		ClientKey[i] = state-&gt;ClientProof[i] ^ ClientSignature[i];</span><br><span class="line"></span><br><span class="line">	/* Hash it one more time, and compare with StoredKey */</span><br><span class="line">	scram_H(ClientKey, SCRAM_KEY_LEN, client_StoredKey);</span><br><span class="line"></span><br><span class="line">	if (memcmp(client_StoredKey, state-&gt;StoredKey, SCRAM_KEY_LEN) != 0)</span><br><span class="line">		return false;</span><br><span class="line"></span><br><span class="line">	return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Server-Signature"><a href="#Server-Signature" class="headerlink" title="Server Signature"></a>Server Signature</h3><p>相较于 <code>client signature</code> 而言，<code>server signature</code> 就要简单许多，类似的，它是由 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/backend/libpq/auth-scram.c#L1095"><code>build_server_final_message()</code></a> 函数生成，如下所示。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">char</span> *</span></span><br><span class="line"><span class="function"><span class="title">build_server_final_message</span><span class="params">(scram_state *state)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	uint8		ServerSignature[SCRAM_KEY_LEN];</span><br><span class="line">	<span class="keyword">char</span>	   *server_signature_base64;</span><br><span class="line">	<span class="keyword">int</span>			siglen;</span><br><span class="line">	scram_HMAC_ctx ctx;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* calculate ServerSignature */</span></span><br><span class="line">	scram_HMAC_init(&amp;ctx, state-&gt;ServerKey, SCRAM_KEY_LEN);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;client_first_message_bare,</span><br><span class="line">					  <span class="built_in">strlen</span>(state-&gt;client_first_message_bare));</span><br><span class="line">	scram_HMAC_update(&amp;ctx, <span class="string">&quot;,&quot;</span>, <span class="number">1</span>);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;server_first_message,</span><br><span class="line">					  <span class="built_in">strlen</span>(state-&gt;server_first_message));</span><br><span class="line">	scram_HMAC_update(&amp;ctx, <span class="string">&quot;,&quot;</span>, <span class="number">1</span>);</span><br><span class="line">	scram_HMAC_update(&amp;ctx,</span><br><span class="line">					  state-&gt;client_final_message_without_proof,</span><br><span class="line">					  <span class="built_in">strlen</span>(state-&gt;client_final_message_without_proof));</span><br><span class="line">	scram_HMAC_final(ServerSignature, &amp;ctx);</span><br><span class="line"></span><br><span class="line">	server_signature_base64 = palloc(pg_b64_enc_len(SCRAM_KEY_LEN) + <span class="number">1</span>);</span><br><span class="line">	siglen = pg_b64_encode((<span class="keyword">const</span> <span class="keyword">char</span> *) ServerSignature,</span><br><span class="line">						   SCRAM_KEY_LEN, server_signature_base64);</span><br><span class="line">	server_signature_base64[siglen] = <span class="string">&#x27;\0&#x27;</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*------</span></span><br><span class="line"><span class="comment">	 * The syntax for the server-final-message is: (RFC 5802)</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * verifier		   = &quot;v=&quot; base64</span></span><br><span class="line"><span class="comment">	 *					 ;; base-64 encoded ServerSignature.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * server-final-message = (server-error / verifier)</span></span><br><span class="line"><span class="comment">	 *					 [&quot;,&quot; extensions]</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 *------</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">return</span> psprintf(<span class="string">&quot;v=%s&quot;</span>, server_signature_base64);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>客户端在接收到 <code>server signature</code> 之后，通过 <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/blob/REL_10_STABLE/src/interfaces/libpq/fe-auth-scram.c#L603"><code>verify_server_signature()</code></a> 函数进行验证，该函数根据 <code>salt</code> 和 <code>password</code> 计算出 <code>ServerKey</code> 随后在结合认证过程中的消息生成 <code>ServerSignature</code> 并与接收到的 <code>ServerSignature</code> 进行比对，相同则认证成功，不同则认证失败。</p>
+<p><strong>注意：</strong></p>
+<ol>
+<li>我在分析 MD5 加密存储的时候使用的是 9.6 的代码，在分析 SCRAM 的时候用的是 10 的代码，它们之间关于 MD5 的处理存在一定的差异，但是大体流程是一样的。</li>
+<li>PostgreSQL 11 版本中支持了 <code>channel binding</code>，可以将 SCRAM 与 TLS 结合实现安全传输。</li>
+</ol>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://www.pgcon.org/2019/schedule/attachments/530_scram.pdf">https://www.pgcon.org/2019/schedule/attachments/530_scram.pdf</a><br>[2] <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/tree/REL9_6_STABLE">https://github.com/postgres/postgres/tree/REL9_6_STABLE</a><br>[3] <a target="_blank" rel="noopener" href="https://github.com/postgres/postgres/tree/REL_10_STABLE">https://github.com/postgres/postgres/tree/REL_10_STABLE</a></p>
+<div class="just-for-fun">
+笑林广记 - 老面皮
+
+<p>或问世间何物最硬，曰：“石头与钢铁。”<br>其人曰：“石可碎，铁可錾，安得为硬？以弟看来惟兄面上的髭须最硬，铁石总不如也。”<br>问其故，答曰：“兄面皮厚，竟被其出。”<br>须者回嘲曰：“足下面皮更老，这等硬须还钻不透。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2023/03/postgresql-password/" title="聊聊 PostgreSQL 中的密码">https://blog.japinli.top/2023/03/postgresql-password/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/03/postgresql-timestamp/" rel="prev" title="PostgreSQL 中 timestamp 与 timestamptz 的区别">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 中 timestamp 与 timestamptz 的区别
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">738k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">11:11</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
