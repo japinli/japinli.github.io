@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -88,9 +88,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -167,7 +167,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -178,7 +178,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -273,7 +273,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4.7k</span>
+      <span>4.9k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -309,7 +309,7 @@
 
 <p>这是为什么呢？通过查看 <a target="_blank" rel="noopener" href="https://github.com/golang/go/blob/master/src/net/http/server.go#L100">Go 语言的源码</a>，发现了如下内容：</p>
 <blockquote>
-<p> type ResponseWriter interface {<br>     // Header returns the header map that will be sent by<br>     // WriteHeader. The Header map also is the mechanism with which<br>     // Handlers can set HTTP trailers.<br>     //<br>     // Changing the header map after a call to WriteHeader (or<br>     // Write) has no effect unless the modified headers are<br>     // trailers.<br>     //<br>     // There are two ways to set Trailers. The preferred way is to<br>     // predeclare in the headers which trailers you will later<br>     // send by setting the “Trailer” header to the names of the<br>     // trailer keys which will come later. In this case, those<br>     // keys of the Header map are treated as if they were<br>     // trailers. See the example. The second way, for trailer<br>     // keys not known to the Handler until after the first Write,<br>     // is to prefix the Header map keys with the TrailerPrefix<br>     // constant value. See TrailerPrefix.<br>     //<br>     // To suppress automatic response headers (such as “Date”), set<br>     // their value to nil.<br>     Header() Header<br> …<br>}</p>
+<p> type ResponseWriter interface {<br>     &#x2F;&#x2F; Header returns the header map that will be sent by<br>     &#x2F;&#x2F; WriteHeader. The Header map also is the mechanism with which<br>     &#x2F;&#x2F; Handlers can set HTTP trailers.<br>     &#x2F;&#x2F;<br>     &#x2F;&#x2F; Changing the header map after a call to WriteHeader (or<br>     &#x2F;&#x2F; Write) has no effect unless the modified headers are<br>     &#x2F;&#x2F; trailers.<br>     &#x2F;&#x2F;<br>     &#x2F;&#x2F; There are two ways to set Trailers. The preferred way is to<br>     &#x2F;&#x2F; predeclare in the headers which trailers you will later<br>     &#x2F;&#x2F; send by setting the “Trailer” header to the names of the<br>     &#x2F;&#x2F; trailer keys which will come later. In this case, those<br>     &#x2F;&#x2F; keys of the Header map are treated as if they were<br>     &#x2F;&#x2F; trailers. See the example. The second way, for trailer<br>     &#x2F;&#x2F; keys not known to the Handler until after the first Write,<br>     &#x2F;&#x2F; is to prefix the Header map keys with the TrailerPrefix<br>     &#x2F;&#x2F; constant value. See TrailerPrefix.<br>     &#x2F;&#x2F;<br>     &#x2F;&#x2F; To suppress automatic response headers (such as “Date”), set<br>     &#x2F;&#x2F; their value to nil.<br>     Header() Header<br> …<br>}</p>
 </blockquote>
 <p>从注释我们可以看到，在调用了 <code>WriteHeader()</code> 或者是 <code>Write()</code> 函数之后去改变响应头（trailers 响应头除外）是没有效果的。<br>其实，在 Go 的文档里面也出现了上述注释，只是在读文档的时候不够仔细，导致忽略了这一点。</p>
 <p>关于 HTTP Trailers 的相关说明可以参考<a target="_blank" rel="noopener" href="https://www.geeksforgeeks.org/http-headers-trailer/">这里</a>。</p>
@@ -416,13 +416,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

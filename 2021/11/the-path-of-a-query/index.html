@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -20,12 +20,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
-<meta name="description" content="在 PostgreSQL 中，查询一般会经历以下几个阶段：  应用程序连接到 PostgreSQL 并发送查询请求，随后等待返回结果。 解析器（parser）检查应用程序传输的查询的语法是否正确并创建查询树（query tree）。 重写系统（rewrite system）采用解析器阶段创建的查询树，并查找存储在系统表中的规则来重写查询树，例如视图。 规划器&#x2F;优化器（planner&#x2F;optimiz">
+<meta name="description" content="在 PostgreSQL 中，查询一般会经历以下几个阶段：  应用程序连接到 PostgreSQL 并发送查询请求，随后等待返回结果。 解析器（parser）检查应用程序传输的查询的语法是否正确并创建查询树（query tree）。 重写系统（rewrite system）采用解析器阶段创建的查询树，并查找存储在系统表中的规则来重写查询树，例如视图。 规划器&#x2F;优化器（planner&amp;#x">
 <meta property="og:type" content="article">
 <meta property="og:title" content="PostgreSQL SQL 查询路径">
 <meta property="og:url" content="https://blog.japinli.top/2021/11/the-path-of-a-query/index.html">
 <meta property="og:site_name" content="Japin">
-<meta property="og:description" content="在 PostgreSQL 中，查询一般会经历以下几个阶段：  应用程序连接到 PostgreSQL 并发送查询请求，随后等待返回结果。 解析器（parser）检查应用程序传输的查询的语法是否正确并创建查询树（query tree）。 重写系统（rewrite system）采用解析器阶段创建的查询树，并查找存储在系统表中的规则来重写查询树，例如视图。 规划器&#x2F;优化器（planner&#x2F;optimiz">
+<meta property="og:description" content="在 PostgreSQL 中，查询一般会经历以下几个阶段：  应用程序连接到 PostgreSQL 并发送查询请求，随后等待返回结果。 解析器（parser）检查应用程序传输的查询的语法是否正确并创建查询树（query tree）。 重写系统（rewrite system）采用解析器阶段创建的查询树，并查找存储在系统表中的规则来重写查询树，例如视图。 规划器&#x2F;优化器（planner&amp;#x">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blog.japinli.top/2021/11/the-path-of-a-query/connection.png">
 <meta property="og:image" content="https://blog.japinli.top/2021/11/the-path-of-a-query/join.jpg">
@@ -93,9 +93,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -157,7 +157,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BB%BA%E7%AB%8B%E8%BF%9E%E6%8E%A5"><span class="nav-number">1.</span> <span class="nav-text">建立连接</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">解析器</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90%E5%99%A8-1"><span class="nav-number">2.1.</span> <span class="nav-text">解析器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E6%8D%A2%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">转换过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%84%E5%88%99%E7%B3%BB%E7%BB%9F"><span class="nav-number">3.</span> <span class="nav-text">规则系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%A1%E5%88%92%E5%99%A8-%E4%BC%98%E5%8C%96%E5%99%A8"><span class="nav-number">4.</span> <span class="nav-text">计划器&#x2F;优化器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C%E5%99%A8"><span class="nav-number">5.</span> <span class="nav-text">执行器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BB%BA%E7%AB%8B%E8%BF%9E%E6%8E%A5"><span class="nav-number">1.</span> <span class="nav-text">建立连接</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">解析器</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90%E5%99%A8-1"><span class="nav-number">2.1.</span> <span class="nav-text">解析器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AC%E6%8D%A2%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">转换过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%84%E5%88%99%E7%B3%BB%E7%BB%9F"><span class="nav-number">3.</span> <span class="nav-text">规则系统</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%A1%E5%88%92%E5%99%A8-x2F-%E4%BC%98%E5%8C%96%E5%99%A8"><span class="nav-number">4.</span> <span class="nav-text">计划器&#x2F;优化器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C%E5%99%A8"><span class="nav-number">5.</span> <span class="nav-text">执行器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -172,7 +172,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -183,7 +183,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -301,12 +301,12 @@
 <li>应用程序连接到 PostgreSQL 并发送查询请求，随后等待返回结果。</li>
 <li>解析器（parser）检查应用程序传输的查询的语法是否正确并创建查询树（query tree）。</li>
 <li>重写系统（rewrite system）采用解析器阶段创建的查询树，并查找存储在系统表中的规则来重写查询树，例如视图。</li>
-<li>规划器/优化器（planner/optimizer）采用（重写的）查询树并创建一个查询计划，该计划将作为执行器（executor）的输入。<br>它首先创建得到相同结果的所有路径。例如，在表上有索引，那么将会创建两个查询路径：顺序扫描和索引扫描。接下来估计每条路径的执行成本并选择最便宜的路径，将最便宜的路径扩展为执行器可以使用的完整计划。</li>
+<li>规划器&#x2F;优化器（planner&#x2F;optimizer）采用（重写的）查询树并创建一个查询计划，该计划将作为执行器（executor）的输入。<br>它首先创建得到相同结果的所有路径。例如，在表上有索引，那么将会创建两个查询路径：顺序扫描和索引扫描。接下来估计每条路径的执行成本并选择最便宜的路径，将最便宜的路径扩展为执行器可以使用的完整计划。</li>
 <li>执行器递归地遍历计划树并以计划表示的方式检索行。执行器在扫描表时会使用存储系统、执行排序和连接、估算条件并最后归还得到的行。</li>
 </ol>
 <span id="more"></span>
 
-<h2 id="建立连接"><a href="#建立连接" class="headerlink" title="建立连接"></a>建立连接</h2><p>PostgreSQL 采用客户端服务器模型实现，针对每一个客户端的连接，它将为其创建一个后端服务进程。由于我们不能提前知道有多少了连接，因此我们必须使用一个主进程在每次连接请求时创建一个后端服务进程。主进程是一个被称为 <code>postmaster</code> 的进程，它在一个特定的 TCP/IP 端口监听连接请求。当它监测到连接请求时，它将创建一个后端进程。这些后端进程使用信号量和共享内存相互通信并与实例的其他进程通信，以确保整个并发数据访问过程中的数据完整性。</p>
+<h2 id="建立连接"><a href="#建立连接" class="headerlink" title="建立连接"></a>建立连接</h2><p>PostgreSQL 采用客户端服务器模型实现，针对每一个客户端的连接，它将为其创建一个后端服务进程。由于我们不能提前知道有多少了连接，因此我们必须使用一个主进程在每次连接请求时创建一个后端服务进程。主进程是一个被称为 <code>postmaster</code> 的进程，它在一个特定的 TCP&#x2F;IP 端口监听连接请求。当它监测到连接请求时，它将创建一个后端进程。这些后端进程使用信号量和共享内存相互通信并与实例的其他进程通信，以确保整个并发数据访问过程中的数据完整性。</p>
 <p>如下所示，当我们启动数据库后一般会有如下进程。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">px@ubuntu:~/Codes/postgres/Debug$ ps -ef | grep postgres</span><br><span class="line">px       1785509       1  0 17:34 ?        00:00:00 /home/px/Codes/postgres/Debug/pg/bin/postgres</span><br><span class="line">px       1785510 1785509  0 17:34 ?        00:00:00 postgres: checkpointer</span><br><span class="line">px       1785511 1785509  0 17:34 ?        00:00:00 postgres: background writer</span><br><span class="line">px       1785513 1785509  0 17:34 ?        00:00:00 postgres: walwriter</span><br><span class="line">px       1785514 1785509  0 17:34 ?        00:00:00 postgres: autovacuum launcher</span><br><span class="line">px       1785515 1785509  0 17:34 ?        00:00:00 postgres: stats collector</span><br><span class="line">px       1785516 1785509  0 17:34 ?        00:00:00 postgres: logical replication launcher</span><br><span class="line">px       1788661  578230  0 17:53 pts/8    00:00:00 grep --color=auto postgres</span><br></pre></td></tr></table></figure>
 
@@ -320,7 +320,7 @@
 <p>为了验证上面的内容，我们创建 <code>friend</code> 的表并插入数据。</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> friend (firstname text, lastname text, age <span class="type">int</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> friend <span class="keyword">VALUES</span> (<span class="string">&#x27;Sandy&#x27;</span>, <span class="string">&#x27;Tom&#x27;</span>, <span class="number">33</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> friend <span class="keyword">VALUES</span> (<span class="string">&#x27;Lily&#x27;</span>, <span class="string">&#x27;Jane&#x27;</span>, <span class="number">23</span>);</span><br></pre></td></tr></table></figure>
 
-<p>接着我们通过 psql 连接到数据库（注意需要走 TCP/IP，可以使用 <code>psql -h 127.0.0.1</code> 的方式进行连接），并利用 tcpdump 来捕获数据包。</p>
+<p>接着我们通过 psql 连接到数据库（注意需要走 TCP&#x2F;IP，可以使用 <code>psql -h 127.0.0.1</code> 的方式进行连接），并利用 tcpdump 来捕获数据包。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ psql -h 127.0.0.1 postgres</span><br><span class="line">postgres=# SELECT firstname</span><br><span class="line">postgres-# FROM friend</span><br><span class="line">postgres-# WHERE age = 33;</span><br><span class="line"> firstname</span><br><span class="line">-----------</span><br><span class="line"> Sandy</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
 
 <p>下面是 tcpdump 的输出，我们可以看到数据包中包含了我们在 psql 中输入的查询语句。</p>
@@ -364,7 +364,7 @@
 <h2 id="规则系统"><a href="#规则系统" class="headerlink" title="规则系统"></a>规则系统</h2><p>PostgreSQL 支持强大的规则系统来规范视图和模糊视图更新。最初的 PostgreSQL 规则系统由两个实现组成：</p>
 <ul>
 <li>第一个使用行级（row level）处理工作，并在执行程序的深处实现。每当访问单个行时，就会调用规则系统。这个实现在 1995 年被删除，当时伯克利 Postgres 项目的最后一个正式版本被转换成 Postgres95。</li>
-<li>规则系统的第二种实现是一种称为查询重写的技术。重写系统是一个存在于解析器阶段和计划器/优化器之间的模块。</li>
+<li>规则系统的第二种实现是一种称为查询重写的技术。重写系统是一个存在于解析器阶段和计划器&#x2F;优化器之间的模块。</li>
 </ul>
 <p>关于查询重写在 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/rules.html">PostgreSQL 文档</a>中有详细的说明，这也是一个比较大的主题，这里我们简要介绍一下。</p>
 <p>查询重写通过函数 <code>QueryRewrite()</code> 实现，它的输入和输出都是查询树，即树中的表示或语义细节级别没有变化。您可以把它认为是一种宏扩展。<code>QueryRewrite()</code> 函数分为三个步骤：</p>
@@ -373,10 +373,10 @@
 <li>对每个查询应用 RIR 规则。</li>
 <li>确定哪个结果查询应该设置命令结果标签；并相应地更新 <code>canSetTag</code> 字段。</li>
 </ol>
-<h2 id="计划器-优化器"><a href="#计划器-优化器" class="headerlink" title="计划器/优化器"></a>计划器/优化器</h2><p>计划器/优化器的任务是创建一个最佳的执行计划。一个给定的 SQL 查询（今后称为查询树）实际上可以有多种执行方式，每种方式都将产生相同的结果。如果在计算上可行，查询优化器将检查这些可能的执行计划中的每一个，最终选择预期运行速度最快的执行计划。</p>
+<h2 id="计划器-x2F-优化器"><a href="#计划器-x2F-优化器" class="headerlink" title="计划器&#x2F;优化器"></a>计划器&#x2F;优化器</h2><p>计划器&#x2F;优化器的任务是创建一个最佳的执行计划。一个给定的 SQL 查询（今后称为查询树）实际上可以有多种执行方式，每种方式都将产生相同的结果。如果在计算上可行，查询优化器将检查这些可能的执行计划中的每一个，最终选择预期运行速度最快的执行计划。</p>
 <p>在某些情况下，检查一个查询所有可能的执行方式会耗费非常多的时间和内存空间。特别是当涉及大量表做连接操作的时候。为了能在合理的时间内给出一个合理的（不一定是最优的）查询计划，当连接数量超过 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/runtime-config-query.html#GUC-GEQO-THRESHOLD">geqo_threshold</a> 时，PostgreSQL 将使用一种<a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/geqo.html">遗传查询优化器</a>。</p>
 <p>计划器的搜索过程实际上使用称为路径（path）的数据结构，这些数据结构只是计划的简化表示，仅包含规划器做出决策所需的信息。在确定最便宜的路径后，将构建一个完整的计划树以传递给执行者。</p>
-<p>计划器/优化器首先为每个独立的表生产计划，其中可能的计划取决于该表上可用的索引。通常表上只是存在一个顺序扫描的计划。假设在表上定义了一个索引（例如 B-tree 索引）并且查询包含 <code>relation.attribute OPR constant</code> 限制，如果 <code>relation.attribute</code> 恰好与 B-tree 索引的键匹配、并且 <code>OPR</code> 是索引的运算符中列出的运算符之一，那么将使用 B-tree 索引创建一个扫描计划。如果存在更多索引并且查询中的限制恰好与索引的键匹配，则将考虑这些扫描计划。此外，还有可能为匹配 <code>ORDER BY</code> 子句（如果有）的排序或者对归并连接（merge joining）有用的排序索引生成索引扫描计划。</p>
+<p>计划器&#x2F;优化器首先为每个独立的表生产计划，其中可能的计划取决于该表上可用的索引。通常表上只是存在一个顺序扫描的计划。假设在表上定义了一个索引（例如 B-tree 索引）并且查询包含 <code>relation.attribute OPR constant</code> 限制，如果 <code>relation.attribute</code> 恰好与 B-tree 索引的键匹配、并且 <code>OPR</code> 是索引的运算符中列出的运算符之一，那么将使用 B-tree 索引创建一个扫描计划。如果存在更多索引并且查询中的限制恰好与索引的键匹配，则将考虑这些扫描计划。此外，还有可能为匹配 <code>ORDER BY</code> 子句（如果有）的排序或者对归并连接（merge joining）有用的排序索引生成索引扫描计划。</p>
 <p>如果查询包含两个或多个表的连接操作，在找到表的所有扫描计划之后，才会考虑表的连接计划。PostgreSQL 提供了三种策略的连接：</p>
 <ul>
 <li>嵌套循环连接（nested loop join）- 对于左侧表中的每一行，右侧的表都会执行一次扫描。这种策略实现比较简单，但是非常耗时。但是，如果可以使用索引扫描来扫描右侧的表，这可能是一个很好的策略。可以使用来自左表当前行的值作为右表索引扫描的键。</li>
@@ -388,7 +388,7 @@
 <img src="/2021/11/the-path-of-a-query/join.jpg" class="">
 
 <p>最终的计划树由基本上的顺序或索引扫描，加上可能的嵌套循环连接、归并连接和哈希连接，以及可能的其他辅助节点（例如，排序节点、聚合函数计算节点）组成。这些计划节点类型中的大多数都具有进行选择（丢弃不满足指定布尔条件的行）和投影（根据给定的列值计算派生列集，即在需要时评估标量表达式）的附加能力。计划者的职责之一是将来自 <code>WHERE</code> 子句的选择条件和所需输出表达式的计算附加到计划树的最合适的节点上。</p>
-<h2 id="执行器"><a href="#执行器" class="headerlink" title="执行器"></a>执行器</h2><p>执行器采用计划器/优化器创建的计划并递归处理它以提取所需的行集。 这本质上是一种需求拉动的管道机制。 每次调用计划节点时，它都必须再交付一行，或者报告已完成交付行。</p>
+<h2 id="执行器"><a href="#执行器" class="headerlink" title="执行器"></a>执行器</h2><p>执行器采用计划器&#x2F;优化器创建的计划并递归处理它以提取所需的行集。 这本质上是一种需求拉动的管道机制。 每次调用计划节点时，它都必须再交付一行，或者报告已完成交付行。</p>
 <p>以下图的例子来看，顶部节点是一个 MergeJoin 节点。在进行任何合并之前，必须获取两行（每个子计划中的一行）。所以执行器递归调用自己来处理子计划（它从附加到左树的子计划开始）。新的顶部节点（左侧子计划的顶部节点）是一个 Sort 节点，并且需要再次递归来获取输入行。Sort 的子节点是一个 SeqScan 节点，代表对表的实际读取。执行此节点会导致执行程序从表中获取一行并将其返回给调用节点。Sort 节点会反复调用它的子节点来获取所有要排序的行。当输入用完时（如子节点返回 NULL 而不是行），Sort 代码执行排序，最后能够返回其第一个输出行，即排序顺序中的第一个。它保存剩余的行，以便它可以按排序顺序传送它们以响应以后的需求。</p>
 <img src="/2021/11/the-path-of-a-query/merge-join.jpg" class="">
 
@@ -422,10 +422,10 @@
       <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
     </li>
   </ul>
 
@@ -497,13 +497,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

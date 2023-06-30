@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -89,9 +89,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -168,7 +168,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -179,7 +179,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -312,7 +312,7 @@
 <p>因此，我们在使用 CTE 时需要特别注意，正确的使用 CTE 将会带来性能的提升；如果使用不当，则很可能影响数据库性能。</p>
 <h2 id="禁止-CTE-物化？"><a href="#禁止-CTE-物化？" class="headerlink" title="禁止 CTE 物化？"></a>禁止 CTE 物化？</h2><p>那么我们是否能禁止 CTE 物化结果呢？就目前 PostgreSQL 来说，这是不可能的。但是在 2019 年 2 月 16 日 Tom Lane 提交了一个<a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=608b167f9f9c4553c35bb1ec0eab9ddae643989b">补丁</a>来解决该问题。</p>
 <blockquote>
-<p>Historically we’ve always materialized the full output of a CTE query,<br>treating WITH as an optimization fence (so that, for example, restrictions<br>from the outer query cannot be pushed into it).  This is appropriate when<br>the CTE query is INSERT/UPDATE/DELETE, or is recursive; but when the CTE<br>query is non-recursive and side-effect-free, there’s no hazard of changing<br>the query results by pushing restrictions down.</p>
+<p>Historically we’ve always materialized the full output of a CTE query,<br>treating WITH as an optimization fence (so that, for example, restrictions<br>from the outer query cannot be pushed into it).  This is appropriate when<br>the CTE query is INSERT&#x2F;UPDATE&#x2F;DELETE, or is recursive; but when the CTE<br>query is non-recursive and side-effect-free, there’s no hazard of changing<br>the query results by pushing restrictions down.</p>
 <p>Another argument for materialization is that it can avoid duplicate<br>computation of an expensive WITH query — but that only applies if<br>the WITH query is called more than once in the outer query.  Even then<br>it could still be a net loss, if each call has restrictions that<br>would allow just a small part of the WITH query to be computed.</p>
 <p>Hence, let’s change the behavior for WITH queries that are non-recursive<br>and side-effect-free.  By default, we will inline them into the outer<br>query (removing the optimization fence) if they are called just once.<br>If they are called more than once, we will keep the old behavior by<br>default, but the user can override this and force inlining by specifying<br>NOT MATERIALIZED.  Lastly, the user can force the old behavior by<br>specifying MATERIALIZED; this would mainly be useful when the query had<br>deliberately been employing WITH as an optimization fence to prevent a<br>poor choice of plan.</p>
 <p>Andreas Karlsson, Andrew Gierth, David Fetter</p>
@@ -348,10 +348,10 @@
       <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+      <div class="popular-posts-title"><a href="/2022/09/cybertec-postgresql-tde-invalid-argument/" rel="bookmark">PostgreSQL TDE 读取文件参数无效分析</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
     </li>
   </ul>
 
@@ -423,13 +423,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -93,9 +93,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -172,7 +172,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -183,7 +183,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -312,7 +312,7 @@
 <ul>
 <li>事务管理器，包括 ACID 的支持以及快照隔离</li>
 <li>缓冲区管理</li>
-<li>I/O 子系统</li>
+<li>I&#x2F;O 子系统</li>
 <li>TOAST</li>
 <li>查询优化器和执行器</li>
 <li>索引支持</li>
@@ -349,8 +349,8 @@
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> reltuples</span><br><span class="line">−−−−−−−−−−−</span><br><span class="line">    214867</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
 
-<p>在估算成本时，优化器会考虑磁盘输入/输出和 CPU 处理成本。</p>
-<p>I/O 成本按照读取单个页面的开销乘以表中的页面数来估算，前提是这些页面按顺序读取。当缓冲区管理器向操作系统请求一个页面时，系统实际上从磁盘读取了更大的数据块，因此接下来的几个页面可能已经在操作系统的缓存中。这使得顺序读取成本（规划器中由 <code>seq_page_cost</code> 参数给出权重，默认为 1）大大低于随机读取的成本（由 <code>random_page_cost</code> 参数给出权重，默认为 4）。</p>
+<p>在估算成本时，优化器会考虑磁盘输入&#x2F;输出和 CPU 处理成本。</p>
+<p>I&#x2F;O 成本按照读取单个页面的开销乘以表中的页面数来估算，前提是这些页面按顺序读取。当缓冲区管理器向操作系统请求一个页面时，系统实际上从磁盘读取了更大的数据块，因此接下来的几个页面可能已经在操作系统的缓存中。这使得顺序读取成本（规划器中由 <code>seq_page_cost</code> 参数给出权重，默认为 1）大大低于随机读取的成本（由 <code>random_page_cost</code> 参数给出权重，默认为 4）。</p>
 <p>默认权重适用于 HDD 驱动器。如果您使用 SSD，则可以将 <code>random_page_cost</code> 设置得更低（<code>seq_page_cost</code> 通常保留为 1 作为参考值）。成本取决于硬件，因此通常在表空间级别设置 <code>(ALTER TABLESPACE ... SET)</code>。</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> relpages, current_setting(<span class="string">&#x27;seq_page_cost&#x27;</span>) <span class="keyword">AS</span> seq_page_cost,</span><br><span class="line">  relpages <span class="operator">*</span> current_setting(<span class="string">&#x27;seq_page_cost&#x27;</span>)::<span class="type">real</span> <span class="keyword">AS</span> total</span><br><span class="line"><span class="keyword">FROM</span> pg_class <span class="keyword">WHERE</span> relname<span class="operator">=</span><span class="string">&#x27;flights&#x27;</span>;</span><br></pre></td></tr></table></figure>
 
@@ -405,7 +405,7 @@
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> reltuples | per_process</span><br><span class="line">−−−−−−−−−−−+−−−−−−−−−−−−−</span><br><span class="line">   2111110 |      879629</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
 
-<p><code>Parallel Seq Scan</code> 成本的估算方式与 <code>Seq Scan</code> 成本估算大致相同。我们通过让每个进程处理更少的行来赢得时间，但我们仍然通过和通过读取表，因此 I/O 成本不受影响：</p>
+<p><code>Parallel Seq Scan</code> 成本的估算方式与 <code>Seq Scan</code> 成本估算大致相同。我们通过让每个进程处理更少的行来赢得时间，但我们仍然通过和通过读取表，因此 I&#x2F;O 成本不受影响：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> round((</span><br><span class="line">  relpages <span class="operator">*</span> current_setting(<span class="string">&#x27;seq_page_cost&#x27;</span>)::<span class="type">real</span> <span class="operator">+</span></span><br><span class="line">  reltuples <span class="operator">/</span> <span class="number">2.4</span> <span class="operator">*</span> current_setting(<span class="string">&#x27;cpu_tuple_cost&#x27;</span>)::<span class="type">real</span></span><br><span class="line">)::<span class="type">numeric</span>, <span class="number">2</span>)</span><br><span class="line"><span class="keyword">FROM</span> pg_class <span class="keyword">WHERE</span> relname <span class="operator">=</span> <span class="string">&#x27;bookings&#x27;</span>;</span><br></pre></td></tr></table></figure>
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">  round</span><br><span class="line">−−−−−−−−−−</span><br><span class="line"> 22243.29</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
@@ -498,10 +498,11 @@
 <p>在 PostgreSQL 11 中，诸如 <code>CREATE TABLE AS</code>, <code>SELECT INTO</code> 和 <code>CREATE MATERIALIZED VIEW</code> 这样的查询仍然是可以并行的（在 14 和更高的版本 <code>REFRESH MATERIALIZED VIEW</code> 同样可以并行）。</p>
 <p>但是，即使在这些情况下，所有 <code>INSERT</code> 操作仍将按顺序执行。</p>
 </li>
-<li><p>可以在执行期间暂停的任何查询。游标内的查询，包括 PL/pgSQL <code>FOR</code> 循环中的查询。</p>
+<li><p>可以在执行期间暂停的任何查询。游标内的查询，包括 PL&#x2F;pgSQL <code>FOR</code> 循环中的查询。</p>
 </li>
 <li><p>调用 <code>PARALLEL UNSAFE</code> 函数的查询。默认情况下，这包括所有用户定义的函数和一些标准函数。您可以从系统表中获取不安全函数的完整列表：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT * FROM pg_proc WHERE proparallel = &#x27;u&#x27;;</span><br></pre></td></tr></table></figure></li>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT * FROM pg_proc WHERE proparallel = &#x27;u&#x27;;</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>从已经并行化的查询中调用的函数中的查询（避免递归创建新的后台 worker 进程）。</p>
 </li>
 </ul>
@@ -661,13 +662,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

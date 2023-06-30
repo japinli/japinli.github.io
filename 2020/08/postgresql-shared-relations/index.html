@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -89,9 +89,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -168,7 +168,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -179,7 +179,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -315,7 +315,7 @@
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">create pg_authid 1260 shared_relation rowtype_oid 2842</span><br><span class="line"> (</span><br><span class="line"> oid = oid ,</span><br><span class="line"> rolname = name ,</span><br><span class="line"> rolsuper = bool ,</span><br><span class="line"> rolinherit = bool ,</span><br><span class="line"> rolcreaterole = bool ,</span><br><span class="line"> rolcreatedb = bool ,</span><br><span class="line"> rolcanlogin = bool ,</span><br><span class="line"> rolreplication = bool ,</span><br><span class="line"> rolbypassrls = bool ,</span><br><span class="line"> rolconnlimit = int4 ,</span><br><span class="line"> rolpassword = text ,</span><br><span class="line"> rolvaliduntil = timestamptz</span><br><span class="line"> )</span><br><span class="line">open pg_authid</span><br><span class="line">insert ( 10 POSTGRES t t t t t t t -1 _null_ _null_ )</span><br><span class="line">insert ( 3373 pg_monitor f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 3374 pg_read_all_settings f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 3375 pg_read_all_stats f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 3377 pg_stat_scan_tables f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4569 pg_read_server_files f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4570 pg_write_server_files f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4571 pg_execute_server_program f t f f f f f -1 _null_ _null_ )</span><br><span class="line">insert ( 4200 pg_signal_backend f t f f f f f -1 _null_ _null_ )</span><br><span class="line">close pg_authid</span><br></pre></td></tr></table></figure>
 
 <p>当我们使用 initdb 初始化数据库时，<code>setup_data_file_paths()</code> 函数将会设置 <code>postgres.bki</code> 文件路径，随后通过 <code>initialize_data_directory()</code> 函数调用 <code>bootstrap_template1()</code> 函数来读取 <code>postgres.bki</code> 文件中的内容初始化模版数据库。</p>
-<p>最后通过 <code>postgres --boot -x1 -X 16777216 -F</code> 命令来初始化 <code>template1</code> 数据库，在 src/backend/main/main.c 文件中，我们可以看到如下代码：</p>
+<p>最后通过 <code>postgres --boot -x1 -X 16777216 -F</code> 命令来初始化 <code>template1</code> 数据库，在 src&#x2F;backend&#x2F;main&#x2F;main.c 文件中，我们可以看到如下代码：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span></span></span><br><span class="line"><span class="function"><span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (argc &gt; <span class="number">1</span> &amp;&amp; <span class="built_in">strcmp</span>(argv[<span class="number">1</span>], <span class="string">&quot;--boot&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">        AuxiliaryProcessMain(argc, argv);   <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (argc &gt; <span class="number">1</span> &amp;&amp; <span class="built_in">strcmp</span>(argv[<span class="number">1</span>], <span class="string">&quot;--describe-config&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">        GucInfoMain();          <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (argc &gt; <span class="number">1</span> &amp;&amp; <span class="built_in">strcmp</span>(argv[<span class="number">1</span>], <span class="string">&quot;--single&quot;</span>) == <span class="number">0</span>)</span><br><span class="line">        PostgresMain(argc, argv,</span><br><span class="line">                     <span class="literal">NULL</span>,      <span class="comment">/* no dbname */</span></span><br><span class="line">                     strdup(get_user_name_or_exit(progname)));  <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        PostmasterMain(argc, argv); <span class="comment">/* does not return */</span></span><br><span class="line">    <span class="built_in">abort</span>();                    <span class="comment">/* should not get here */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>从上面可以看到，在 initdb 的时候执行的是 <code>AuxiliaryProcessMain()</code> 函数，该函数可以用于创建多种类型的辅助进程，例如，Checkpointer、WAL writer 和 WAL receiver 等进程，该函数通过参数 <code>-x num</code> 来创建不同的进程，有如下辅助进程：</p>
@@ -354,10 +354,10 @@
       <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
     </li>
   </ul>
 
@@ -429,13 +429,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -91,9 +91,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -170,7 +170,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -181,7 +181,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -299,8 +299,8 @@
 
 <span id="more"></span>
 
-<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><p>其实这就是一个数据类型溢出的问题，我第一时间想到的时查看一下这个变量的类型，然而，我发现 <code>VacuumPageHit</code> 是 <code>int64</code> 类型（$2^{63} = 9223372036854775808$），那这个溢出的概率就很小了，在结合其运行的时间来看，几乎不可能发生溢出。</p>
-<p>随后又询问了一下他当前的数据库版本，发现是 11.9 版本，而我查看的是 master 分支代码，因此，存在一定的误差。通过查看 11.9 的源码，发现 <code>VacuumPageHit</code> 被定义为 <code>int</code> 类型（$2^{31} = 2147483648$），那么这个溢出就有很大的概率发生。</p>
+<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><p>其实这就是一个数据类型溢出的问题，我第一时间想到的时查看一下这个变量的类型，然而，我发现 <code>VacuumPageHit</code> 是 <code>int64</code> 类型（$2^{63} &#x3D; 9223372036854775808$），那这个溢出的概率就很小了，在结合其运行的时间来看，几乎不可能发生溢出。</p>
+<p>随后又询问了一下他当前的数据库版本，发现是 11.9 版本，而我查看的是 master 分支代码，因此，存在一定的误差。通过查看 11.9 的源码，发现 <code>VacuumPageHit</code> 被定义为 <code>int</code> 类型（$2^{31} &#x3D; 2147483648$），那么这个溢出就有很大的概率发生。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> ag <span class="string">&#x27;VacuumPageHit&#x27;</span></span></span><br><span class="line">src/backend/utils/init/globals.c</span><br><span class="line">142:int                 VacuumPageHit = 0;</span><br><span class="line"></span><br><span class="line">src/backend/storage/buffer/bufmgr.c</span><br><span class="line">762:                    VacuumPageHit++;</span><br><span class="line"></span><br><span class="line">src/backend/commands/vacuum.c</span><br><span class="line">327:            VacuumPageHit = 0;</span><br><span class="line"></span><br><span class="line">src/backend/commands/vacuumlazy.c</span><br><span class="line">399:                                                     VacuumPageHit,</span><br><span class="line"></span><br><span class="line">src/include/miscadmin.h</span><br><span class="line">253:extern int  VacuumPageHit;</span><br></pre></td></tr></table></figure>
 
 <p>这说明在最新的版本中针对这个问题进行了修改，那可以确定这个 bug 被记录在案。</p>
@@ -424,13 +424,13 @@ Date:   Wed Feb 5 16:59:29 2020 -0300
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

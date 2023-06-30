@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -88,9 +88,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -167,7 +167,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -178,7 +178,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -297,7 +297,8 @@
 
 <h3 id="常用函数"><a href="#常用函数" class="headerlink" title="常用函数"></a>常用函数</h3><ul>
 <li><p>查看数据库大小</p>
- <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_database_size(&#x27;table_name&#x27;);</span><br></pre></td></tr></table></figure></li>
+ <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_database_size(&#x27;table_name&#x27;);</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>查看数据表大小</p>
   <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_relation_size(&#x27;table_name&#x27;);</span><br></pre></td></tr></table></figure></li>
 <li><p>查看数据表大小</p>
@@ -306,9 +307,11 @@
 <p>  <strong>注意：</strong> <code>pg_relation_size</code> 与 <code>pg_table_size</code> 的区别在于 <code>pg_table_size</code> 将获取数据表的 TOAST 表、空闲空间映射表 (FSM) 和可见性表 (但不包括索引表) 的大小；而 <code>pg_relation_size</code> 可以跟一个 fork 类型的参数 (可取的值为 main, fsm, vm, init) 来获取关系表的部分数据大小，默认为 main 类型，此外 <code>pg_relation_size</code> 也可以用于获取索引表的大小。</p>
 </li>
 <li><p>获取数据表大小 (包括索引和 TOAST 表)</p>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_total_relation_size(&#x27;table_name&#x27;);</span><br></pre></td></tr></table></figure></li>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_total_relation_size(&#x27;table_name&#x27;);</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>将数据转为易于人们阅读的格式</p>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_size_pretty(pg_relation_size(&#x27;table_name&#x27;));</span><br></pre></td></tr></table></figure></li>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_size_pretty(pg_relation_size(&#x27;table_name&#x27;));</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>查看对应的表空间的路径</p>
   <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_tablespace_location(oid);</span><br></pre></td></tr></table></figure>
 
@@ -317,11 +320,14 @@
 <li><p>查看表对应的文件路径</p>
   <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_relation_filepath(oid);</span><br></pre></td></tr></table></figure></li>
 <li><p>获取当前事务 ID 编号</p>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT txid_current();</span><br></pre></td></tr></table></figure></li>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT txid_current();</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>获取当前 WAL 日志的写入位置</p>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_current_wal_lsn();          -- version 10 or later</span><br><span class="line">SELECT pg_current_xlog_location();    -- before version 10</span><br></pre></td></tr></table></figure></li>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_current_wal_lsn();          -- version 10 or later</span><br><span class="line">SELECT pg_current_xlog_location();    -- before version 10</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>获取当前 WAL 日志的插入位置</p>
-  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_current_wal_insert_lsn();          -- version 10 or later</span><br><span class="line">SELECT pg_current_xlog_insert_location();    -- before version 10</span><br></pre></td></tr></table></figure></li>
+  <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_current_wal_insert_lsn();          -- version 10 or later</span><br><span class="line">SELECT pg_current_xlog_insert_location();    -- before version 10</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>获取日志所在的 WAL 日志文件</p>
   <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SELECT pg_walfile_name(lsn);     -- version 10 or later</span><br><span class="line">SELECT pg_xlogfile_name(lsn);    -- before version 10</span><br></pre></td></tr></table></figure></li>
 </ul>
@@ -333,7 +339,7 @@
 <p>  主要 WAL 日志的磁盘使用率低于此设置，那么旧的 WAL 日志文件将被回收用于后续的 CHECKPOINT 使用。它可以确保有足够的磁盘空间来存放 WAL 日志记录。</p>
 </li>
 <li><p><code>checkpoint_completion_target (floating point)</code></p>
-<p>  该参数指定 CHECKPOINT 完成的目标，作为 CHECKPOINT 之间的总时间的一部分。该参数可以用于缓解两个 CHECKPOINT 之间的 I/O 负载。</p>
+<p>  该参数指定 CHECKPOINT 完成的目标，作为 CHECKPOINT 之间的总时间的一部分。该参数可以用于缓解两个 CHECKPOINT 之间的 I&#x2F;O 负载。</p>
 </li>
 </ul>
 <h3 id="psql-使用"><a href="#psql-使用" class="headerlink" title="psql 使用"></a>psql 使用</h3><ul>
@@ -350,7 +356,8 @@
 </ul>
 <h3 id="性能分析"><a href="#性能分析" class="headerlink" title="性能分析"></a>性能分析</h3><ul>
 <li><p>查询数据库事务提交率</p>
-  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> xact_commit::<span class="type">float</span> <span class="operator">/</span> (xact_commit <span class="operator">+</span> xact_rollback) <span class="keyword">AS</span> xact_commit_rate</span><br><span class="line"><span class="keyword">FROM</span> pg_stat_database <span class="keyword">WHERE</span> datname <span class="operator">=</span> <span class="string">&#x27;postgres&#x27;</span>;</span><br></pre></td></tr></table></figure></li>
+  <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> xact_commit::<span class="type">float</span> <span class="operator">/</span> (xact_commit <span class="operator">+</span> xact_rollback) <span class="keyword">AS</span> xact_commit_rate</span><br><span class="line"><span class="keyword">FROM</span> pg_stat_database <span class="keyword">WHERE</span> datname <span class="operator">=</span> <span class="string">&#x27;postgres&#x27;</span>;</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>查询数据库缓存命中率</p>
   <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> blks_hit::<span class="type">float</span> <span class="operator">/</span> (blks_hit <span class="operator">+</span> blks_read) <span class="keyword">AS</span> blks_hit_rate</span><br><span class="line"><span class="keyword">FROM</span> pg_stat_database <span class="keyword">WHERE</span> datname <span class="operator">=</span> <span class="string">&#x27;postgres&#x27;</span>;</span><br></pre></td></tr></table></figure></li>
 </ul>
@@ -374,10 +381,10 @@
       <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+      <div class="popular-posts-title"><a href="/2022/09/cybertec-postgresql-tde-invalid-argument/" rel="bookmark">PostgreSQL TDE 读取文件参数无效分析</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
     </li>
   </ul>
 
@@ -448,13 +455,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

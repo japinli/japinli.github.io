@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -88,9 +88,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -167,7 +167,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -178,7 +178,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -309,7 +309,7 @@
 
 <p>从上面的结果，我们可以看到，<code>FORCE ROW LEVEL SECURITY</code> 可以控制表所有者的行级安全策略行为，相应的，我们可以通过 <code>NO FORCE ROW LEVEL SECURITY</code> 来禁用表所有者的行级安全策略。在梳理这个功能的时候，我还给 PostgreSQL 提供了一个关于<a target="_blank" rel="noopener" href="https://postgr.es/m/15B10F9F-5847-4F5E-BD66-8E25AA473C95@hotmail.com">行级安全策略的 psql 补全功能</a>，代码十分简单，感兴趣的可以去看看。</p>
 <h2 id="策略表达式"><a href="#策略表达式" class="headerlink" title="策略表达式"></a>策略表达式</h2><p>在之前的行级安全策略中，我们都只用到了 <code>USING</code> 表达式，PostgreSQL 还支持行级安全策略中使用 <code>CHECK</code> 表达式，它们两者的用途是不一样的。</p>
-<p>正如上面看到的，<code>USING</code> 表达式表明了用户可以读取哪些数据，而 <code>CHECK</code> 表达式则指明了哪些数据可以插入/更新到表中。需要注意的是，如果表没有 <code>CHECK</code> 表达式，那么它将使用 <code>USING</code> 表达式。</p>
+<p>正如上面看到的，<code>USING</code> 表达式表明了用户可以读取哪些数据，而 <code>CHECK</code> 表达式则指明了哪些数据可以插入&#x2F;更新到表中。需要注意的是，如果表没有 <code>CHECK</code> 表达式，那么它将使用 <code>USING</code> 表达式。</p>
 <p>我们先来看看没有 <code>CHECK</code> 表达式时，插入违反 <code>USING</code> 表达式的示例，接上面的例子。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">postgres=&gt; INSERT INTO tblrls VALUES (3, 30, &#x27;rls2&#x27;);  -- rls1 用户</span><br><span class="line">ERROR:  new row violates row-level security policy for table &quot;tblrls&quot;</span><br></pre></td></tr></table></figure>
 
@@ -348,10 +348,10 @@
       <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+      <div class="popular-posts-title"><a href="/2022/09/cybertec-postgresql-tde-invalid-argument/" rel="bookmark">PostgreSQL TDE 读取文件参数无效分析</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
     </li>
   </ul>
 
@@ -422,13 +422,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

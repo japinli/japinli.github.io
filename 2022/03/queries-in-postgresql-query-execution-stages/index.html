@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -97,9 +97,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -176,7 +176,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -187,7 +187,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -356,7 +356,7 @@
 <li>初始表之一从计划树中消失了，因为规划器发现不需要处理查询并将其删除。</li>
 <li>估计要处理的行数和每个节点旁边的处理成本。</li>
 </ul>
-<p>计划搜索（<strong>Plan search</strong>）。为了找到最佳计划，PostgreSQL 使用了基于成本的查询优化器（<em>cost-based query optimizer</em>）。优化器会检查各种可用的执行计划并估计所需的资源量，例如 I/O 操作和 CPU 周期。这个计算出来的估计，转换成任意单位，被称为计划成本（<em>plan cost</em>）。选择成本最低的计划来执行。</p>
+<p>计划搜索（<strong>Plan search</strong>）。为了找到最佳计划，PostgreSQL 使用了基于成本的查询优化器（<em>cost-based query optimizer</em>）。优化器会检查各种可用的执行计划并估计所需的资源量，例如 I&#x2F;O 操作和 CPU 周期。这个计算出来的估计，转换成任意单位，被称为计划成本（<em>plan cost</em>）。选择成本最低的计划来执行。</p>
 <p>问题是，可能的计划数量随着连接数量的增加而呈指数增长，即使对于相对简单的查询，也无法一一筛选所有计划。因此，动态规划和启发式用于限制搜索范围。这允许在合理的时间内精确地解决查询中更多表的问题，但所选计划不能保证是真正最优的，因为计划员使用简化的数学模型，并且可能使用不精确的初始数据。</p>
 <p>连接顺序（<strong>Ordering joins</strong>）。可以以特定方式构建查询，以显着缩小搜索范围（有可能错过找到最佳计划的机会）</p>
 <ul>
@@ -399,7 +399,7 @@
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Sort  (cost=21.03..21.04 rows=1 width=128)</span><br></pre></td></tr></table></figure>
 
 <p>第一个组成部分，启动成本，是为节点执行做准备的成本；第二个组成部分，总成本，代表总节点执行成本。</p>
-<p>当选择计划时，规划器首先检查游标是否正在使用（可以在 PL/pgSQL 中使用 <code>DECLARE</code> 命令设置游标或明确声明）。如果没有使用游标，那么规划器假定需要全部输出并选择总成本最低的计划。</p>
+<p>当选择计划时，规划器首先检查游标是否正在使用（可以在 PL&#x2F;pgSQL 中使用 <code>DECLARE</code> 命令设置游标或明确声明）。如果没有使用游标，那么规划器假定需要全部输出并选择总成本最低的计划。</p>
 <p>否则，如果使用游标，那么规划器会选择一个计划，以最佳方式检索匹配行总数中等于 <code>cursor_tuple_fraction</code>（默认为 0.1）的行数。或者，更具体地说，最低的计划 <code>startup cost + cursor_tuple_fraction * (total cost - startup cost)</code>。</p>
 <p>成本计算过程（<strong>Cost calculation process</strong>）。要估计计划成本，必须单独估计其每个节点。节点成本取决于节点类型（从表中读取的成本远低于对表排序的成本）和处理的数据量（通常，数据越多，成本越高）。虽然节点类型是立即知道的，但要评估数据量，我们首先需要估计节点的基数（输入行的数量）和选择率（剩余用于输出的行的比例）。为此，我们需要数据统计：表大小、跨列的数据分布。</p>
 <p>因此，优化依赖于准确的统计数据，这些数据由自动分析过程收集并保持最新。</p>
@@ -413,8 +413,8 @@
 <p>选择率是一个介于 0 到 1 之间的数字。选择率的值越接近 0 则具有更高的选择率，反之，越接近 1 则具有更低的选择率。这是因为高选择率会消除较高比例的行，而较低的选择率值会降低阈值，因此丢弃的行数会更少。</p>
 <p>首先处理具有数据访问方法的叶节点。这就是统计信息的来源，例如表大小。</p>
 <p>应用于表的条件的选择率取决于条件类型。在最简单的形式中，选择率可以是一个常数值，但规划器会尝试使用所有可用信息来产生最准确的估计。最简单条件的选择率估计作为基础，使用布尔运算构建的复杂条件可以使用以下简单公式进一步计算：</p>
-<p>$$<br>sel_{x\ and\ y} = sel_{x}\ sel_{y}<br>$$</p>
-<p>$$<br>sel_{x\ or\ y} = 1 - (1 -sel_{x})(1 - sel_{y}) = sel_{x} + sel_{y} - sel_{x}\ sel_{y}<br>$$</p>
+<p>$$<br>sel_{x\ and\ y} &#x3D; sel_{x}\ sel_{y}<br>$$</p>
+<p>$$<br>sel_{x\ or\ y} &#x3D; 1 - (1 -sel_{x})(1 - sel_{y}) &#x3D; sel_{x} + sel_{y} - sel_{x}\ sel_{y}<br>$$</p>
 <p>在这些公式中，$x$ 和 $y$ 被认为是独立的。如果它们相关，则仍使用这些公式，但估计会不太准确。</p>
 <p>对于连接的基数估计，计算两个值：笛卡尔积的基数（两个数据集的基数的乘积）和连接条件的选择率，这又取决于条件类型。</p>
 <p>其他节点类型的基数，例如排序或聚合节点，也是类似地计算的。</p>
@@ -456,7 +456,7 @@
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">−[ RECORD 1 ]−−−+−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−</span><br><span class="line">name            | plane</span><br><span class="line">statement       | PREPARE plane(text) AS                           +</span><br><span class="line">                | SELECT * FROM aircrafts WHERE aircraft_code = $1;</span><br><span class="line">parameter_types | &#123;text&#125;</span><br></pre></td></tr></table></figure>
 
-<p>该视图没有列出任何未命名的语句（使用扩展协议或 PL/pgSQL）。它也没有列出来自其他会话的准备好的语句：访问另一个会话的内存是不可能的。</p>
+<p>该视图没有列出任何未命名的语句（使用扩展协议或 PL&#x2F;pgSQL）。它也没有列出来自其他会话的准备好的语句：访问另一个会话的内存是不可能的。</p>
 <h3 id="参数绑定"><a href="#参数绑定" class="headerlink" title="参数绑定"></a>参数绑定</h3><p>在执行 <code>PREPARE</code> 的查询之前，会绑定当前参数值。</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXECUTE</span> plane(<span class="string">&#x27;733&#x27;</span>);</span><br></pre></td></tr></table></figure>
 
@@ -610,13 +610,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

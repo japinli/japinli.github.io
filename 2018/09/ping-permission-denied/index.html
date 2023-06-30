@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -88,9 +88,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -167,7 +167,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -178,7 +178,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -300,12 +300,12 @@
 
 <span id="more"></span>
 
-<p>那么什么是 suid 权限呢？我们所熟悉的文件权限包括读、写和可执行 (r/w/x) 三种权限，其实在 Linux 系统中对所有文件还有三种特殊的权限说明，即 SUID, SGID 和 Sticky Bits。</p>
+<p>那么什么是 suid 权限呢？我们所熟悉的文件权限包括读、写和可执行 (r&#x2F;w&#x2F;x) 三种权限，其实在 Linux 系统中对所有文件还有三种特殊的权限说明，即 SUID, SGID 和 Sticky Bits。</p>
 <h3 id="Sticky-Bit"><a href="#Sticky-Bit" class="headerlink" title="Sticky Bit"></a>Sticky Bit</h3><p>由于 Unix 是多用户操作系统并且设计为多个用户可以同时使用，而 Sticky Bit 则告诉 Unix 系统一旦程序被执行，那么他将一直保留在内存当中，这样可以避免不同用户执行同一程序进行多次加载。在设置了 Sticky Bit 位后，当一个用户使用了这个程序，另一个用户再次使用时可以避免初始化该程序的过程。Sticky Bit 的概念在快速磁盘访问 (Fast Disk Access) 和内存访问技术 (Memory Access Technologies) 出现之前非常有用。随着技术的发展程序加载到内存的时间的减少，Sticky Bit 的概念逐渐被废弃，因此，目前 Sticky Bit 的作用不是很明显。需要注意的是 Sticky Bit 只能用于可执行文件。</p>
 <h3 id="SUID-Set-User-ID-Bit"><a href="#SUID-Set-User-ID-Bit" class="headerlink" title="SUID (Set User ID) Bit"></a>SUID (Set User ID) Bit</h3><p>SUID (Set User ID) 意味着当执行应用程序时，用户的 ID 将被设置为文件或程序所有者的 ID 而不是当前用户的 ID。例如，假设我有一个应用程序他的所有者为 root 并且设置和了 SUID 位，那么当我以普通用户运行该应用程序时，该应用程序依然会以 root 身份运行。这是由于 SUID 位告诉 Linux 系统为该应用程序设置 root 用户的 ID，并且在运行时始终以 root 用户的身份去运行该应用程序 (此处文件的所有者为 root 用户)。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 设置文件 SUID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod u+s filename</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 去掉文件 SUID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod u-s filename</span></span><br></pre></td></tr></table></figure>
 
-<h3 id="SGID-Set-Group-ID-Bit"><a href="#SGID-Set-Group-ID-Bit" class="headerlink" title="SGID (Set Group ID) Bit"></a>SGID (Set Group ID) Bit</h3><p>SGID (Set Group ID) 与 SUID 类似，他意味着文件执行时设置其执行的用户组 ID。通常情况下，在 Linux/Unix 系统中程序运行时会继承当前登录用户的权限。SGID 则可以给运行的程序临时修改有效用户组为文件所属的组。</p>
+<h3 id="SGID-Set-Group-ID-Bit"><a href="#SGID-Set-Group-ID-Bit" class="headerlink" title="SGID (Set Group ID) Bit"></a>SGID (Set Group ID) Bit</h3><p>SGID (Set Group ID) 与 SUID 类似，他意味着文件执行时设置其执行的用户组 ID。通常情况下，在 Linux&#x2F;Unix 系统中程序运行时会继承当前登录用户的权限。SGID 则可以给运行的程序临时修改有效用户组为文件所属的组。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 设置文件 SGID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod g+s filename</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> <span class="comment"># 去掉文件 SGID 位</span></span></span><br><span class="line"><span class="meta">$</span><span class="bash"> chmod g-s filename</span></span><br></pre></td></tr></table></figure>
 
 <h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><ol>
@@ -386,13 +386,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -90,9 +90,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -169,7 +169,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -180,7 +180,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -294,11 +294,11 @@
     
     <div class="post-body" itemprop="articleBody">
         <p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 为 Linux 内核和用户态程序提供了动态跟踪功能。用户可以自定义探测事件来跟踪程序的运行情况，如函数调用栈、系统调用以及其他事件。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 可以在不修改代码、甚至是不需要重启的情况下就能分析程序的运行情况。</p>
-<p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的基本思想是命名事件，以及事件对应的处理程序。当运行 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本时，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会监视事件；一旦事件发生，Linux 内核就会将处理程序作为子例程运行，然后继续运行。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 有几种事件：进入/退出函数、计时器到期、会话开始/终止等。处理程序是一系列脚本语句，指定事件发生时要执行的工作。这项工作包括从事件上下午中提取数据，将其存储到内部变量中，打印结果。</p>
+<p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的基本思想是命名事件，以及事件对应的处理程序。当运行 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本时，<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会监视事件；一旦事件发生，Linux 内核就会将处理程序作为子例程运行，然后继续运行。<a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 有几种事件：进入&#x2F;退出函数、计时器到期、会话开始&#x2F;终止等。处理程序是一系列脚本语句，指定事件发生时要执行的工作。这项工作包括从事件上下午中提取数据，将其存储到内部变量中，打印结果。</p>
 <p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的工作原理是将 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 脚本翻译成 C 语言，然后将其编译为内核模块，并加载到内核中并启用脚本中的探测点；当相应的事件发生时，事件对应的处理程序被执行；一旦 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 会话结束，探测点将被禁用，内核模块也被卸载。下图是 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 的处理过程。</p>
 <img src="/2023/01/systemtap-dynamic-tracing/systemtap-processing-steps.png" class="">
 
-<p>图片来源于 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/archpaper.pdf">Architecture of systemtap: a Linux trace/probe tool</a>。</p>
+<p>图片来源于 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/archpaper.pdf">Architecture of systemtap: a Linux trace&#x2F;probe tool</a>。</p>
 <span id="more"></span>
 
 <h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><p>本文的环境如下所示：</p>
@@ -373,7 +373,7 @@
 <li><code>timer.us(microseconds)</code></li>
 <li><code>timer.ns(nanoseconds)</code></li>
 <li><code>timer.hz(hertz)</code></li>
-<li><code>timer.jiffies(jiffies)</code><br>当与其他收集信息的探测点一起使用时，计时器事件允许您定期打印更新并查看该信息如何随时间变化。</li>
+<li><code>timer.jiffies(jiffies)</code><br> 当与其他收集信息的探测点一起使用时，计时器事件允许您定期打印更新并查看该信息如何随时间变化。</li>
 </ul>
 </li>
 </ul>
@@ -439,11 +439,11 @@
 
 <p><a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 支持以下聚合运算：</p>
 <ul>
-<li><code>count</code> - 返回存储在变量/数组索引表达式中的所有值的数量。</li>
-<li><code>sum</code> - 返回存储在变量/数组索引表达式中的所有值的总和。</li>
-<li><code>min</code> - 返回存储在变量/数组索引表达式中的所有值中的最小值。</li>
-<li><code>max</code> - 返回存储在变量/数组索引表达式中的所有值中的最大值。</li>
-<li><code>avg</code> - 返回存储在变量/数组索引表达式中的所有值中的平均值。</li>
+<li><code>count</code> - 返回存储在变量&#x2F;数组索引表达式中的所有值的数量。</li>
+<li><code>sum</code> - 返回存储在变量&#x2F;数组索引表达式中的所有值的总和。</li>
+<li><code>min</code> - 返回存储在变量&#x2F;数组索引表达式中的所有值中的最小值。</li>
+<li><code>max</code> - 返回存储在变量&#x2F;数组索引表达式中的所有值中的最大值。</li>
+<li><code>avg</code> - 返回存储在变量&#x2F;数组索引表达式中的所有值中的平均值。</li>
 </ul>
 <h2 id="SystemTap-跟踪-PostgreSQL"><a href="#SystemTap-跟踪-PostgreSQL" class="headerlink" title="SystemTap 跟踪 PostgreSQL"></a>SystemTap 跟踪 PostgreSQL</h2><p>本节将介绍如何使用 <a target="_blank" rel="noopener" href="https://sourceware.org/systemtap/">SystemTap</a> 来跟踪 PostgreSQL。</p>
 <h3 id="查看探测点"><a href="#查看探测点" class="headerlink" title="查看探测点"></a>查看探测点</h3><p>首先，我们使用 <code>stap</code> 命令来获取 PostgreSQL 中所有的探测点。</p>
@@ -587,13 +587,13 @@ $ sudo apt-get install linux-image-$(uname -r)-dbgsym
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

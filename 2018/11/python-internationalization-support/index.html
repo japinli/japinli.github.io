@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -88,9 +88,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -167,7 +167,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -178,7 +178,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -313,23 +313,23 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Internationalization test.</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> gettext</span><br><span class="line">_ = gettext.gettext</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">printSomeMessages</span>():</span></span><br><span class="line">    <span class="built_in">print</span>(_(<span class="string">&quot;Hello world!&quot;</span>))</span><br><span class="line">    <span class="built_in">print</span>(_(<span class="string">&quot;This is a translate message.&quot;</span>))</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    printSomeMessages()</span><br></pre></td></tr></table></figure>
 
 <p>注意，我们引入了 gettext 模块并将 <code>_</code> 赋值为 <code>gettext.gettext</code>。这样可以保证我们的程序可以正常运行。</p>
-<h2 id="生成原始翻译消息"><a href="#生成原始翻译消息" class="headerlink" title="生成原始翻译消息"></a>生成原始翻译消息</h2><p>为了自动化在整个应用程序中从包装字符串生成原始可翻译消息的过程，gettext 库的作者提供了一组工具用于解析源文件并提取需要翻译的消息。最初，GNU gettext 仅支持 C/C++ 源码，但是它的扩展程序 xgettext 支持多种语言的源码，包括 Python，Lisp，Java 等。</p>
+<h2 id="生成原始翻译消息"><a href="#生成原始翻译消息" class="headerlink" title="生成原始翻译消息"></a>生成原始翻译消息</h2><p>为了自动化在整个应用程序中从包装字符串生成原始可翻译消息的过程，gettext 库的作者提供了一组工具用于解析源文件并提取需要翻译的消息。最初，GNU gettext 仅支持 C&#x2F;C++ 源码，但是它的扩展程序 xgettext 支持多种语言的源码，包括 Python，Lisp，Java 等。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> i18n</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> xgettext -o locales/en_US/LC_MESSAGES/base.po_en src/*.py</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> xgettext -o locales/zh_CN/LC_MESSAGES/base.po_zh src/*.py</span></span><br></pre></td></tr></table></figure>
 
 <p>原始信息 (两个文件内容一致) 如下所示：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"># SOME DESCRIPTIVE TITLE.</span><br><span class="line"># Copyright (C) YEAR THE PACKAGE&#x27;S COPYRIGHT HOLDER</span><br><span class="line"># This file is distributed under the same license as the PACKAGE package.</span><br><span class="line"># FIRST AUTHOR &lt;EMAIL@ADDRESS&gt;, YEAR.</span><br><span class="line">#</span><br><span class="line">#, fuzzy</span><br><span class="line">msgid &quot;&quot;</span><br><span class="line">msgstr &quot;&quot;</span><br><span class="line">&quot;Project-Id-Version: PACKAGE VERSION\n&quot;</span><br><span class="line">&quot;Report-Msgid-Bugs-To: \n&quot;</span><br><span class="line">&quot;POT-Creation-Date: 2018-11-04 10:24+0800\n&quot;</span><br><span class="line">&quot;PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n&quot;</span><br><span class="line">&quot;Last-Translator: FULL NAME &lt;EMAIL@ADDRESS&gt;\n&quot;</span><br><span class="line">&quot;Language-Team: LANGUAGE &lt;LL@li.org&gt;\n&quot;</span><br><span class="line">&quot;Language: \n&quot;</span><br><span class="line">&quot;MIME-Version: 1.0\n&quot;</span><br><span class="line">&quot;Content-Type: text/plain; charset=CHARSET\n&quot;</span><br><span class="line">&quot;Content-Transfer-Encoding: 8bit\n&quot;</span><br><span class="line"></span><br><span class="line">#: src/main.py:11</span><br><span class="line">msgid &quot;Hello world!&quot;</span><br><span class="line">msgstr &quot;&quot;</span><br><span class="line"></span><br><span class="line">#: src/main.py:12</span><br><span class="line">msgid &quot;This is a translate message.&quot;</span><br><span class="line">msgstr &quot;&quot;</span><br></pre></td></tr></table></figure>
 
 <h2 id="翻译"><a href="#翻译" class="headerlink" title="翻译"></a>翻译</h2><p>在得到原始翻译消息之后，我们就可以通过编辑生成的 <code>*.po</code> 文件进行翻译工作了。这里需要注意的是 PO 文件具有自己的格式，因此尽量使用专用的 PO 文件编辑器进行修改。我个人使用的 Emacs + po-mode 进行编辑。</p>
-<p>翻译 locales/en_US/LC_MESSAGES/base.po_en 为：</p>
+<p>翻译 locales&#x2F;en_US&#x2F;LC_MESSAGES&#x2F;base.po_en 为：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"># I18N.</span><br><span class="line"># Copyright (C) 2018 Japin Li</span><br><span class="line"># This file is distributed under the same license as the I18N package.</span><br><span class="line"># Japin Li &lt;japinli@hotmail.com&gt;, 2018.</span><br><span class="line">#</span><br><span class="line">#, fuzzy</span><br><span class="line">msgid &quot;&quot;</span><br><span class="line">msgstr &quot;&quot;</span><br><span class="line">&quot;Project-Id-Version: 0.0.1\n&quot;</span><br><span class="line">&quot;Report-Msgid-Bugs-To: \n&quot;</span><br><span class="line">&quot;POT-Creation-Date: 2018-11-04 10:24+0800\n&quot;</span><br><span class="line">&quot;PO-Revision-Date: 2018-11-04 10:26+0800\n&quot;</span><br><span class="line">&quot;Last-Translator: Japin Li &lt;japinli@hotmail.com&gt;\n&quot;</span><br><span class="line">&quot;Language-Team: English &lt;LL@li.org&gt;\n&quot;</span><br><span class="line">&quot;Language: \n&quot;</span><br><span class="line">&quot;MIME-Version: 1.0\n&quot;</span><br><span class="line">&quot;Content-Type: text/plain; charset=ASCII\n&quot;</span><br><span class="line">&quot;Content-Transfer-Encoding: 8bit\n&quot;</span><br><span class="line"></span><br><span class="line">#: src/main.py:11</span><br><span class="line">msgid &quot;Hello world!&quot;</span><br><span class="line">msgstr &quot;Hello world!&quot;</span><br><span class="line"></span><br><span class="line">#: src/main.py:12</span><br><span class="line">msgid &quot;This is a translate message.&quot;</span><br><span class="line">msgstr &quot;This is a translate message.&quot;</span><br></pre></td></tr></table></figure>
 
-<p>翻译 locales/zh_CN/LC_MESSAGES/base.po_zh 为：</p>
+<p>翻译 locales&#x2F;zh_CN&#x2F;LC_MESSAGES&#x2F;base.po_zh 为：</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"># I18N.</span><br><span class="line"># Copyright (C) 2018 Japin Li</span><br><span class="line"># This file is distributed under the same license as the I18N package.</span><br><span class="line"># Japin Li &lt;japinli@hotmail.com&gt;, 2018.</span><br><span class="line">#</span><br><span class="line">#, fuzzy</span><br><span class="line">msgid &quot;&quot;</span><br><span class="line">msgstr &quot;&quot;</span><br><span class="line">&quot;Project-Id-Version: 0.0.1\n&quot;</span><br><span class="line">&quot;Report-Msgid-Bugs-To: \n&quot;</span><br><span class="line">&quot;POT-Creation-Date: 2018-11-04 10:24+0800\n&quot;</span><br><span class="line">&quot;PO-Revision-Date: 2018-11-04 10:37+0800\n&quot;</span><br><span class="line">&quot;Last-Translator: Japin Li &lt;japinli@hotmail.com&gt;\n&quot;</span><br><span class="line">&quot;Language-Team: Chinese &lt;LL@li.org&gt;\n&quot;</span><br><span class="line">&quot;Language: \n&quot;</span><br><span class="line">&quot;MIME-Version: 1.0\n&quot;</span><br><span class="line">&quot;Content-Type: text/plain; charset=UTF-8\n&quot;</span><br><span class="line">&quot;Content-Transfer-Encoding: 8bit\n&quot;</span><br><span class="line"></span><br><span class="line">#: src/main.py:11</span><br><span class="line">msgid &quot;Hello world!&quot;</span><br><span class="line">msgstr &quot;你好世界！&quot;</span><br><span class="line"></span><br><span class="line">#: src/main.py:12</span><br><span class="line">msgid &quot;This is a translate message.&quot;</span><br><span class="line">msgstr &quot;这是一个翻译消息。&quot;</span><br></pre></td></tr></table></figure>
 
 <p>上述翻译需要注意中文的编码要选择 <code>UTF-8</code>，至于其他的诸如 PACKAGE VERSION，COPYRIGHT 等可以根据自己需要进行填写。当翻译完成之后，我们需要将 <code>*.po</code> 文件通过 msgfmt 最终转换为 <code>*.mo</code> 文件。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> <span class="built_in">cd</span> i18n</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> msgfmt -o locales/en_US/LC_MESSAGES/base.mo locales/en_US/LC_MESSAGES/base.po_en</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> msgfmt -o locales/zh_CN/LC_MESSAGES/base.mo locales/zh_CN/LC_MESSAGES/base.po_zh</span></span><br></pre></td></tr></table></figure>
 
-<h2 id="执行"><a href="#执行" class="headerlink" title="执行"></a>执行</h2><p>我们修改 src/main.py 文件为：</p>
+<h2 id="执行"><a href="#执行" class="headerlink" title="执行"></a>执行</h2><p>我们修改 src&#x2F;main.py 文件为：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Internationalization test.</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> gettext</span><br><span class="line">_ = gettext.gettext</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">printSomeMessages</span>():</span></span><br><span class="line">    <span class="built_in">print</span>(_(<span class="string">&quot;Hello world!&quot;</span>))</span><br><span class="line">    <span class="built_in">print</span>(_(<span class="string">&quot;This is a translate message.&quot;</span>))</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line">localedir=os.path.dirname(os.path.abspath(sys.argv[<span class="number">0</span>])) + <span class="string">&#x27;/../locales&#x27;</span></span><br><span class="line">zh_CN = gettext.translation(<span class="string">&#x27;base&#x27;</span>, localedir, languages=[<span class="string">&#x27;zh_CN&#x27;</span>]);</span><br><span class="line">zh_CN.install()</span><br><span class="line">_ = zh_CN.gettext</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    printSomeMessages()</span><br></pre></td></tr></table></figure>
 
 <p>其中 <code>getext.translation</code> 函数有三个较为重要的参数。</p>
@@ -356,10 +356,10 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
   <div class="popular-posts-header">相关文章</div>
   <ul class="popular-posts">
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/04/pyqt5-signal-slot/" rel="bookmark">PyQt5 信号槽自定义参数</a></div>
+      <div class="popular-posts-title"><a href="/2019/07/pyinstaller-package-pyqt5-error-on-Qt5Core/" rel="bookmark">PyInstaller 打包 PyQt5 失败 - 执行脚本失败</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/07/pyinstaller-package-pyqt5-error-on-Qt5Core/" rel="bookmark">PyInstaller 打包 PyQt5 失败 - 执行脚本失败</a></div>
+      <div class="popular-posts-title"><a href="/2019/04/pyqt5-signal-slot/" rel="bookmark">PyQt5 信号槽自定义参数</a></div>
     </li>
   </ul>
 
@@ -430,13 +430,13 @@ GNU gettext 是国际化 (i18n) 开发古老而成熟的解决方案。它可以
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -88,9 +88,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -167,7 +167,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -178,7 +178,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -308,7 +308,7 @@
 <p>接下来我们尝试配置 WAL 日志归档，首先进行相关的准备工作，编译 PostgreSQL 10.4，初始化数据库，建立归档日志存储路径 (本例旨在使用 WAL 日志归档，因此就在本地建立目录来存储备份的 WAL 日志，通常的做法时备份到其他主机)，</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">$ pwd</span><br><span class="line">/home/postgres/postgresql-10.4</span><br><span class="line">$ ls</span><br><span class="line">drwxr-xr-x  2 postgres postgres 4096 Oct 24 13:36 bin</span><br><span class="line">drwx------ 19 postgres postgres 4096 Oct 24 13:49 data</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 include</span><br><span class="line">drwxr-xr-x  4 postgres postgres 4096 Oct 24 13:36 lib</span><br><span class="line">-rw-rw-r--  1 postgres postgres  177 Oct 24 13:39 pg-env.sh</span><br><span class="line">drwxr-xr-x  6 postgres postgres 4096 Oct 24 13:36 share</span><br><span class="line">$ cat pg-env.sh</span><br><span class="line">export PGHOME=/home/postgres/postgresql-10.4</span><br><span class="line">export PGDATA=/home/postgres/postgresql-10.4/data</span><br><span class="line">export PATH=$PGHOME/bin:$PATH</span><br><span class="line">export LD_LIBRARY_PATH=$PGHOME/lib:$LD_LIBRARY_PATH</span><br><span class="line">$ mkdir wals            # 建立 WAL 日志备份目录</span><br><span class="line">$ . pg-env.sh           # 初始化环境变量</span><br><span class="line">$ initdb -D data        # 初始化数据库集群</span><br></pre></td></tr></table></figure>
 
-<p>接着修改 data/postgresql.conf 文件中的 wal_level，archive_mode 和 archive_command 参数。</p>
+<p>接着修改 data&#x2F;postgresql.conf 文件中的 wal_level，archive_mode 和 archive_command 参数。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wal_level = replica</span><br><span class="line">archive_mode = on</span><br><span class="line">archive_command = &#x27;test ! -f /home/postgres/postgresql-10.4/wals/%f &amp;&amp; cp %p /home/postgres/postgresql-10.4/wals/%f&#x27;</span><br></pre></td></tr></table></figure>
 
 <p>按照上述操作进行，我们目前已经配置好了 WAL 日志归档，接下来我们运行数据库并创建一个基本备份 (即文件系统级备份) 并保存在当前目录。</p>
@@ -341,10 +341,10 @@
       <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+      <div class="popular-posts-title"><a href="/2022/09/cybertec-postgresql-tde-invalid-argument/" rel="bookmark">PostgreSQL TDE 读取文件参数无效分析</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
     </li>
   </ul>
 
@@ -415,13 +415,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -90,9 +90,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -169,7 +169,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -180,7 +180,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -275,7 +275,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4.5k</span>
+      <span>4.6k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -297,7 +297,7 @@
 <p>Cstore_fdw 采用 Optimized Row Columnar (ORC) 格式作为其数据的物理存储格式。ORC 优化了 Facebook 的 RCFile 存储格式，并具有以下优点：</p>
 <ul>
 <li>压缩 (Compression) - 大约减少了 2~4 倍的内存和磁盘存储空间。易于扩展以支持不同的编码。</li>
-<li>列投影 (Column Projections) - 仅仅读取与该查询有关的数据列，提高了 I/O 效率。</li>
+<li>列投影 (Column Projections) - 仅仅读取与该查询有关的数据列，提高了 I&#x2F;O 效率。</li>
 <li>跳跃索引 (Skip Indexes) - 为每个行组 (Row Groups) 存储其最大值和最小值，并利用他们来跳过不相关的数据行。</li>
 </ul>
 <p>除此之外，cstore_fdw 使用了 PostgreSQL 的数据类型和 fdw API 编程接口，这样做的好处有以下几点：</p>
@@ -323,7 +323,7 @@
 
 <p>以下四个选项可以在创建 cstore 外部表的时候指定：</p>
 <ul>
-<li>filename (可选) - 存放列存表数据的绝对路径，如果没有指定该选项，那么 cstore_fdw 则采用默认的 $PGHOME/cstore_fdw 来存储列存表数据。如果为该参数指定了值，则使用该值作为前缀来存储列存表数据信息。例如，当指定的 filename 值为 /cstore_fdw/my_table，那么 cstore_fdw 将使用 /cstore_fdw/my_table 来存储列存表用户数据，同时，使用 /cstore_fdw/my_table.footer 来存储列存表的元数据信息。</li>
+<li>filename (可选) - 存放列存表数据的绝对路径，如果没有指定该选项，那么 cstore_fdw 则采用默认的 $PGHOME&#x2F;cstore_fdw 来存储列存表数据。如果为该参数指定了值，则使用该值作为前缀来存储列存表数据信息。例如，当指定的 filename 值为 &#x2F;cstore_fdw&#x2F;my_table，那么 cstore_fdw 将使用 &#x2F;cstore_fdw&#x2F;my_table 来存储列存表用户数据，同时，使用 &#x2F;cstore_fdw&#x2F;my_table.footer 来存储列存表的元数据信息。</li>
 <li>compression (可选) - 该参数用于指定用户数据的压缩算法，目前仅支持 none 和 pglz 两个值，即不压缩或者使用 pglz 压缩算法进行压缩，默认值为 none。</li>
 <li>stripe_row_count (可选) - 该参数指定每个 stripe 中行记录数，默认值为 150000。该值越小，加载数据或者查询时使用的内存也就越小，相反，其性能也就越低。</li>
 <li>block_row_count (可选) - 该参数指定每个列数据块 (column block) 中的行记录数，默认为 10000。Cstore_fdw 压缩数据、创建跳跃索引以及磁盘读取时都是以块 (block) 为最小单元。该值越大，则利用数据压缩，并可以减少磁盘读取的次数量，然而，这将影响到跳过不相关的数据块的概率。</li>
@@ -378,7 +378,7 @@
       <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2021/07/join-stragegies-and-performance-in-postgresql/" rel="bookmark">【译】PostgreSQL 中的 JOIN 策略及其性能</a></div>
+      <div class="popular-posts-title"><a href="/2022/09/cybertec-postgresql-tde-invalid-argument/" rel="bookmark">PostgreSQL TDE 读取文件参数无效分析</a></div>
     </li>
   </ul>
 
@@ -451,13 +451,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

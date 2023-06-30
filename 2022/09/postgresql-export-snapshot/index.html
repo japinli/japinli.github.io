@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -89,9 +89,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -168,7 +168,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -179,7 +179,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -306,17 +306,22 @@
 <p>快照的导出、导入需要注意以下几点：</p>
 <ol>
 <li><p>在导出快照的事务中不能使用 <a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/14/sql-prepare-transaction.html"><code>PREPARE TRANSACTION</code></a> 语句。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span>;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SELECT</span> pg_export_snapshot();</span><br><span class="line"> pg_export_snapshot</span><br><span class="line"><span class="comment">---------------------</span></span><br><span class="line"> <span class="number">00000003</span><span class="number">-0000000</span>A<span class="number">-1</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">PREPARE</span> TRANSACTION <span class="string">&#x27;foo&#x27;</span>;</span><br><span class="line">ERROR:  cannot <span class="keyword">PREPARE</span> a transaction that has exported snapshots</span><br></pre></td></tr></table></figure></li>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span>;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SELECT</span> pg_export_snapshot();</span><br><span class="line"> pg_export_snapshot</span><br><span class="line"><span class="comment">---------------------</span></span><br><span class="line"> <span class="number">00000003</span><span class="number">-0000000</span>A<span class="number">-1</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">PREPARE</span> TRANSACTION <span class="string">&#x27;foo&#x27;</span>;</span><br><span class="line">ERROR:  cannot <span class="keyword">PREPARE</span> a transaction that has exported snapshots</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>在子事务中不能导出快照。</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span>;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SAVEPOINT</span> s1;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">select</span> pg_export_snapshot();</span><br><span class="line">ERROR:  cannot export a snapshot <span class="keyword">from</span> a subtransaction</span><br></pre></td></tr></table></figure></li>
 <li><p>快照的导入必须在任何查询执行之前进行。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span>;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SELECT</span> <span class="number">1</span>;</span><br><span class="line"> ?<span class="keyword">column</span>?</span><br><span class="line"><span class="comment">----------</span></span><br><span class="line">        <span class="number">1</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000C-1&#x27;</span>;</span><br><span class="line">ERROR:  <span class="keyword">SET</span> TRANSACTION SNAPSHOT must be <span class="keyword">called</span> before <span class="keyword">any</span> query</span><br></pre></td></tr></table></figure></li>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span>;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SELECT</span> <span class="number">1</span>;</span><br><span class="line"> ?<span class="keyword">column</span>?</span><br><span class="line"><span class="comment">----------</span></span><br><span class="line">        <span class="number">1</span></span><br><span class="line">(<span class="number">1</span> <span class="type">row</span>)</span><br><span class="line"></span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000C-1&#x27;</span>;</span><br><span class="line">ERROR:  <span class="keyword">SET</span> TRANSACTION SNAPSHOT must be <span class="keyword">called</span> before <span class="keyword">any</span> query</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>导入快照的事务隔离级别必须是 <code>REPEATABLE READ</code> 或更高的隔离级别。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span> TRANSACTION ISOLATION LEVEL READ COMMITTED;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000C-1&#x27;</span>;</span><br><span class="line">ERROR:  a snapshot<span class="operator">-</span>importing transaction must have isolation level SERIALIZABLE <span class="keyword">or</span> REPEATABLE READ</span><br></pre></td></tr></table></figure></li>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span> TRANSACTION ISOLATION LEVEL READ COMMITTED;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000C-1&#x27;</span>;</span><br><span class="line">ERROR:  a snapshot<span class="operator">-</span>importing transaction must have isolation level SERIALIZABLE <span class="keyword">or</span> REPEATABLE READ</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>如果导入事务使用 <code>SERIALIZABLE</code> 隔离级别，则导出快照的事务也必须使用该隔离级别。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000C-1&#x27;</span>;</span><br><span class="line">ERROR:  a serializable transaction cannot import a snapshot <span class="keyword">from</span> a non<span class="operator">-</span>serializable transaction</span><br></pre></td></tr></table></figure></li>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000C-1&#x27;</span>;</span><br><span class="line">ERROR:  a serializable transaction cannot import a snapshot <span class="keyword">from</span> a non<span class="operator">-</span>serializable transaction</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>非只读可序列化事务无法从只读事务导入快照。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000D-1&#x27;</span>;</span><br><span class="line">ERROR:  a non<span class="operator">-</span>read<span class="operator">-</span><span class="keyword">only</span> serializable transaction cannot import a snapshot <span class="keyword">from</span> a read<span class="operator">-</span><span class="keyword">only</span> transaction</span><br></pre></td></tr></table></figure></li>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">postgres<span class="operator">=</span># <span class="keyword">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;</span><br><span class="line">postgres<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000D-1&#x27;</span>;</span><br><span class="line">ERROR:  a non<span class="operator">-</span>read<span class="operator">-</span><span class="keyword">only</span> serializable transaction cannot import a snapshot <span class="keyword">from</span> a read<span class="operator">-</span><span class="keyword">only</span> transaction</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>导出的快照不能导入到其他数据库中，即导出、导入快照的数据库必须相同。</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">testdb<span class="operator">=</span># <span class="keyword">BEGIN</span> ISOLATION LEVEL SERIALIZABLE;</span><br><span class="line">testdb<span class="operator">=</span><span class="operator">*</span># <span class="keyword">SET</span> TRANSACTION SNAPSHOT <span class="string">&#x27;00000003-0000000D-1&#x27;</span>;</span><br><span class="line">ERROR:  cannot import a snapshot <span class="keyword">from</span> a different database</span><br></pre></td></tr></table></figure></li>
 </ol>
@@ -414,10 +419,10 @@
       <div class="popular-posts-title"><a href="/2021/02/postgresql-auto-explain-memory-leak/" rel="bookmark">PostgreSQL auto_explain 插件内存泄露</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
     </li>
     <li class="popular-posts-item">
-      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-query-plan/" rel="bookmark">PostgreSQL CREATE TABLE 查询计划树及执行计划树的生成</a></div>
+      <div class="popular-posts-title"><a href="/2019/05/postgresql-create-table-syntax-analysis/" rel="bookmark">PostgreSQL CREATE TABLE 语法分析</a></div>
     </li>
   </ul>
 
@@ -489,13 +494,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动

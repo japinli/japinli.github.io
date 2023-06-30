@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 5.4.0">
+<meta name="generator" content="Hexo 5.4.2">
 
 
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
@@ -94,9 +94,9 @@
 <nav class="site-nav">
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">50</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">143</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">144</span></a></li>
         <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
         <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
@@ -173,7 +173,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">143</span>
+          <span class="site-state-item-count">144</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -184,7 +184,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-count">51</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -437,7 +437,7 @@
 <h2 id="直方图"><a href="#直方图" class="headerlink" title="直方图"></a>直方图</h2><p>当不同值的数量变得太大而无法将它们全部存储在数组中时，系统开始使用直方图（Histogram）表示。直方图使用多个存储桶来存储值。存储桶的数量受相同的 <code>default_statistics_target</code> 参数限制。选择每个桶的宽度，以便将值均匀分布在它们之间（如下图所示具有大致相同面积的矩形所示）。这种表示使系统能够只存储直方图边界，而不是浪费空间来存储每个桶的频率。直方图不包括 MCV 列表中的值。</p>
 <img src="/2022/03/queries-in-postgresql-statistics/statistics3-en.png" class="">
 
-<p>边界存储在 <code>pg_stats</code> 的 <code>histogram_bounds</code> 字段中。任何桶中值的汇总频率等于 1 / 桶数。</p>
+<p>边界存储在 <code>pg_stats</code> 的 <code>histogram_bounds</code> 字段中。任何桶中值的汇总频率等于 1 &#x2F; 桶数。</p>
 <p>直方图存储桶边界数组：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="keyword">left</span>(histogram_bounds::text,<span class="number">60</span>) <span class="operator">||</span> <span class="string">&#x27;...&#x27;</span> <span class="keyword">AS</span> histogram_bounds</span><br><span class="line"><span class="keyword">FROM</span> pg_stats s</span><br><span class="line"><span class="keyword">WHERE</span> s.tablename <span class="operator">=</span> <span class="string">&#x27;boarding_passes&#x27;</span> <span class="keyword">AND</span> s.attname <span class="operator">=</span> <span class="string">&#x27;seat_no&#x27;</span>;</span><br></pre></td></tr></table></figure>
 
@@ -450,7 +450,7 @@
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">                             QUERY PLAN</span><br><span class="line">−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−−</span><br><span class="line"> Seq Scan on boarding_passes  (cost=0.00..157353.30 rows=2943394 ...</span><br><span class="line">   Filter: ((seat_no)::text &gt; &#x27;30C&#x27;::text)</span><br><span class="line">(2 rows)</span><br></pre></td></tr></table></figure>
 
 <p>分割的座位号是专门选择在两个桶之间的边缘。</p>
-<p>这个条件的选择率是 N / 桶数，其中 N 是具有匹配值的桶的数量（在分割的座位号的右侧）。请记住，直方图没有考虑最常见的值和未定义的值。让我们先看看匹配最常见值的分数：</p>
+<p>这个条件的选择率是 N &#x2F; 桶数，其中 N 是具有匹配值的桶的数量（在分割的座位号的右侧）。请记住，直方图没有考虑最常见的值和未定义的值。让我们先看看匹配最常见值的分数：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="built_in">sum</span>(s.most_common_freqs[</span><br><span class="line">  array_position((s.most_common_vals::text::text[]),v)</span><br><span class="line">])</span><br><span class="line"><span class="keyword">FROM</span> pg_stats s, <span class="built_in">unnest</span>(s.most_common_vals::text::text[]) v</span><br><span class="line"><span class="keyword">WHERE</span> s.tablename <span class="operator">=</span> <span class="string">&#x27;boarding_passes&#x27;</span> <span class="keyword">AND</span> s.attname <span class="operator">=</span> <span class="string">&#x27;seat_no&#x27;</span></span><br><span class="line"><span class="keyword">AND</span> v <span class="operator">&gt;</span> <span class="string">&#x27;30C&#x27;</span>;</span><br></pre></td></tr></table></figure>
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">  sum</span><br><span class="line">−−−−−−−−</span><br><span class="line"> 0.2127</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
@@ -509,7 +509,7 @@
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> round</span><br><span class="line">−−−−−−−</span><br><span class="line">  1074</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
 
-<p>规划器甚至无法处理标准函数，而对我们来说，很明显 1 月份的航班比例将约为总航班的 1/12：</p>
+<p>规划器甚至无法处理标准函数，而对我们来说，很明显 1 月份的航班比例将约为总航班的 1&#x2F;12：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="built_in">count</span>(<span class="operator">*</span>) <span class="keyword">AS</span> total,</span><br><span class="line">  <span class="built_in">count</span>(<span class="operator">*</span>) <span class="keyword">FILTER</span> (<span class="keyword">WHERE</span> <span class="built_in">extract</span>(</span><br><span class="line">    <span class="keyword">month</span> <span class="keyword">FROM</span> scheduled_departure <span class="keyword">AT</span> <span class="type">TIME</span> ZONE <span class="string">&#x27;Europe/Moscow&#x27;</span></span><br><span class="line">  ) <span class="operator">=</span> <span class="number">1</span>) <span class="keyword">AS</span> january</span><br><span class="line"><span class="keyword">FROM</span> flights;</span><br></pre></td></tr></table></figure>
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> total  | january</span><br><span class="line">−−−−−−−−+−−−−−−−−−</span><br><span class="line"> 214867 |   16831</span><br><span class="line">(1 row)</span><br></pre></td></tr></table></figure>
@@ -728,13 +728,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="站点总字数">743k</span>
+    <span title="站点总字数">753k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">11:15</span>
+    <span title="站点阅读时长">11:24</span>
   </span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
