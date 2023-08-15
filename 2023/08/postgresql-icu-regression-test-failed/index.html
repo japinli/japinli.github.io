@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近遇到一个比较有意思的问题，我在运行 PostgreSQL 的回归测试时发现 collate.icu.utf8 这个测试用例在 REL_14_STABLE 分支始终无法跑过，但是在 REL_15_STABLE 却可以正常运行。同时由于 collate.icu.utf8 失败还将导致 foreign_data 测试用例也失败了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL ICU 回归测试失败">
+<meta property="og:url" content="https://blog.japinli.top/2023/08/postgresql-icu-regression-test-failed/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近遇到一个比较有意思的问题，我在运行 PostgreSQL 的回归测试时发现 collate.icu.utf8 这个测试用例在 REL_14_STABLE 分支始终无法跑过，但是在 REL_15_STABLE 却可以正常运行。同时由于 collate.icu.utf8 失败还将导致 foreign_data 测试用例也失败了。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-08-15T14:46:14.000Z">
+<meta property="article:modified_time" content="2023-08-15T15:40:24.444Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2023/08/postgresql-icu-regression-test-failed/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2023/08/postgresql-icu-regression-test-failed/","path":"2023/08/postgresql-icu-regression-test-failed/","title":"PostgreSQL ICU 回归测试失败"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PostgreSQL ICU 回归测试失败 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">51</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">145</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">1.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">解决办法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">145</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">51</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2023/08/postgresql-icu-regression-test-failed/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PostgreSQL ICU 回归测试失败
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-08-15 22:46:14" itemprop="dateCreated datePublished" datetime="2023-08-15T22:46:14+08:00">2023-08-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>8 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>最近遇到一个比较有意思的问题，我在运行 PostgreSQL 的回归测试时发现 <code>collate.icu.utf8</code> 这个测试用例在 <code>REL_14_STABLE</code> 分支始终无法跑过，但是在 <code>REL_15_STABLE</code> 却可以正常运行。同时由于 <code>collate.icu.utf8</code> 失败还将导致 <code>foreign_data</code> 测试用例也失败了。</p>
+<span id="more"></span>
+
+<p>下面是详细的错误信息。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line">diff -U3 /home/japin/Codes/postgres/build/../src/test/regress/expected/collate.icu.utf8.out /home/japin/Codes/postgres/build/src/test/regress/results/collate.icu.utf8.out</span><br><span class="line"><span class="comment">--- /home/japin/Codes/postgres/build/../src/test/regress/expected/collate.icu.utf8.out	2023-08-14 17:37:31.960448245 +0800</span></span><br><span class="line"><span class="comment">+++ /home/japin/Codes/postgres/build/src/test/regress/results/collate.icu.utf8.out	2023-08-14 21:30:44.335214886 +0800</span></span><br><span class="line"><span class="meta">@@ -1035,6 +1035,9 @@</span></span><br><span class="line">           quote_literal(current_setting(&#x27;lc_ctype&#x27;)) || &#x27;);&#x27;;</span><br><span class="line"> END</span><br><span class="line"> $$;</span><br><span class="line"><span class="addition">+ERROR:  collations with different collate and ctype values are not supported by ICU</span></span><br><span class="line"><span class="addition">+CONTEXT:  SQL statement &quot;CREATE COLLATION test1 (provider = icu, lc_collate = &#x27;C.UTF-8&#x27;, lc_ctype = &#x27;en_US.UTF-8&#x27;);&quot;</span></span><br><span class="line"><span class="addition">+PL/pgSQL function inline_code_block line 3 at EXECUTE</span></span><br><span class="line"> CREATE COLLATION test3 (provider = icu, lc_collate = &#x27;en_US.utf8&#x27;); -- fail, need lc_ctype</span><br><span class="line"> ERROR:  parameter &quot;lc_ctype&quot; must be specified</span><br><span class="line"> CREATE COLLATION testx (provider = icu, locale = &#x27;nonsense&#x27;); /* never fails with ICU */  DROP COLLATION testx;</span><br><span class="line"><span class="meta">@@ -1045,13 +1048,12 @@</span></span><br><span class="line">  collname</span><br><span class="line"> ----------</span><br><span class="line">  test0</span><br><span class="line"><span class="deletion">- test1</span></span><br><span class="line">  test5</span><br><span class="line"><span class="deletion">-(3 rows)</span></span><br><span class="line"><span class="addition">+(2 rows)</span></span><br><span class="line"></span><br><span class="line"> ALTER COLLATION test1 RENAME TO test11;</span><br><span class="line"><span class="addition">+ERROR:  collation &quot;test1&quot; for encoding &quot;UTF8&quot; does not exist</span></span><br><span class="line"> ALTER COLLATION test0 RENAME TO test11; -- fail</span><br><span class="line"><span class="deletion">-ERROR:  collation &quot;test11&quot; already exists in schema &quot;collate_tests&quot;</span></span><br><span class="line"> ALTER COLLATION test1 RENAME TO test22; -- fail</span><br><span class="line"> ERROR:  collation &quot;test1&quot; for encoding &quot;UTF8&quot; does not exist</span><br><span class="line"> ALTER COLLATION test11 OWNER TO regress_test_role;</span><br><span class="line"><span class="meta">@@ -1059,18 +1061,19 @@</span></span><br><span class="line"> ERROR:  role &quot;nonsense&quot; does not exist</span><br><span class="line"> ALTER COLLATION test11 SET SCHEMA test_schema;</span><br><span class="line"> COMMENT ON COLLATION test0 IS &#x27;US English&#x27;;</span><br><span class="line"><span class="addition">+ERROR:  collation &quot;test0&quot; for encoding &quot;UTF8&quot; does not exist</span></span><br><span class="line"> SELECT collname, nspname, obj_description(pg_collation.oid, &#x27;pg_collation&#x27;)</span><br><span class="line">     FROM pg_collation JOIN pg_namespace ON (collnamespace = pg_namespace.oid)</span><br><span class="line">     WHERE collname LIKE &#x27;test%&#x27;</span><br><span class="line">     ORDER BY 1;</span><br><span class="line">  collname |    nspname    | obj_description</span><br><span class="line"> ----------+---------------+-----------------</span><br><span class="line"><span class="deletion">- test0    | collate_tests | US English</span></span><br><span class="line">  test11   | test_schema   |</span><br><span class="line">  test5    | collate_tests |</span><br><span class="line"><span class="deletion">-(3 rows)</span></span><br><span class="line"><span class="addition">+(2 rows)</span></span><br><span class="line"></span><br><span class="line"> DROP COLLATION test0, test_schema.test11, test5;</span><br><span class="line"><span class="addition">+ERROR:  collation &quot;test0&quot; for encoding &quot;UTF8&quot; does not exist</span></span><br><span class="line"> DROP COLLATION test0; -- fail</span><br><span class="line"> ERROR:  collation &quot;test0&quot; for encoding &quot;UTF8&quot; does not exist</span><br><span class="line"> DROP COLLATION IF EXISTS test0;</span><br><span class="line"><span class="meta">@@ -1078,10 +1081,17 @@</span></span><br><span class="line"> SELECT collname FROM pg_collation WHERE collname LIKE &#x27;test%&#x27;;</span><br><span class="line">  collname</span><br><span class="line"> ----------</span><br><span class="line"><span class="deletion">-(0 rows)</span></span><br><span class="line"><span class="addition">+ test11</span></span><br><span class="line"><span class="addition">+ test5</span></span><br><span class="line"><span class="addition">+(2 rows)</span></span><br><span class="line"></span><br><span class="line"> DROP SCHEMA test_schema;</span><br><span class="line"><span class="addition">+ERROR:  cannot drop schema test_schema because other objects depend on it</span></span><br><span class="line"><span class="addition">+DETAIL:  collation test_schema.test11 depends on schema test_schema</span></span><br><span class="line"><span class="addition">+HINT:  Use DROP ... CASCADE to drop the dependent objects too.</span></span><br><span class="line"> DROP ROLE regress_test_role;</span><br><span class="line"><span class="addition">+ERROR:  role &quot;regress_test_role&quot; cannot be dropped because some objects depend on it</span></span><br><span class="line"><span class="addition">+DETAIL:  owner of collation test_schema.test11</span></span><br><span class="line"> -- ALTER</span><br><span class="line"> ALTER COLLATION &quot;en-x-icu&quot; REFRESH VERSION;</span><br><span class="line"> NOTICE:  version has not changed</span><br><span class="line">diff -U3 /home/japin/Codes/postgres/build/../src/test/regress/expected/foreign_data.out /home/japin/Codes/postgres/build/src/test/regress/results/foreign_data.out</span><br><span class="line"><span class="comment">--- /home/japin/Codes/postgres/build/../src/test/regress/expected/foreign_data.out	2023-08-14 17:37:31.964448260 +0800</span></span><br><span class="line"><span class="comment">+++ /home/japin/Codes/postgres/build/src/test/regress/results/foreign_data.out	2023-08-14 21:30:55.571170376 +0800</span></span><br><span class="line"><span class="meta">@@ -5,10 +5,13 @@</span></span><br><span class="line"> -- Suppress NOTICE messages when roles don&#x27;t exist</span><br><span class="line"> SET client_min_messages TO &#x27;warning&#x27;;</span><br><span class="line"> DROP ROLE IF EXISTS regress_foreign_data_user, regress_test_role, regress_test_role2, regress_test_role_super, regress_test_indirect, regress_unprivileged_role;</span><br><span class="line"><span class="addition">+ERROR:  role &quot;regress_test_role&quot; cannot be dropped because some objects depend on it</span></span><br><span class="line"><span class="addition">+DETAIL:  owner of collation test_schema.test11</span></span><br><span class="line"> RESET client_min_messages;</span><br><span class="line"> CREATE ROLE regress_foreign_data_user LOGIN SUPERUSER;</span><br><span class="line"> SET SESSION AUTHORIZATION &#x27;regress_foreign_data_user&#x27;;</span><br><span class="line"> CREATE ROLE regress_test_role;</span><br><span class="line"><span class="addition">+ERROR:  role &quot;regress_test_role&quot; already exists</span></span><br><span class="line"> CREATE ROLE regress_test_role2;</span><br><span class="line"> CREATE ROLE regress_test_role_super SUPERUSER;</span><br><span class="line"> CREATE ROLE regress_test_indirect;</span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>从上面的错误信息我们可以看到回归测试在执行 <code>CREATE COLLATION test1 (provider = icu, lc_collate = &#39;C.UTF-8&#39;, lc_ctype = &#39;en_US.UTF-8&#39;);</code> 语句时出现了非期望的情况。通过查看 <code>collate.icu.utf8.out</code> 文件，我们可以定位到如下内容：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">do $$</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  <span class="keyword">EXECUTE</span> <span class="string">&#x27;CREATE COLLATION test1 (provider = icu, lc_collate = &#x27;</span> <span class="operator">||</span></span><br><span class="line">          quote_literal(current_setting(<span class="string">&#x27;lc_collate&#x27;</span>)) <span class="operator">||</span></span><br><span class="line">          <span class="string">&#x27;, lc_ctype = &#x27;</span> <span class="operator">||</span></span><br><span class="line">          quote_literal(current_setting(<span class="string">&#x27;lc_ctype&#x27;</span>)) <span class="operator">||</span> <span class="string">&#x27;);&#x27;</span>;</span><br><span class="line"><span class="keyword">END</span></span><br><span class="line">$$;</span><br></pre></td></tr></table></figure>
+
+<p>测试用例使用 <code>current_setting()</code> 来获取 <code>lc_collate</code> 和 <code>lc_ctype</code> 的值，并且期望这两个值是相同的，但是在实际的回归测试时，<code>lc_collate</code> 为 <code>C.UTF-8</code> 而 <code>lc_ctype</code> 为 <code>en_US.UTF-8</code>，从而导致测试用例失败。</p>
+<p>然而，当我尝试使用 <code>make installcheck</code> 运行回归测试时，一切又都正常了。</p>
+<p>考虑到这个是和 <code>locale</code> 相关，因此我确认了一下该环境下的 <code>locale</code> 设置。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">$ locale</span><br><span class="line">LANG=C.UTF-8</span><br><span class="line">LANGUAGE=</span><br><span class="line">LC_CTYPE=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_NUMERIC=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_TIME=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_COLLATE=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_MONETARY=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_MESSAGES=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_PAPER=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_NAME=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_ADDRESS=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_TELEPHONE=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_MEASUREMENT=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_IDENTIFICATION=<span class="string">&quot;en_US.UTF-8&quot;</span></span><br><span class="line">LC_ALL=en_US.UTF-8</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 <code>LANG</code> 的设置与其他的不同，我尝试用 <code>export LANG=en_US.UTF-8</code> 重新导出环境变量，然后在执行 <code>make check</code>，此时一切就正常了。</p>
+<p>从结果来看，回归测试的失败是由于 <code>LANG</code> 的设置不合理导致的。那么为什么 <code>REL_15_STABLE</code> 没有遇到这个情况呢？</p>
+<p>如下所示，查看 <code>REL_15_STABLE</code> 的 <code>collate.icu.utf8.out</code> 测试，可以发现它将 <code>lc_collate</code> 和 <code>lc_ctype</code> 合并为 <code>locale</code> 了，因此没有导致回归测试失败。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ git show origin/REL_15_STABLE:src/<span class="built_in">test</span>/regress/expected/collate.icu.utf8.out | grep -A 3 -B 2 <span class="string">&#x27;CREATE COLLATION test1&#x27;</span></span><br><span class="line"><span class="keyword">do</span> $$</span><br><span class="line">BEGIN</span><br><span class="line">  EXECUTE <span class="string">&#x27;CREATE COLLATION test1 (provider = icu, locale = &#x27;</span> ||</span><br><span class="line">          quote_literal(current_setting(<span class="string">&#x27;lc_collate&#x27;</span>)) || <span class="string">&#x27;);&#x27;</span>;</span><br><span class="line">END</span><br><span class="line">$$;</span><br></pre></td></tr></table></figure>
+
+<p>这是 PG 15 开发分支的 <a target="_blank" rel="noopener" href="https://git.postgresql.org/gitweb/?p=postgresql.git;a=commit;h=f2553d43060edb210b36c63187d52a632448e1d2"><code>f2553d43</code></a> 提交引入的。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/src/test/regress/sql/collate.icu.utf8.sql b/src/test/regress/sql/collate.icu.utf8.sql</span></span><br><span class="line"><span class="comment">index 242a7ce6b7..b0ddc7db44 100644</span></span><br><span class="line"><span class="comment">--- a/src/test/regress/sql/collate.icu.utf8.sql</span></span><br><span class="line"><span class="comment">+++ b/src/test/regress/sql/collate.icu.utf8.sql</span></span><br><span class="line"><span class="meta">@@ -366,13 +366,11 @@</span> $$;</span><br><span class="line"> CREATE COLLATION test0 FROM &quot;C&quot;; -- fail, duplicate name</span><br><span class="line"> do $$</span><br><span class="line"> BEGIN</span><br><span class="line"><span class="deletion">-  EXECUTE &#x27;CREATE COLLATION test1 (provider = icu, lc_collate = &#x27; ||</span></span><br><span class="line"><span class="deletion">-          quote_literal(current_setting(&#x27;lc_collate&#x27;)) ||</span></span><br><span class="line"><span class="deletion">-          &#x27;, lc_ctype = &#x27; ||</span></span><br><span class="line"><span class="deletion">-          quote_literal(current_setting(&#x27;lc_ctype&#x27;)) || &#x27;);&#x27;;</span></span><br><span class="line"><span class="addition">+  EXECUTE &#x27;CREATE COLLATION test1 (provider = icu, locale = &#x27; ||</span></span><br><span class="line"><span class="addition">+          quote_literal(current_setting(&#x27;lc_collate&#x27;)) || &#x27;);&#x27;;</span></span><br><span class="line"> END</span><br><span class="line"> $$;</span><br><span class="line"><span class="deletion">-CREATE COLLATION test3 (provider = icu, lc_collate = &#x27;en_US.utf8&#x27;); -- fail, need lc_ctype</span></span><br><span class="line"><span class="addition">+CREATE COLLATION test3 (provider = icu, lc_collate = &#x27;en_US.utf8&#x27;); -- fail, needs &quot;locale&quot;</span></span><br><span class="line"> CREATE COLLATION testx (provider = icu, locale = &#x27;nonsense&#x27;); /* never fails with ICU */  DROP COLLATION testx;</span><br><span class="line"></span><br><span class="line"> CREATE COLLATION test4 FROM nonsense;</span><br></pre></td></tr></table></figure>
+
+<p>那么为什么 <code>LANG</code> 会影响到数据库的 <code>lc_collate</code> 和 <code>lc_ctype</code> 呢？在我的环境变量中又是配置了 <code>LC_COLLATE</code> 和 <code>LC_CTYPE</code> 的，同时也可以注意到 <code>LC_ALL</code> 也配置了。</p>
+<p>关于环境变量 <code>LANG</code>，<code>LC_ALL</code> 和 <code>LC_*</code> 的优先级如下所示：</p>
+<blockquote>
+<p>The environment variables LANG, LC_ALL, LC_COLLATE, LC_CTYPE, LC_MESSAGES, LC_MONETARY, LC_NUMERIC, LC_TIME, (LC_*), and NLSPATH provide for the support of internationalised applications. The standard utilities make use of these environment variables as described in this section and the individual ENVIRONMENT VARIABLES sections for the utilities. If these variables specify locale categories that are not based upon the same underlying codeset, the results are unspecified.</p>
+<p>The values of locale categories are determined by a precedence order; the first condition met below determines the value:</p>
+<ol>
+<li>If the LC_ALL environment variable is defined and is not null, the value of LC_ALL is used.</li>
+<li>If the LC_* environment variable ( LC_COLLATE, LC_CTYPE, LC_MESSAGES, LC_MONETARY, LC_NUMERIC, LC_TIME) is defined and is not null, the value of the environment variable is used to initialise the category that corresponds to the environment variable.</li>
+<li>If the LANG environment variable is defined and is not null, the value of the LANG environment variable is used.</li>
+<li>If the LANG environment variable is not set or is set to the empty string, the implementation-dependent default locale is used.</li>
+</ol>
+</blockquote>
+<p>从上面我看可以看到，<code>LC_ALL</code> 的优先级是最高的，其次是 <code>LC_*</code>，最后是 <code>LANG</code>，那么为什么 <code>make check</code> 的时候会出现 <code>LC_COLLATE</code> 和 <code>LC_CTYPE</code> 不一致的情况呢？（这里更准确的说应该是 <code>current_setting(&#39;lc_collate&#39;)</code> 和 <code>current_setting(&#39;lc_ctype&#39;)</code> 不一致。）</p>
+<p><strong>待进一步分析。</strong></p>
+<h2 id="解决办法"><a href="#解决办法" class="headerlink" title="解决办法"></a>解决办法</h2><p>上面已经提到了如何解决这个问题，我们可以重新导出 <code>LANG</code> 环境变量，使其与 <code>LC_ALL</code>、<code>LC_CTYPE</code> 和 <code>LC_COLLATE</code> 一致。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://pubs.opengroup.org/onlinepubs/7908799/xbd/envvar.html">https://pubs.opengroup.org/onlinepubs/7908799/xbd/envvar.html</a></p>
+<div class="just-for-fun">
+笑林广记 -
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/09/cybertec-postgresql-tde-invalid-argument/" rel="bookmark">PostgreSQL TDE 读取文件参数无效分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2023/08/postgresql-icu-regression-test-failed/" title="PostgreSQL ICU 回归测试失败">https://blog.japinli.top/2023/08/postgresql-icu-regression-test-failed/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/06/postgresql-backup-tablespace/" rel="prev" title="PostgreSQL 表空间备份">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 表空间备份
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">761k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">11:32</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
