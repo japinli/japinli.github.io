@@ -28,7 +28,7 @@
 <meta property="og:description" content="基本信息 从事 PostgreSQL 数据库相关开发    专业技能 C Python Golang PostgreSQL GDB    演讲稿 2022-10-22 - 如何参与 PostgreSQL 贡献      在线工具 crontab guru - 用于 cron 计划表达式的快速简单的在线编辑器。 Compiler Explorer - 一个在线的交互式编译器，可以展示 C++,">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-08-23T07:55:41.000Z">
-<meta property="article:modified_time" content="2023-07-17T12:08:45.086Z">
+<meta property="article:modified_time" content="2023-09-25T01:58:30.563Z">
 <meta property="article:author" content="Japin Li">
 <meta property="article:tag" content="C&#x2F;C++, Go, PostgreSQL">
 <meta name="twitter:card" content="summary">
@@ -315,6 +315,12 @@
   sudo apt-get install -y gettext         # --enable-nls
   sudo apt-get install -y libperl-dev     # --with-perl
   sudo apt-get install -y libpython3-dev  # --with-python
+  sudo apt-get install -y liblz4-dev      # --with-lz4
+
+  # Install perf tool
+  sudo apt-get install -y linux-tools-common
+  sudo apt-get install -y linux-tools-generic
+  sudo apt-get install -y linux-tools-`uname -r`
 #+end_src
 
 Or, you can use the following command to install IPC::Run.
