@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近 Cybertec 发布了新的 TDE 解决方案，通过在制作安装包时打补丁的方式添加数据库透明加解密功能，不得不说这种方式比之前的引入到整个代码库中要清晰的多。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Cybertec TDE 无法启动 PostgreSQL 数据库">
+<meta property="og:url" content="https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近 Cybertec 发布了新的 TDE 解决方案，通过在制作安装包时打补丁的方式添加数据库透明加解密功能，不得不说这种方式比之前的引入到整个代码库中要清晰的多。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/cover.png">
+<meta property="article:published_time" content="2023-12-09T13:19:40.000Z">
+<meta property="article:modified_time" content="2023-12-09T03:57:19.634Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="TDE">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/cover.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/","path":"2023/12/cybertec-tde-could-not-start-postgres/","title":"Cybertec TDE 无法启动 PostgreSQL 数据库"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Cybertec TDE 无法启动 PostgreSQL 数据库 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">52</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">146</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%93%E8%A1%A5%E4%B8%81"><span class="nav-number">1.</span> <span class="nav-text">打补丁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85"><span class="nav-number">2.</span> <span class="nav-text">编译安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Bug-%E5%A4%8D%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">Bug 复现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">146</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Cybertec TDE 无法启动 PostgreSQL 数据库
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-12-09 21:19:40" itemprop="dateCreated datePublished" datetime="2023-12-09T21:19:40+08:00">2023-12-09</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <img src="/2023/12/cybertec-tde-could-not-start-postgres/cover.png" class="">
+
+<p>最近 <a target="_blank" rel="noopener" href="https://github.com/cybertec-postgresql/postgresql">Cybertec 发布了新的 TDE 解决方案</a>，通过在制作安装包时打补丁的方式添加数据库透明加解密功能，不得不说这种方式比之前的引入到整个代码库中要清晰的多。</p>
+<!--此外，原有的仓库则在 Github 上无法访问，从而导致很多 issue 信息无法查看。-->
+
+<span id="more"></span>
+
+<h2 id="打补丁"><a href="#打补丁" class="headerlink" title="打补丁"></a>打补丁</h2><p>Cybertec 提供了 PostgreSQL 12 到 15 的透明加解密补丁，我采用 15 的版本进行实验，在 <code>debian/patches</code> 目录下有一个名为 <code>10-cybertec-tde.patch</code> 的补丁文件，该文件包含了所有关于透明加解密的功能。</p>
+<p>接下来需要确定补丁基于那个 PostgreSQL 提交生产的，在 <code>10-cybertec-tde.patch</code> 我们可以看到如下内容，这说明 PG 15 的透明加解密是基于 PG 15.1 生成的补丁。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/configure b/configure</span></span><br><span class="line"><span class="comment">index 2270417f8e..f06fc12cfb 100755</span></span><br><span class="line"><span class="comment">--- a/configure</span></span><br><span class="line"><span class="comment">+++ b/configure</span></span><br><span class="line"><span class="meta">@@ -580,12 +580,12 @@</span> MFLAGS=</span><br><span class="line"> MAKEFLAGS=</span><br><span class="line"></span><br><span class="line"> # Identity of this package.</span><br><span class="line"><span class="deletion">-PACKAGE_NAME=&#x27;PostgreSQL&#x27;</span></span><br><span class="line"><span class="deletion">-PACKAGE_TARNAME=&#x27;postgresql&#x27;</span></span><br><span class="line"><span class="deletion">-PACKAGE_VERSION=&#x27;15.1&#x27;</span></span><br><span class="line"><span class="deletion">-PACKAGE_STRING=&#x27;PostgreSQL 15.1&#x27;</span></span><br><span class="line"><span class="deletion">-PACKAGE_BUGREPORT=&#x27;pgsql-bugs@lists.postgresql.org&#x27;</span></span><br><span class="line"><span class="deletion">-PACKAGE_URL=&#x27;https://www.postgresql.org/&#x27;</span></span><br><span class="line"><span class="addition">+PACKAGE_NAME=&#x27;PostgreSQL-TDE&#x27;</span></span><br><span class="line"><span class="addition">+PACKAGE_TARNAME=&#x27;postgresql-tde&#x27;</span></span><br><span class="line"><span class="addition">+PACKAGE_VERSION=&#x27;15.1_TDE_1.1.2&#x27;</span></span><br><span class="line"><span class="addition">+PACKAGE_STRING=&#x27;PostgreSQL 15.1 TDE 1.1.2&#x27;</span></span><br><span class="line"><span class="addition">+PACKAGE_BUGREPORT=&#x27;bugs-tde@cybertec.at&#x27;</span></span><br><span class="line"><span class="addition">+PACKAGE_URL=&#x27;https://www.cybertec.at/&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果本地有 PostgreSQL 的 git 仓库，可以用如下方式打补丁：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">cd</span> postgresql</span><br><span class="line">$ wget https://raw.githubusercontent.com/cybertec-postgresql/postgresql/15tde/debian/patches/10-cybertec-tde.patch</span><br><span class="line">$ git checkout -b 15.1-tde REL_15_1</span><br><span class="line">$ git apply 10-cybertec-tde.patch</span><br></pre></td></tr></table></figure>
+
+<p>如果本地没有 PostgreSQL 的 git 参考，可以选择下载 PostgreSQL 的源码的方式打补丁：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">$ wget https://ftp.postgresql.org/pub/<span class="built_in">source</span>/v15.1/postgresql-15.1.tar.gz</span><br><span class="line">$ tar xf postgresql-15.1.tar.gz</span><br><span class="line">$ <span class="built_in">cd</span> postgresql-15.1</span><br><span class="line">$ wget https://raw.githubusercontent.com/cybertec-postgresql/postgresql/15tde/debian/patches/10-cybertec-tde.patch</span><br><span class="line">$ patch -p1 &lt; 10-cybertec-tde.patch</span><br></pre></td></tr></table></figure>
+
+<h2 id="编译安装"><a href="#编译安装" class="headerlink" title="编译安装"></a>编译安装</h2><p>常规操作，需要注意的时编译时要带上 <code>--with-openssl</code> 选项。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">$ mkdir build &amp;&amp; <span class="built_in">cd</span> build</span><br><span class="line">$ ../configure --prefix=<span class="variable">$PWD</span>/tde --with-openssl &amp;&amp; make install</span><br><span class="line">$ cat &lt;&lt;<span class="string">EOF &gt; env.sh</span></span><br><span class="line"><span class="string">export PGHOME=$PWD/tde</span></span><br><span class="line"><span class="string">export PATH=\$PGHOME/bin:\$PATH</span></span><br><span class="line"><span class="string">export LD_LIBRARY_PATH=\$PGHOME/lib:\$LD_LIBRARY_PATH</span></span><br><span class="line"><span class="string">export PGDATA=\$PGHOME/pgdata</span></span><br><span class="line"><span class="string">export PGPORT=9815</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line">$ <span class="built_in">source</span> env.sh</span><br></pre></td></tr></table></figure>
+
+<p>为了方便查看使用手册可以编译文档。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ make -C doc install</span><br><span class="line">$ $ ls -l tde/share/doc/html/ | head -n 5</span><br><span class="line">total 17568</span><br><span class="line">-rw-rw-r-- 1 japin japin  21420 Dec  8 22:19 acronyms.html</span><br><span class="line">-rw-rw-r-- 1 japin japin  17874 Dec  8 22:19 admin.html</span><br><span class="line">-rw-rw-r-- 1 japin japin   8939 Dec  8 22:19 adminpack.html</span><br><span class="line">-rw-rw-r-- 1 japin japin  26943 Dec  8 22:19 amcheck.html</span><br></pre></td></tr></table></figure>
+<p>在文档的 33 章有介绍如何使用透明加解密功能。</p>
+<h2 id="Bug-复现"><a href="#Bug-复现" class="headerlink" title="Bug 复现"></a>Bug 复现</h2><p>这里的 Bug 出现在从用户输入获取密码的情况，即使用文档中的 <code>read -sp &quot;Cluster encryption password: &quot;</code> 这种方式获取密码，如下所示：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">$ initdb -K <span class="string">&#x27;(read -sp &quot;Cluster encryption password: &quot; PGENCRPWD; echo $PGENCRPWD | pg_keytool -D %D -w)&#x27;</span></span><br><span class="line">The files belonging to this database system will be owned by user <span class="string">&quot;japin&quot;</span>.</span><br><span class="line">This user must also own the server process.</span><br><span class="line"></span><br><span class="line">The database cluster will be initialized with locale <span class="string">&quot;en_US.UTF-8&quot;</span>.</span><br><span class="line">The default database encoding has accordingly been <span class="built_in">set</span> to <span class="string">&quot;UTF8&quot;</span>.</span><br><span class="line">The default text search configuration will be <span class="built_in">set</span> to <span class="string">&quot;english&quot;</span>.</span><br><span class="line"></span><br><span class="line">Data page checksums are disabled.</span><br><span class="line">Data encryption is enabled.</span><br><span class="line"></span><br><span class="line">creating directory /home/japin/postgresql-15.1/build/tde/pgdata ... ok</span><br><span class="line">creating subdirectories ... ok</span><br><span class="line">sh: 1: <span class="built_in">read</span>: Illegal option -s</span><br><span class="line">pg_keytool: error: The password is too short, the minimum length is 8 characters</span><br><span class="line">initdb: error: could not <span class="built_in">read</span> encryption key from <span class="built_in">command</span> <span class="string">&quot;(read -sp &quot;</span>Cluster encryption password: <span class="string">&quot; PGENCRPWD; echo <span class="variable">$PGENCRPWD</span> | pg_keytool -D /home/japin/postgresql-15.1/build/tde/pgdata -w)&quot;</span></span><br><span class="line">initdb: removing data directory <span class="string">&quot;/home/japin/postgresql-15.1/build/tde/pgdata&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>这是由于 <code>sh</code> 的 <code>read</code> 命令不执行 <code>-s</code> 选项（该选项是禁止回显，即不显示我们输入的内容），我们可以稍作调整：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">$ rm -rf <span class="variable">$PGDATA</span></span><br><span class="line">$ initdb -K <span class="string">&#x27;(read -p &quot;Cluster encryption password: &quot; PGENCRPWD; echo $PGENCRPWD | pg_keytool -D %D -w)&#x27;</span></span><br><span class="line">The files belonging to this database system will be owned by user <span class="string">&quot;japin&quot;</span>.</span><br><span class="line">This user must also own the server process.</span><br><span class="line"></span><br><span class="line">The database cluster will be initialized with locale <span class="string">&quot;en_US.UTF-8&quot;</span>.</span><br><span class="line">The default database encoding has accordingly been <span class="built_in">set</span> to <span class="string">&quot;UTF8&quot;</span>.</span><br><span class="line">The default text search configuration will be <span class="built_in">set</span> to <span class="string">&quot;english&quot;</span>.</span><br><span class="line"></span><br><span class="line">Data page checksums are disabled.</span><br><span class="line">Data encryption is enabled.</span><br><span class="line"></span><br><span class="line">creating directory /home/japin/postgresql-15.1/build/tde/pgdata ... ok</span><br><span class="line">creating subdirectories ... ok</span><br><span class="line">Cluster encryption password: helloworld</span><br><span class="line">selecting dynamic shared memory implementation ... posix</span><br><span class="line">selecting default max_connections ... 100</span><br><span class="line">selecting default shared_buffers ... 128MB</span><br><span class="line">selecting default time zone ... Asia/Shanghai</span><br><span class="line">creating configuration files ... ok</span><br><span class="line">running bootstrap script ... ok</span><br><span class="line">performing post-bootstrap initialization ... ok</span><br><span class="line">syncing data to disk ... ok</span><br><span class="line"></span><br><span class="line">initdb: warning: enabling <span class="string">&quot;trust&quot;</span> authentication <span class="keyword">for</span> <span class="built_in">local</span> connections</span><br><span class="line">initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.</span><br><span class="line"></span><br><span class="line">Success. You can now start the database server using:</span><br><span class="line"></span><br><span class="line">    pg_ctl -D /home/japin/postgresql-15.1/build/tde/pgdata -l logfile start</span><br></pre></td></tr></table></figure>
+
+<p>可以看到在我们输入密码之后，数据库初始化成功了，我们可以看到初始化完成之后 <code>-K</code> 选项的内容被写入到 <code>postgresql.conf</code> 配置文件，这样可以避免每次启动的时候指定 <code>-K</code> 选项。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ grep <span class="string">&#x27;encryption_key_command&#x27;</span> <span class="variable">$PGDATA</span>/postgresql.conf</span><br><span class="line">encryption_key_command = <span class="string">&#x27;(read -p &quot;Cluster encryption password: &quot; PGENCRPWD; echo $PGENCRPWD | pg_keytool -D %D -w)&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>现在我们尝试启动数据库：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">$ pg_ctl start</span><br><span class="line">2023-12-08 22:31:16.140 CST [1018742] LOG:  starting PostgreSQL 15.1_TDE_1.1.2 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, 64-bit</span><br><span class="line">2023-12-08 22:31:16.141 CST [1018742] LOG:  listening on IPv4 address <span class="string">&quot;127.0.0.1&quot;</span>, port 9815</span><br><span class="line">2023-12-08 22:31:16.146 CST [1018742] LOG:  listening on Unix socket <span class="string">&quot;/tmp/.s.PGSQL.9815&quot;</span></span><br><span class="line">pg_keytool: error: The password is too short, the minimum length is 8 characters</span><br><span class="line">2023-12-08 22:31:16.164 CST [1018742] FATAL:  could not <span class="built_in">read</span> encryption key from <span class="built_in">command</span> <span class="string">&quot;(read -p &quot;</span>Cluster encryption password: <span class="string">&quot; PGENCRPWD; echo <span class="variable">$PGENCRPWD</span> | pg_keytool -D /home/japin/postgresql-15.1/build/tde/pgdata -w)&quot;</span></span><br><span class="line">2023-12-08 22:31:16.171 CST [1018742] LOG:  database system is shut down</span><br><span class="line"> stopped waiting</span><br><span class="line">pg_ctl: could not start server</span><br><span class="line">Examine the <span class="built_in">log</span> output.</span><br></pre></td></tr></table></figure>
+
+<p>这里的错误提示是 <code>The password is too short, the minimum length is 8 characters</code>，但是我们压根就没有输入密码，为啥会是密码太短了？</p>
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>通过分析 <code>pg_ctl</code> 的代码，我们可以看到在 <code>start_postmaster()</code> 函数中启动 <code>postgres</code> 进程时采用了输入重定向，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">pgpid_t</span></span></span><br><span class="line"><span class="function"><span class="title">start_postmaster</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	[...]</span><br><span class="line"></span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">         * Since there might be quotes to handle here, it is easier simply to pass</span></span><br><span class="line"><span class="comment">         * everything to a shell to process them.  Use exec so that the postmaster</span></span><br><span class="line"><span class="comment">         * has the same PID as the current child process.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">if</span> (log_file != <span class="literal">NULL</span>)</span><br><span class="line">                cmd = psprintf(<span class="string">&quot;exec \&quot;%s\&quot; %s%s &lt; \&quot;%s\&quot; &gt;&gt; \&quot;%s\&quot; 2&gt;&amp;1&quot;</span>,</span><br><span class="line">                                           exec_path, pgdata_opt, post_opts,</span><br><span class="line">                                           DEVNULL, log_file);</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">                cmd = psprintf(<span class="string">&quot;exec \&quot;%s\&quot; %s%s &lt; \&quot;%s\&quot; 2&gt;&amp;1&quot;</span>,</span><br><span class="line">                                           exec_path, pgdata_opt, post_opts, DEVNULL);</span><br><span class="line">	[...]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这就导致在有输入需要的时候，进程会从 <code>/dev/null</code> 设备获取内容，从而导致失败，我们可以删除输入重定向来验证。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">$ cat 11-pg_ctl-tde.patch</span><br><span class="line"><span class="comment">diff --git a/src/bin/pg_ctl/pg_ctl.c b/src/bin/pg_ctl/pg_ctl.c</span></span><br><span class="line"><span class="comment">index e26b065f50..59b1a7a527 100644</span></span><br><span class="line"><span class="comment">--- a/src/bin/pg_ctl/pg_ctl.c</span></span><br><span class="line"><span class="comment">+++ b/src/bin/pg_ctl/pg_ctl.c</span></span><br><span class="line"><span class="meta">@@ -520,12 +520,12 @@</span> start_postmaster(void)</span><br><span class="line"> 	 * has the same PID as the current child process.</span><br><span class="line"> 	 */</span><br><span class="line"> 	if (log_file != NULL)</span><br><span class="line"><span class="deletion">-		cmd = psprintf(&quot;exec \&quot;%s\&quot; %s%s &lt; \&quot;%s\&quot; &gt;&gt; \&quot;%s\&quot; 2&gt;&amp;1&quot;,</span></span><br><span class="line"><span class="addition">+		cmd = psprintf(&quot;exec \&quot;%s\&quot; %s%s &gt;&gt; \&quot;%s\&quot; 2&gt;&amp;1&quot;,</span></span><br><span class="line"> 					   exec_path, pgdata_opt, post_opts,</span><br><span class="line"><span class="deletion">-					   DEVNULL, log_file);</span></span><br><span class="line"><span class="addition">+					   log_file);</span></span><br><span class="line"> 	else</span><br><span class="line"><span class="deletion">-		cmd = psprintf(&quot;exec \&quot;%s\&quot; %s%s &lt; \&quot;%s\&quot; 2&gt;&amp;1&quot;,</span></span><br><span class="line"><span class="deletion">-					   exec_path, pgdata_opt, post_opts, DEVNULL);</span></span><br><span class="line"><span class="addition">+		cmd = psprintf(&quot;exec \&quot;%s\&quot; %s%s 2&gt;&amp;1&quot;,</span></span><br><span class="line"><span class="addition">+					   exec_path, pgdata_opt, post_opts);</span></span><br><span class="line"></span><br><span class="line"> 	(void) execl(&quot;/bin/sh&quot;, &quot;/bin/sh&quot;, &quot;-c&quot;, cmd, (char *) NULL);</span><br><span class="line"></span><br><span class="line">$ patch -p1 &lt;11-pg_ctl-tde.patch</span><br><span class="line">$ cd build &amp;&amp; make install</span><br></pre></td></tr></table></figure>
+
+<p>现在我们再次尝试启动数据库：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">$ pg_ctl start</span><br><span class="line">2023-12-08 22:49:35.783 CST [1019738] LOG:  starting PostgreSQL 15.1_TDE_1.1.2 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, 64-bit</span><br><span class="line">2023-12-08 22:49:35.784 CST [1019738] LOG:  listening on IPv4 address <span class="string">&quot;127.0.0.1&quot;</span>, port 9815</span><br><span class="line">2023-12-08 22:49:35.793 CST [1019738] LOG:  listening on Unix socket <span class="string">&quot;/tmp/.s.PGSQL.9815&quot;</span></span><br><span class="line">Cluster encryption password: waiting <span class="keyword">for</span> server to start.....he.llowor.ld</span><br><span class="line">.2023-12-08 22:49:40.808 CST [1019749] LOG:  database system was shut down at 2023-12-08 22:27:04 CST</span><br><span class="line">2023-12-08 22:49:40.816 CST [1019738] LOG:  database system is ready to accept connections</span><br><span class="line"> <span class="keyword">done</span></span><br><span class="line">server started</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 <code>Cluster encryption password: </code> 提示符出来了，我们可以输入密码了，但是由于 <code>pg_ctl</code> 进程同时也在显标准输出打印字符，因此可以看到比较混乱的结果，如上所示 <code>he.llowor.ld</code>，但这并不影响密码的获取。如果您尝试使用 <code>-l log</code> 选项，则不会显示提示符，因为它会被重定向到日志文件中。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>[1] <a target="_blank" rel="noopener" href="https://github.com/cybertec-postgresql/postgresql">https://github.com/cybertec-postgresql/postgresql</a></p>
+<div class="just-for-fun">
+笑林广记 - 善屁
+
+<p>有善屁者，往铁匠铺打铁锛，方讲价，连撒十余屁。<br>匠曰：“汝屁直恁多，若能连撒百个，我当白送一把铁锛与你。”<br>其人便放百个。匠只得打成送之。临出门又撒数个屁。<br>乃谓匠曰：“算不得许多，这几个小屁，乞我几只钯头钉罢。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/09/cybertec-postgresql-tde-invalid-argument/" rel="bookmark">PostgreSQL TDE 读取文件参数无效分析</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/05/Oracle-sys-connect-by-path-to-PostgreSQL/" rel="bookmark">Oracle sys_connect_by_path 函数迁移到 PostgreSQL 数据库</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2019/05/cross-database-querying-in-postgresql/" rel="bookmark">PostgreSQL 数据库跨库查询</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2022/02/create-or-replace-view-output-column-collation/" rel="bookmark">PostgreSQL 视图替换时更新输出列的 collation 问题</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/" title="Cybertec TDE 无法启动 PostgreSQL 数据库">https://blog.japinli.top/2023/12/cybertec-tde-could-not-start-postgres/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/PostgreSQL/" rel="tag"># PostgreSQL</a>
+              <a href="/tags/TDE/" rel="tag"># TDE</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/08/postgresql-icu-regression-test-failed/" rel="prev" title="PostgreSQL ICU 回归测试失败">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL ICU 回归测试失败
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">769k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">11:40</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
