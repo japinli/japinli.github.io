@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.ico">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"blog.japinli.top","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="最近，同事在测试 Hydra 的列存时遇到了崩溃的问题。当 chunk_group_row_limit 的值超过 100000 时，就会导致进程崩溃，其本质是由于 stripeReadState-&gt;chunkGroupReadState 被释放后，出现了空指针和悬空指针 (Dangling Pointer)，从而引发了进程崩溃。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hydra 列存崩溃问题">
+<meta property="og:url" content="https://blog.japinli.top/2024/03/hydra-columnar-crashed/index.html">
+<meta property="og:site_name" content="Japin">
+<meta property="og:description" content="最近，同事在测试 Hydra 的列存时遇到了崩溃的问题。当 chunk_group_row_limit 的值超过 100000 时，就会导致进程崩溃，其本质是由于 stripeReadState-&gt;chunkGroupReadState 被释放后，出现了空指针和悬空指针 (Dangling Pointer)，从而引发了进程崩溃。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.japinli.top/2024/03/hydra-columnar-crashed/hydra-columnar-crashed.png">
+<meta property="article:published_time" content="2024-03-07T14:16:22.000Z">
+<meta property="article:modified_time" content="2024-03-08T16:54:34.411Z">
+<meta property="article:author" content="Japin Li">
+<meta property="article:tag" content="列存">
+<meta property="article:tag" content="Hydra">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.japinli.top/2024/03/hydra-columnar-crashed/hydra-columnar-crashed.png">
+
+
+<link rel="canonical" href="https://blog.japinli.top/2024/03/hydra-columnar-crashed/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://blog.japinli.top/2024/03/hydra-columnar-crashed/","path":"2024/03/hydra-columnar-crashed/","title":"Hydra 列存崩溃问题"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Hydra 列存崩溃问题 | Japin</title>
+  
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Japin</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">登高必自卑，行远必自迩</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">57</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">6</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">152</span></a></li>
+        <li class="menu-item menu-item-readings"><a href="/readings/" rel="section"><i class="fa fa-book fa-fw"></i>阅读</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-links"><a href="/links/" rel="section"><i class="fa fa-link fa-fw"></i>友情链接</a></li>
+        <li class="menu-item menu-item-sitemap"><a href="/sitemap.xml" rel="section"><i class="fa fa-sitemap fa-fw"></i>站点地图</a></li>
+        <li class="menu-item menu-item-commonweal"><a href="/404/" rel="section"><i class="fa fa-heartbeat fa-fw"></i>公益 404</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A9%BA%E6%8C%87%E9%92%88%E5%AF%BC%E8%87%B4%E5%B4%A9%E6%BA%83"><span class="nav-number">1.</span> <span class="nav-text">空指针导致崩溃</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%82%AC%E7%A9%BA%E6%8C%87%E9%92%88%E5%AF%BC%E8%87%B4%E5%B4%A9%E6%BA%83"><span class="nav-number">2.</span> <span class="nav-text">悬空指针导致崩溃</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%87%E6%B3%A8"><span class="nav-number">3.</span> <span class="nav-text">备注</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5"><span class="nav-number">4.</span> <span class="nav-text">链接</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Japin Li"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">Japin Li</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">152</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">57</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/japinli" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;japinli" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:japinli@hotmail.com" title="E-Mail → mailto:japinli@hotmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.japinli.top/2024/03/hydra-columnar-crashed/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="Japin Li">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Japin">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hydra 列存崩溃问题
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-03-07 22:16:22" itemprop="dateCreated datePublished" datetime="2024-03-07T22:16:22+08:00">2024-03-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>23k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>21 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <img src="/2024/03/hydra-columnar-crashed/hydra-columnar-crashed.png" class="">
+
+<p>最近，同事在测试 <a target="_blank" rel="noopener" href="https://github.com/hydradatabase/hydra">Hydra</a> 的列存时遇到了崩溃的问题。当 <code>chunk_group_row_limit</code> 的值超过 <code>100000</code> 时，就会导致进程崩溃，其本质是由于 <code>stripeReadState-&gt;chunkGroupReadState</code> 被释放后，出现了空指针和悬空指针 (<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Dangling_pointer">Dangling Pointer</a>)，从而引发了进程崩溃。</p>
+<span id="more"></span>
+
+
+<h2 id="空指针导致崩溃"><a href="#空指针导致崩溃" class="headerlink" title="空指针导致崩溃"></a>空指针导致崩溃</h2><p>如 Test-Case-01 所示，我将 <code>t2</code> 表的 <code>chunk_group_row_limit</code> 修改为 <code>11000</code>，当在其上执行 <code>SELECT count(*) FROM t2;</code> 时服务器出现了崩溃。</p>
+<figure class="highlight sql"><figcaption><span>Test-Case-01</span></figcaption><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t2 (id <span class="type">int</span>, info text) <span class="keyword">USING</span> columnar;</span><br><span class="line"><span class="keyword">SELECT</span> columnar.alter_columnar_table_set(<span class="string">&#x27;t2&#x27;</span>, chunk_group_row_limit <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;11000&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t2 <span class="keyword">SELECT</span> id, md5(id::text) <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">10000000</span>) id;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="built_in">count</span>(<span class="operator">*</span>) <span class="keyword">FROM</span> t2;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><figcaption><span>Test-Case-01-Output</span></figcaption><table><tr><td class="code"><pre><span class="line">server closed the connection unexpectedly</span><br><span class="line">        This probably means the server terminated abnormally</span><br><span class="line">        before or while processing the request.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br></pre></td></tr></table></figure>
+
+<p>通过 GDB 调试其崩溃时的堆栈如下所示。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB-Backtrace</span></figcaption><table><tr><td class="code"><pre><span class="line">#0  ReadStripeNextVector (stripeReadState=0x5575fc19e768, columnValues=0x5575fc1540a0, columnNulls=0x5575fc1540b0,</span><br><span class="line">    newVectorSize=0x7ffdf9495ea0, stripeId=1, snapshot=0x5575fc0283b8, rowNumber=0x5575fc140820,</span><br><span class="line">    stripeFirstRowNumber=1) at columnar_reader.c:2166</span><br><span class="line">#1  0x00007fb8037bc42c in ColumnarReadNextVector (readState=0x5575fc19c7e8, columnValues=0x5575fc1540a0,</span><br><span class="line">    columnNulls=0x5575fc1540b0, rowNumber=0x5575fc140820, newVectorSize=0x7ffdf9495ea0) at columnar_reader.c:2057</span><br><span class="line">#2  0x00007fb8037befb8 in columnar_getnextslot (sscan=0x5575fc19c758, direction=ForwardScanDirection,</span><br><span class="line">    slot=0x5575fc13e0c8) at columnar_tableam.c:385</span><br><span class="line">#3  0x00007fb8037aafe0 in table_scan_getnextslot (sscan=0x5575fc19c758, direction=ForwardScanDirection,</span><br><span class="line">    slot=0x5575fc13e0c8) at /data/japin/codes/postgres/build/pg/include/server/access/tableam.h:1066</span><br><span class="line">#4  0x00007fb8037aeeeb in ColumnarScanNext (columnarScanState=0x5575fc0d02f0) at columnar_customscan.c:2544</span><br><span class="line">#5  0x00007fb8037ae7e9 in ExecScanFetch (node=0x5575fc0d02f0, accessMtd=0x7fb8037aed2f &lt;ColumnarScanNext&gt;,</span><br><span class="line">    recheckMtd=0x7fb8037aef21 &lt;ColumnarScanRecheck&gt;) at columnar_customscan.c:2257</span><br><span class="line">#6  0x00007fb8037ae9e6 in CustomExecScan (columnarScanState=0x5575fc0d02f0,</span><br><span class="line">    accessMtd=0x7fb8037aed2f &lt;ColumnarScanNext&gt;, recheckMtd=0x7fb8037aef21 &lt;ColumnarScanRecheck&gt;)</span><br><span class="line">    at columnar_customscan.c:2353</span><br><span class="line">#7  0x00007fb8037aef65 in ColumnarScan_ExecCustomScan (node=0x5575fc0d02f0) at columnar_customscan.c:2576</span><br><span class="line">#8  0x00005575f990c1d3 in ExecCustomScan (pstate=0x5575fc0d02f0)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/nodeCustom.c:124</span><br><span class="line">#9  0x00007fb8037e1df6 in ExecProcNode (node=0x5575fc0d02f0)</span><br><span class="line">    at /data/japin/codes/postgres/build/pg/include/server/executor/executor.h:273</span><br><span class="line">#10 0x00007fb8037e2355 in fetch_input_tuple (aggstate=0x5575fc0cfc88)</span><br><span class="line">    at vectorization/nodes/columnar_aggregator_node.c:639</span><br><span class="line">#11 0x00007fb8037e5a66 in agg_retrieve_direct (vectoraggstate=0x5575fc0cf658)</span><br><span class="line">    at vectorization/nodes/columnar_aggregator_node.c:2619</span><br><span class="line">#12 0x00007fb8037e53c4 in ExecAgg (pstate=0x5575fc0cf658) at vectorization/nodes/columnar_aggregator_node.c:2311</span><br><span class="line">#13 0x00007fb8037eac1f in ExecVectorAgg (node=0x5575fc0cf658) at vectorization/nodes/columnar_aggregator_node.c:5316</span><br><span class="line">#14 0x00005575f990c1d3 in ExecCustomScan (pstate=0x5575fc0cf658)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/nodeCustom.c:124</span><br><span class="line">#15 0x00005575f98eda69 in ExecProcNodeFirst (node=0x5575fc0cf658)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#16 0x00005575f990e406 in ExecProcNode (node=0x5575fc0cf658)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#17 0x00005575f990eaf0 in gather_getnext (gatherstate=0x5575fc0cf4b8)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/nodeGather.c:295</span><br><span class="line">#18 0x00005575f990e953 in ExecGather (pstate=0x5575fc0cf4b8)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/nodeGather.c:227</span><br><span class="line">#19 0x00005575f98eda69 in ExecProcNodeFirst (node=0x5575fc0cf4b8)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#20 0x00005575f98fd84a in ExecProcNode (node=0x5575fc0cf4b8)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#21 0x00005575f98fdda3 in fetch_input_tuple (aggstate=0x5575fc0cee90)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:562</span><br><span class="line">#22 0x00005575f9901358 in agg_retrieve_direct (aggstate=0x5575fc0cee90)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:2365</span><br><span class="line">#23 0x00005575f9900f2e in ExecAgg (pstate=0x5575fc0cee90)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:2180</span><br><span class="line">#24 0x00005575f98eda69 in ExecProcNodeFirst (node=0x5575fc0cee90)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#25 0x00005575f98e0b10 in ExecProcNode (node=0x5575fc0cee90)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#26 0x00005575f98e3ac8 in ExecutePlan (estate=0x5575fc0cec18, planstate=0x5575fc0cee90, use_parallel_mode=true,</span><br><span class="line">    operation=CMD_SELECT, sendTuples=true, numberTuples=0, direction=ForwardScanDirection, dest=0x5575fc115d18,</span><br><span class="line">    execute_once=true) at /data/japin/codes/postgres/build/../src/backend/executor/execMain.c:1670</span><br><span class="line">#27 0x00005575f98e11f8 in standard_ExecutorRun (queryDesc=0x5575fc103a28, direction=ForwardScanDirection, count=0,</span><br><span class="line">    execute_once=true) at /data/japin/codes/postgres/build/../src/backend/executor/execMain.c:365</span><br><span class="line">#28 0x00005575f98e1001 in ExecutorRun (queryDesc=0x5575fc103a28, direction=ForwardScanDirection, count=0,</span><br><span class="line">    execute_once=true) at /data/japin/codes/postgres/build/../src/backend/executor/execMain.c:309</span><br><span class="line">#29 0x00005575f9ba356d in PortalRunSelect (portal=0x5575fc072cc8, forward=true, count=0, dest=0x5575fc115d18)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/tcop/pquery.c:924</span><br><span class="line">#30 0x00005575f9ba3194 in PortalRun (portal=0x5575fc072cc8, count=9223372036854775807, isTopLevel=true,</span><br><span class="line">    run_once=true, dest=0x5575fc115d18, altdest=0x5575fc115d18, qc=0x7ffdf94967e0)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/tcop/pquery.c:768</span><br><span class="line">#31 0x00005575f9b9bf52 in exec_simple_query (query_string=0x5575fbff60d8 &quot;SELECT count(*) FROM t2;&quot;)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/tcop/postgres.c:1274</span><br><span class="line">#32 0x00005575f9ba0fc1 in PostgresMain (dbname=0x5575fbf60058 &quot;postgres&quot;, username=0x5575fc02cb58 &quot;japin&quot;)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/tcop/postgres.c:4637</span><br><span class="line">#33 0x00005575f9ac195a in BackendRun (port=0x5575fc01fd90)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:4464</span><br><span class="line">#34 0x00005575f9ac11e6 in BackendStartup (port=0x5575fc01fd90)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:4192</span><br><span class="line">#35 0x00005575f9abd471 in ServerLoop ()</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:1782</span><br><span class="line">#36 0x00005575f9abcd1b in PostmasterMain (argc=1, argv=0x5575fbf5e010)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:1466</span><br><span class="line">#37 0x00005575f9970914 in main (argc=1, argv=0x5575fbf5e010)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/main/main.c:198</span><br></pre></td></tr></table></figure>
+
+<p>可以看到这里在 <code>ReadStripeNextVector()</code> 函数里的 2166 行出现了问题，通过查看 <code>stripeReadState-&gt;chunkGroupReadState</code> 可以看到其为空。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">(gdb) p stripeReadState-&gt;chunkGroupReadState</span><br><span class="line">$1 = (ChunkGroupReadState *) 0x0</span><br></pre></td></tr></table></figure>
+
+<p>其代码如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">ReadStripeNextVector</span><span class="params">(StripeReadState *stripeReadState, Datum *columnValues,</span></span></span><br><span class="line"><span class="params"><span class="function">                     <span class="keyword">bool</span> *columnNulls, <span class="keyword">int</span> *newVectorSize,</span></span></span><br><span class="line"><span class="params"><span class="function">                     uint64 stripeId,</span></span></span><br><span class="line"><span class="params"><span class="function">                     Snapshot snapshot,</span></span></span><br><span class="line"><span class="params"><span class="function">                     uint64 *rowNumber,</span></span></span><br><span class="line"><span class="params"><span class="function">                     uint64 stripeFirstRowNumber)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    [...]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (<span class="literal">true</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        [...]</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!ReadChunkGroupNextVector(stripeReadState-&gt;chunkGroupReadState,</span><br><span class="line">                                      columnValues, columnNulls,</span><br><span class="line">                                      stripeReadState-&gt;tupleDescriptor,</span><br><span class="line">                                      columnValueOffset,</span><br><span class="line">                                      newVectorSize,</span><br><span class="line">                                      rowNumber,</span><br><span class="line">                                      chunkFirstRowNumber))</span><br><span class="line">        &#123;</span><br><span class="line">             <span class="comment">/* if this chunk group is exhausted, fetch the next one and loop */</span></span><br><span class="line">             EndChunkGroupRead(stripeReadState-&gt;chunkGroupReadState);</span><br><span class="line">             stripeReadState-&gt;chunkGroupReadState = <span class="literal">NULL</span>;</span><br><span class="line">             stripeReadState-&gt;chunkGroupIndex++;</span><br><span class="line"></span><br><span class="line">             <span class="keyword">if</span> (*newVectorSize == <span class="number">0</span>)</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        stripeReadState-&gt;currentRow += stripeReadState-&gt;chunkGroupReadState-&gt;rowCount;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当 <code>ReadChunkGroupNextVector()</code> 返回为 <code>false</code> 时，如果 <code>*newVectorSize</code> 不为 0 时，那么 <code>stripeReadState-&gt;chunkGroupReadState</code> 将会被释放并置为 <code>NULL</code>，而在后续的执行到继续使用到了该值，从而出现访问空指针导致进程崩溃。</p>
+<p>这里由于 <code>stripeReadState-&gt;chunkGroupReadState</code> 已经被释放，我们无法知道其信息以及 <code>ReadChunkGroupNextVector()</code> 是如何退出的。我们可以通过加入条件断点来观察。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">(gdb) b columnar_reader.c:2158 if (*newVectorSize) &gt; 0</span><br></pre></td></tr></table></figure>
+
+<p>再次运行，可以观察到如下信息。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">Breakpoint 1, ReadStripeNextVector (stripeReadState=0x5575fc1850d8, columnValues=0x5575fc13aa10, columnNulls=0x5575fc13aa20, newVectorSize=0x7ffdf9495ea0, stripeId=1, snapshot=0x5575fc0283b8, rowNumber=0x5575fc127190, stripeFirstRowNumber=1) at columnar_reader.c:2158</span><br><span class="line">(gdb) p stripeReadState -&gt;chunkGroupReadState</span><br><span class="line">$4 = (ChunkGroupReadState *) 0x5575fc188e38</span><br><span class="line">(gdb) p *stripeReadState -&gt;chunkGroupReadState</span><br><span class="line">$5 = &#123;currentRow = 11000, rowCount = 11000, columnCount = 2, projectedColumnList = 0x0,</span><br><span class="line">  chunkGroupData = 0x5575fc191ab8, rowMask = 0x0, rowMaskCached = false, chunkStripeRowOffset = 0,</span><br><span class="line">  chunkGroupDeletedRows = 0&#125;</span><br><span class="line">(gdb) p *newVectorSize</span><br><span class="line">$6 = 1000</span><br></pre></td></tr></table></figure>
+
+<p><code>ReadChunkGroupNextVector()</code> 仅在读取到 <code>COLUMNAR_VECTOR_COLUMN_SIZE</code> 行记录时才返回 <code>true</code>。当 <code>currentRow == rowCount</code> 时返回 <code>false</code>。</p>
+<p>根据 <code>currentRow = 11000, rowCount = 11000</code> 我们可以知道，该 chunk 被读取完毕，<code>ReadChunkGroupNextVector()</code> 返回 <code>false</code>，但此时 <code>*newVectorSize = 1000</code>，意味着还有数据，因此不会执行 <code>continue</code>，而是执行下面的累计操作。但是由于 <code>ReadChunkGroupNextVector()</code> 返回 <code>false</code> 时，<code>stripeReadState-&gt;chunkGroupReadState</code> 被释放且置空，因此后续的累计操作出现了空指针访问异常。</p>
+<p>因此，我们需要避免在返回 <code>false</code> 时使用 <code>stripeReadState-&gt;chunkGroupReadState</code>，修复方法如下所示：</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/columnar/src/backend/columnar/columnar_reader.c b/columnar/src/backend/columnar/columnar_reader.c</span></span><br><span class="line"><span class="comment">index b24e4d1..b23829f 100644</span></span><br><span class="line"><span class="comment">--- a/columnar/src/backend/columnar/columnar_reader.c</span></span><br><span class="line"><span class="comment">+++ b/columnar/src/backend/columnar/columnar_reader.c</span></span><br><span class="line"><span class="meta">@@ -2162,8 +2162,8 @@</span> ReadStripeNextVector(StripeReadState *stripeReadState, Datum *columnValues,</span><br><span class="line"> 			if (*newVectorSize == 0)</span><br><span class="line"> 				continue;</span><br><span class="line"> 		&#125;</span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="deletion">-		stripeReadState-&gt;currentRow += stripeReadState-&gt;chunkGroupReadState-&gt;rowCount;</span></span><br><span class="line"><span class="addition">+		else</span></span><br><span class="line"><span class="addition">+			stripeReadState-&gt;currentRow += stripeReadState-&gt;chunkGroupReadState-&gt;rowCount;</span></span><br><span class="line"></span><br><span class="line"> 		return true;</span><br><span class="line"> 	&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="悬空指针导致崩溃"><a href="#悬空指针导致崩溃" class="headerlink" title="悬空指针导致崩溃"></a>悬空指针导致崩溃</h2><p>这个问题与上面的类似，测试用例如 Test-Case-02 所示：</p>
+<figure class="highlight sql"><figcaption><span>Test-Case-02</span></figcaption><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> t(a <span class="type">INT</span>, b TEXT) <span class="keyword">USING</span> columnar;</span><br><span class="line"><span class="keyword">SELECT</span> columnar.alter_columnar_table_set(<span class="string">&#x27;t&#x27;</span>, chunk_group_row_limit <span class="operator">=</span><span class="operator">&gt;</span> <span class="string">&#x27;11000&#x27;</span>);</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> t <span class="keyword">SELECT</span> a, md5(b::text) <span class="keyword">FROM</span> generate_series(<span class="number">0</span>,<span class="number">50000</span>) <span class="keyword">AS</span> t1(a)</span><br><span class="line"><span class="keyword">JOIN</span> <span class="keyword">LATERAL</span> generate_series(<span class="number">1</span>, <span class="number">10</span>) <span class="keyword">AS</span> t2(b) <span class="keyword">ON</span> (<span class="literal">true</span>);</span><br><span class="line"><span class="keyword">SELECT</span> b, <span class="built_in">count</span>(<span class="operator">*</span>) <span class="keyword">FROM</span> t <span class="keyword">WHERE</span> a <span class="operator">&gt;</span> <span class="number">50</span> <span class="keyword">AND</span> b <span class="operator">&lt;&gt;</span> <span class="string">&#x27;&#x27;</span> <span class="keyword">GROUP</span> <span class="keyword">BY</span> b;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><figcaption><span>Test-Case-02-Output</span></figcaption><table><tr><td class="code"><pre><span class="line">server closed the connection unexpectedly</span><br><span class="line">        This probably means the server terminated abnormally</span><br><span class="line">        before or while processing the request.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br><span class="line">The connection to the server was lost. Attempting reset: Failed.</span><br></pre></td></tr></table></figure>
+
+<p>其堆栈信息如下所示：</p>
+<figure class="highlight plaintext"><figcaption><span>GDB-Backtrace</span></figcaption><table><tr><td class="code"><pre><span class="line">#0  0x00005588c2b833ff in toast_raw_datum_size (value=22503863415320) at /home/japin/codes/postgres/build/../src/backend/access/common/detoast.c:550</span><br><span class="line">#1  0x00005588c32c69b4 in textne (fcinfo=0x5588c521b718) at /home/japin/codes/postgres/build/../src/backend/utils/adt/varlena.c:1697</span><br><span class="line">#2  0x00005588c2e50dd5 in ExecInterpExpr (state=0x5588c521b688, econtext=0x5588c51f7890, isnull=0x7fffda8cb39f)</span><br><span class="line">    at /home/japin/codes/postgres/build/../src/backend/executor/execExprInterp.c:758</span><br><span class="line">#3  0x00001477a335cceb in ExecEvalExprSwitchContext (state=0x5588c521b688, econtext=0x5588c51f7890, isNull=0x7fffda8cb39f)</span><br><span class="line">    at /data/japin/codes/postgres/build/pg/include/server/executor/executor.h:355</span><br><span class="line">#4  0x00001477a335ce1a in ExecQual (state=0x5588c521b688, econtext=0x5588c51f7890) at /data/japin/codes/postgres/build/pg/include/server/executor/executor.h:424</span><br><span class="line">#5  0x00001477a3360c51 in CustomExecScan (columnarScanState=0x5588c51f7680, accessMtd=0x1477a3360d1c &lt;ColumnarScanNext&gt;, recheckMtd=0x1477a3360f0e &lt;ColumnarScanRecheck&gt;)</span><br><span class="line">    at columnar_customscan.c:2448</span><br><span class="line">#6  0x00001477a3360f52 in ColumnarScan_ExecCustomScan (node=0x5588c51f7680) at columnar_customscan.c:2576</span><br><span class="line">#7  0x00005588c2e88fda in ExecCustomScan (pstate=0x5588c51f7680) at /home/japin/codes/postgres/build/../src/backend/executor/nodeCustom.c:124</span><br><span class="line">#8  0x00005588c2e7a651 in ExecProcNode (node=0x5588c51f7680) at /home/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#9  0x00005588c2e7abaa in fetch_input_tuple (aggstate=0x5588c51f7018) at /home/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:562</span><br><span class="line">#10 0x00005588c2e7e4e3 in agg_fill_hash_table (aggstate=0x5588c51f7018) at /home/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:2552</span><br><span class="line">#11 0x00005588c2e7dd17 in ExecAgg (pstate=0x5588c51f7018) at /home/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:2173</span><br><span class="line">#12 0x00005588c2e6a870 in ExecProcNodeFirst (node=0x5588c51f7018) at /home/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#13 0x00005588c2e8b20d in ExecProcNode (node=0x5588c51f7018) at /home/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#14 0x00005588c2e8b8f7 in gather_getnext (gatherstate=0x5588c51f6de8) at /home/japin/codes/postgres/build/../src/backend/executor/nodeGather.c:295</span><br><span class="line">#15 0x00005588c2e8b75a in ExecGather (pstate=0x5588c51f6de8) at /home/japin/codes/postgres/build/../src/backend/executor/nodeGather.c:227</span><br><span class="line">#16 0x00005588c2e6a870 in ExecProcNodeFirst (node=0x5588c51f6de8) at /home/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#17 0x00005588c2e7a651 in ExecProcNode (node=0x5588c51f6de8) at /home/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#18 0x00005588c2e7abaa in fetch_input_tuple (aggstate=0x5588c51f6780) at /home/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:562</span><br><span class="line">#19 0x00005588c2e7e4e3 in agg_fill_hash_table (aggstate=0x5588c51f6780) at /home/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:2552</span><br><span class="line">#20 0x00005588c2e7dd17 in ExecAgg (pstate=0x5588c51f6780) at /home/japin/codes/postgres/build/../src/backend/executor/nodeAgg.c:2173</span><br><span class="line">#21 0x00005588c2e6a870 in ExecProcNodeFirst (node=0x5588c51f6780) at /home/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#22 0x00005588c2eb3951 in ExecProcNode (node=0x5588c51f6780) at /home/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#23 0x00005588c2eb3ba1 in ExecSort (pstate=0x5588c51f6570) at /home/japin/codes/postgres/build/../src/backend/executor/nodeSort.c:149</span><br><span class="line">#24 0x00005588c2e6a870 in ExecProcNodeFirst (node=0x5588c51f6570) at /home/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#25 0x00005588c2e9de67 in ExecProcNode (node=0x5588c51f6570) at /home/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#26 0x00005588c2e9e0be in ExecLimit (pstate=0x5588c51f6280) at /home/japin/codes/postgres/build/../src/backend/executor/nodeLimit.c:96</span><br><span class="line">#27 0x00005588c2e6a870 in ExecProcNodeFirst (node=0x5588c51f6280) at /home/japin/codes/postgres/build/../src/backend/executor/execProcnode.c:464</span><br><span class="line">#28 0x00005588c2e5d917 in ExecProcNode (node=0x5588c51f6280) at /home/japin/codes/postgres/build/../src/include/executor/executor.h:273</span><br><span class="line">#29 0x00005588c2e608cf in ExecutePlan (estate=0x5588c51f6008, planstate=0x5588c51f6280, use_parallel_mode=true, operation=CMD_SELECT, sendTuples=true, numberTuples=0,</span><br><span class="line">    direction=ForwardScanDirection, dest=0x5588c520a538, execute_once=true) at /home/japin/codes/postgres/build/../src/backend/executor/execMain.c:1670</span><br><span class="line">#30 0x00005588c2e5dfff in standard_ExecutorRun (queryDesc=0x5588c51d6268, direction=ForwardScanDirection, count=0, execute_once=true)</span><br><span class="line">    at /home/japin/codes/postgres/build/../src/backend/executor/execMain.c:365</span><br><span class="line">#31 0x00005588c2e5de08 in ExecutorRun (queryDesc=0x5588c51d6268, direction=ForwardScanDirection, count=0, execute_once=true)</span><br><span class="line">    at /home/japin/codes/postgres/build/../src/backend/executor/execMain.c:309</span><br><span class="line">#32 0x00005588c3120364 in PortalRunSelect (portal=0x5588c51655c8, forward=true, count=0, dest=0x5588c520a538) at /home/japin/codes/postgres/build/../src/backend/tcop/pquery.c:924</span><br><span class="line">#33 0x00005588c311ff8b in PortalRun (portal=0x5588c51655c8, count=9223372036854775807, isTopLevel=true, run_once=true, dest=0x5588c520a538, altdest=0x5588c520a538,</span><br><span class="line">    qc=0x7fffda8cbbd0) at /home/japin/codes/postgres/build/../src/backend/tcop/pquery.c:768</span><br><span class="line">#34 0x00005588c3118d49 in exec_simple_query (</span><br><span class="line">    query_string=0x5588c50e6178 &quot;SELECT\n  URL, COUNT(*) AS PageViews FROM hits\nWHERE\n  CounterID = 62\n  AND EventDate &gt;= &#x27;2013-07-01&#x27;\n  AND EventDate &lt;= &#x27;2013-07-31&#x27;\n  AND DontCountHits = 0\n  AND IsRefresh = 0\n  AND URL &lt;&gt; &#x27;&#x27;\nGROUP B&quot;...) at /home/japin/codes/postgres/build/../src/backend/tcop/postgres.c:1274</span><br><span class="line">#35 0x00005588c311ddb8 in PostgresMain (dbname=0x5588c5123370 &quot;postgres&quot;, username=0x5588c5123358 &quot;japin&quot;) at /home/japin/codes/postgres/build/../src/backend/tcop/postgres.c:4637</span><br><span class="line">#36 0x00005588c303e751 in BackendRun (port=0x5588c510fe90) at /home/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:4464</span><br><span class="line">#37 0x00005588c303dfdd in BackendStartup (port=0x5588c510fe90) at /home/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:4192</span><br><span class="line">#38 0x00005588c303a268 in ServerLoop () at /home/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:1782</span><br><span class="line">#39 0x00005588c3039b12 in PostmasterMain (argc=3, argv=0x5588c504e050) at /home/japin/codes/postgres/build/../src/backend/postmaster/postmaster.c:1466</span><br><span class="line">#40 0x00005588c2eed71b in main (argc=3, argv=0x5588c504e050) at /home/japin/codes/postgres/build/../src/backend/main/main.c:198</span><br></pre></td></tr></table></figure>
+
+<p>通过上面的堆栈信息，可以知道 <code>toast_raw_datum_size()</code> 访问第一个参数时出现了内存访问异常。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">(gdb) f 1</span><br><span class="line">#1  0x0000557ddff3eef1 in textne (fcinfo=0x557de0cbd748)</span><br><span class="line">    at /data/japin/codes/postgres/build/../src/backend/utils/adt/varlena.c:1697</span><br><span class="line">(gdb) p arg1</span><br><span class="line">$1 = 140355960598152</span><br><span class="line">(gdb) p *(Datum *)arg1</span><br><span class="line">Cannot access memory at address 0x7fa72b2c6e88</span><br></pre></td></tr></table></figure>
+
+<p>可以看到此时的 <code>arg1</code> 的内存地址是无法访问的，那么这个值来自哪儿呢？再向上追溯可以看到 <code>CustomExecScan()</code> 函数调用了 <code>ExecQual()</code>，随后触发了上述错误，那么问题大概是由于此时的 <code>econtext-&gt;ecxt_scantuple</code> 中的包含了无效的内存地址。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">(gdb) p rowNumber</span><br><span class="line">$3 = 10001</span><br></pre></td></tr></table></figure>
+
+<p>在从 <code>VectorTupleTableSlot</code> 解析数据时，读取到 10001 行时出现了错误，这个值比较的特殊（在真实的场景中这个触发的条件比较难判断，因为存在其他一些条件过滤了部分数据，这里是我在后面分析之后给出的简化版本，参考 <a target="_blank" rel="noopener" href="https://github.com/hydradatabase/hydra/pull/245">#245</a>），因为 <code>COLUMNAR_VECTOR_COLUMN_SIZE = 10000</code>，我们可以在读取数据时下断点来查看数据内容。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">(gdb) b ReadChunkGroupNextVector</span><br><span class="line">Function &quot;ReadChunkGroupNextVector&quot; not defined.</span><br><span class="line">Make breakpoint pending on future shared library load? (y or [n]) y</span><br><span class="line">Breakpoint 1 (ReadChunkGroupNextVector) pending.</span><br><span class="line">(gdb) b columnar_reader.c:2184</span><br><span class="line">No source file named columnar_reader.c.</span><br><span class="line">Make breakpoint pending on future shared library load? (y or [n]) y</span><br><span class="line">Breakpoint 2 (columnar_reader.c:2184) pending.</span><br><span class="line">(gdb) b columnar_reader.c:2199</span><br><span class="line">No source file named columnar_reader.c.</span><br><span class="line">Make breakpoint pending on future shared library load? (y or [n]) y</span><br><span class="line">Breakpoint 3 (columnar_reader.c:2199) pending.</span><br></pre></td></tr></table></figure>
+
+<p>其代码如下所示：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">2175</span><br><span class="line">2176</span><br><span class="line">2177</span><br><span class="line">2178</span><br><span class="line">2179</span><br><span class="line">2180</span><br><span class="line">2181</span><br><span class="line">2182</span><br><span class="line">2183</span><br><span class="line">2184</span><br><span class="line">2185</span><br><span class="line">2186</span><br><span class="line">2187</span><br><span class="line">2188</span><br><span class="line">2189</span><br><span class="line">2190</span><br><span class="line">2191</span><br><span class="line">2192</span><br><span class="line">2193</span><br><span class="line">2194</span><br><span class="line">2195</span><br><span class="line">2196</span><br><span class="line">2197</span><br><span class="line">2198</span><br><span class="line">2199</span><br><span class="line">2200</span><br><span class="line">2201</span><br><span class="line">2202</span><br><span class="line">2203</span><br><span class="line">2204</span><br><span class="line">2205</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">bool</span></span></span><br><span class="line"><span class="function"><span class="title">ReadChunkGroupNextVector</span><span class="params">(ChunkGroupReadState *chunkGroupReadState, Datum *columnValues,</span></span></span><br><span class="line"><span class="params"><span class="function">                         <span class="keyword">bool</span> *columnNulls, TupleDesc tupleDesc,</span></span></span><br><span class="line"><span class="params"><span class="function">                         int32 *columnValueOffset, <span class="keyword">int</span> *chunkReadRows,</span></span></span><br><span class="line"><span class="params"><span class="function">                         uint64 *rowNumber,</span></span></span><br><span class="line"><span class="params"><span class="function">                         uint64 stripeFirstRowNumber)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (chunkGroupReadState-&gt;currentRow &gt;= chunkGroupReadState-&gt;rowCount)</span><br><span class="line">    &#123;</span><br><span class="line marked">        Assert(chunkGroupReadState-&gt;currentRow == chunkGroupReadState-&gt;rowCount);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * Initialize to all-NULL. Only non-NULL projected attributes will be set.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="built_in">memset</span>(columnNulls, <span class="literal">true</span>, <span class="keyword">sizeof</span>(<span class="keyword">bool</span>) * chunkGroupReadState-&gt;columnCount);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> i;</span><br><span class="line">    <span class="keyword">int</span> rowNumberIndex = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; chunkGroupReadState-&gt;rowCount; i ++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (chunkGroupReadState-&gt;currentRow &gt;= chunkGroupReadState-&gt;rowCount)</span><br><span class="line marked">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">        [...]</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接着，我们再次调试，当触发断点时，我们刚进入 <code>ReadChunkGroupNextVector()</code> 函数准备读取，我们使用 <code>finish</code> 命令执行该函数。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">Breakpoint 1, ReadChunkGroupNextVector (chunkGroupReadState=0x557de0db6858, columnValues=0x557de0cd48e0, columnNulls=0x557de0cd48f0, tupleDesc=0x557de0cbae28, columnValueOffset=0x557de0d06bc8, chunkReadRows=0x7fffbc56a620, rowNumber=0x557de0cc1060, stripeFirstRowNumber=1) at columnar_reader.c:2182</span><br><span class="line">2182            if (chunkGroupReadState-&gt;currentRow &gt;= chunkGroupReadState-&gt;rowCount)</span><br><span class="line">(gdb) finish</span><br><span class="line">Run till exit from #0  ReadChunkGroupNextVector (chunkGroupReadState=0x557de0db6858,</span><br><span class="line">    columnValues=0x557de0cd48e0, columnNulls=0x557de0cd48f0, tupleDesc=0x557de0cbae28,</span><br><span class="line">    columnValueOffset=0x557de0d06bc8, chunkReadRows=0x7fffbc56a620,</span><br><span class="line">    rowNumber=0x557de0cc1060, stripeFirstRowNumber=1) at columnar_reader.c:2182</span><br><span class="line">0x00007fa72b3bc65e in ReadStripeNextVector (stripeReadState=0x557de0d2d038, columnValues=0x557de0cd48e0, columnNulls=0x557de0cd48f0, newVectorSize=0x7fffbc56a620, stripeId=1, snapshot=0x557de0bdd3b8, rowNumber=0x557de0cc1060, stripeFirstRowNumber=1) at columnar_reader.c:2149</span><br><span class="line">Value returned is $1 = true</span><br><span class="line">(gdb) p *stripeReadState-&gt;chunkGroupReadState</span><br><span class="line">$3 = &#123;currentRow = 10000, rowCount = 11000, columnCount = 2,</span><br><span class="line">  projectedColumnList = 0x557de0d2b0d8, chunkGroupData = 0x557de0db68c0, rowMask = 0x0,</span><br><span class="line">  rowMaskCached = false, chunkStripeRowOffset = 0, chunkGroupDeletedRows = 0&#125;</span><br><span class="line">(gdb) p *newVectorSize</span><br><span class="line">$4 = 10000</span><br></pre></td></tr></table></figure>
+
+<p>从上面可以看到，第一次读取的时候仅读取了第一个 chunk 的 10000 行记录，此时 <code>ReadChunkGroupNextVector()</code> 函数返回 <code>true</code>，我们使用 <code>c</code> 继续执行，程序将第二次进入 <code>ReadChunkGroupNextVector()</code>，如下所示：</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">(gdb) c</span><br><span class="line">Continuing.</span><br><span class="line"></span><br><span class="line">Breakpoint 1, ReadChunkGroupNextVector (chunkGroupReadState=0x557de0db6858, columnValues=0x557de0cd48e0, columnNulls=0x557de0cd48f0, tupleDesc=0x557de0cbae28, columnValueOffset=0x557de0d06c90, chunkReadRows=0x7fffbc56a640, rowNumber=0x557de0cc1060, stripeFirstRowNumber=1) at columnar_reader.c:2182</span><br><span class="line">(gdb) finish</span><br><span class="line">Run till exit from #0  ReadChunkGroupNextVector (chunkGroupReadState=0x557de0db6858,</span><br><span class="line">    columnValues=0x557de0cd48e0, columnNulls=0x557de0cd48f0, tupleDesc=0x557de0cbae28,</span><br><span class="line">    columnValueOffset=0x557de0d06c90, chunkReadRows=0x7fffbc56a640,</span><br><span class="line">    rowNumber=0x557de0cc1060, stripeFirstRowNumber=1) at columnar_reader.c:2182</span><br><span class="line"></span><br><span class="line">Breakpoint 3, ReadChunkGroupNextVector (chunkGroupReadState=0x557de0db6858, columnValues=0x557de0cd48e0, columnNulls=0x557de0cd48f0, tupleDesc=0x557de0cbae28, columnValueOffset=0x557de0d06c90, chunkReadRows=0x7fffbc56a640, rowNumber=0x557de0cc1060, stripeFirstRowNumber=1) at columnar_reader.c:2199</span><br></pre></td></tr></table></figure>
+
+<p>可以看到此时触发了第三个断点，执行 <code>n</code> 返回到上层调用函数，我们可以看到如下信息。</p>
+<figure class="highlight plaintext"><figcaption><span>GDB</span></figcaption><table><tr><td class="code"><pre><span class="line">(gdb) p *stripeReadState-&gt;chunkGroupReadState</span><br><span class="line">$7 = &#123;currentRow = 11000, rowCount = 11000, columnCount = 2,</span><br><span class="line">  projectedColumnList = 0x557de0d2b0d8, chunkGroupData = 0x557de0db68c0, rowMask = 0x0,</span><br><span class="line">  rowMaskCached = false, chunkStripeRowOffset = 0, chunkGroupDeletedRows = 0&#125;</span><br><span class="line">(gdb) p *newVectorSize</span><br><span class="line">$8 = 1000</span><br></pre></td></tr></table></figure>
+
+<p>由于该 chunk 中仅剩下 1000 行记录没有读取，因此，在该 chunk 中最多能读取 1000 行，即 <code>*newVectorSize = 1000</code>。但是，函数 <code>ReadChunkGroupNextVector()</code> 仅在读取了 <code>COLUMNAR_VECTOR_COLUMN_SIZE</code> 行记录时返回 <code>true</code>，所以该函数此时返回值为 <code>false</code>，从而导致 <code>ReadStripeNextVector()</code> 释放了 <code>stripeReadState-&gt;chunkGroupReadState</code> 相关的内存。这便是引发悬空指针问题的根源。</p>
+<p>此外，这里需要注意的时，对于基础数据类型（如 int, double 等固定长度的字段）不会出现问题，因为它们采用的是值传递 (pass-by-value)；而对于变长数据类型（如 text）则会导致崩溃，因为它们采用的是引用传递 (pass-by-reference)，参看 <a target="_blank" rel="noopener" href="https://github.com/hydradatabase/hydra/blob/dd0ef07209dd23b9fca213a152ee3ee13249bb34/columnar/src/backend/columnar/vectorization/columnar_vector_types.c#L70-L75"><code>CreateVectorTupleTableSlot()</code></a> 函数。</p>
+<p>因此，我们需要在 <code>ReadChunkGroupNextVector()</code> 返回 <code>false</code> 时，判断 <code>VectorTupleTableSlot</code> 中是否有数据，如果有则要延迟 <code>stripeReadState-&gt;chunkGroupReadState</code> 内存的释放。</p>
+<figure class="highlight diff"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">diff --git a/columnar/src/backend/columnar/columnar_reader.c b/columnar/src/backend/columnar/columnar_reader.c</span></span><br><span class="line"><span class="comment">index b23829f..30448d5 100644</span></span><br><span class="line"><span class="comment">--- a/columnar/src/backend/columnar/columnar_reader.c</span></span><br><span class="line"><span class="comment">+++ b/columnar/src/backend/columnar/columnar_reader.c</span></span><br><span class="line"><span class="meta">@@ -2154,13 +2154,19 @@</span> ReadStripeNextVector(StripeReadState *stripeReadState, Datum *columnValues,</span><br><span class="line"> 									  rowNumber,</span><br><span class="line"> 									  chunkFirstRowNumber))</span><br><span class="line"> 		&#123;</span><br><span class="line"><span class="deletion">-			/* if this chunk group is exhausted, fetch the next one and loop */</span></span><br><span class="line"><span class="deletion">-			EndChunkGroupRead(stripeReadState-&gt;chunkGroupReadState);</span></span><br><span class="line"><span class="deletion">-			stripeReadState-&gt;chunkGroupReadState = NULL;</span></span><br><span class="line"><span class="deletion">-			stripeReadState-&gt;chunkGroupIndex++;</span></span><br><span class="line"><span class="deletion">-</span></span><br><span class="line"><span class="addition">+			/*</span></span><br><span class="line"><span class="addition">+			 * if *newVectorSize is non-zero, it means there might be some data in</span></span><br><span class="line"><span class="addition">+			 * chunkGroupReadState-&gt;chunkGroupData referenced by VectorColumn.  In</span></span><br><span class="line"><span class="addition">+			 * this case, do NOT release ChunkGroupReadState.</span></span><br><span class="line"><span class="addition">+			 */</span></span><br><span class="line"> 			if (*newVectorSize == 0)</span><br><span class="line"><span class="addition">+			&#123;</span></span><br><span class="line"><span class="addition">+				/* if this chunk group is exhausted, fetch the next one and loop */</span></span><br><span class="line"><span class="addition">+				EndChunkGroupRead(stripeReadState-&gt;chunkGroupReadState);</span></span><br><span class="line"><span class="addition">+				stripeReadState-&gt;chunkGroupReadState = NULL;</span></span><br><span class="line"><span class="addition">+				stripeReadState-&gt;chunkGroupIndex++;</span></span><br><span class="line"> 				continue;</span><br><span class="line"><span class="addition">+			&#125;</span></span><br><span class="line"> 		&#125;</span><br><span class="line"> 		else</span><br><span class="line"> 			stripeReadState-&gt;currentRow += stripeReadState-&gt;chunkGroupReadState-&gt;rowCount;</span><br></pre></td></tr></table></figure>
+
+<h2 id="备注"><a href="#备注" class="headerlink" title="备注"></a>备注</h2><p>上面的查询可能会并行执行，为了减少调试时并行执行带来的困扰，可以在执行 SQL 查询时禁止并行执行，如 <code>SET max_parallel_workers = 0;</code>。</p>
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>[1] <a target="_blank" rel="noopener" href="https://github.com/hydradatabase/hydra/pull/235">https://github.com/hydradatabase/hydra/pull/235</a><br>[2] <a target="_blank" rel="noopener" href="https://github.com/hydradatabase/hydra/pull/245">https://github.com/hydradatabase/hydra/pull/245</a></p>
+<div class="just-for-fun">
+笑林广记 - 善生虱
+
+<p>有善生虱者。自言一年只生十二虱。诘其故。曰：“我身上的虱者，真真一月一个。”</p>
+</div>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/10/cstore-fdw-implementation/" rel="bookmark">列存数据库 cstore_fdw 的实现</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/09/introduction-cstore-fdw-columnar-store/" rel="bookmark">列存数据库 cstore_fdw 入门</a></div>
+    </li>
+  </ul>
+
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Japin Li
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://blog.japinli.top/2024/03/hydra-columnar-crashed/" title="Hydra 列存崩溃问题">https://blog.japinli.top/2024/03/hydra-columnar-crashed/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/%E5%88%97%E5%AD%98/" rel="tag"># 列存</a>
+              <a href="/tags/Hydra/" rel="tag"># Hydra</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/02/postgresql-transaction-timeout/" rel="prev" title="PostgreSQL 事务超时">
+                  <i class="fa fa-chevron-left"></i> PostgreSQL 事务超时
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments utterances-container"></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2018 – 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Japin Li</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="站点总字数">820k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">12:26</span>
+  </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"none","js":{"url":"https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js","integrity":"sha256-r+3itOMtGGjap0x+10hu6jW/gZCzxHsoKrOd7gyRSGY="}}</script>
+<script src="/js/third-party/math/mathjax.js"></script>
+
+
+<script class="next-config" data-name="utterances" type="application/json">{"enable":true,"repo":"japinli/japinli.github.io","issue_term":"pathname","theme":"github-light"}</script>
+<script src="/js/third-party/comments/utterances.js"></script>
+
+</body>
+</html>
