@@ -21,7 +21,8 @@ jobs:
         # Examples: 20, 18.19, >= 16.20.2, lts/Iron, lts/Hydrogen, lastest,
         # current, node
         # Ref: https://github.com/actions/setup-node#supported-version-syntax
-        with: node-version: '20'
+        with:
+          node-version: '20'
       - name: Cache NPM dependencies
         uses: actions/cache@v4
         with:
