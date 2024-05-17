@@ -9,7 +9,7 @@ toc:
 
 <div class="custom-black"></div>
 
-{% note primary %}
+{% note primary no-icon %}
 
 ## 基本信息
 
@@ -17,7 +17,7 @@ toc:
 
 {% endnote %}
 
-{% note success %}
+{% note success no-icon %}
 
 ## 专业技能
 
@@ -29,7 +29,7 @@ toc:
 
 {% endnote %}
 
-{% note danger %}
+{% note danger no-icon %}
 
 ## 演讲稿
 
@@ -39,7 +39,7 @@ toc:
 
 
 
-{% note info %}
+{% note info no-icon %}
 
 ## 在线工具
 
@@ -50,7 +50,7 @@ toc:
 
 {% endnote %}
 
-{% note warning %}
+{% note warning no-icon %}
 
 ## 更新日志
 
