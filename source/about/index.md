@@ -72,7 +72,7 @@ toc:
 
 #+begin_src bash
   sudo apt-get install -y vim emacs git tmux
-  sudo apt-get install -y global gdb silversearcher-ag
+  sudo apt-get install -y global gdb silversearcher-ag ripgrep fd-find fzf
   sudo apt-get install -y build-essential
   sudo apt-get install -y clangd-12 clang-12
   sudo update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-12 100
@@ -98,6 +98,9 @@ toc:
   sudo apt-get install -y libperl-dev     # --with-perl
   sudo apt-get install -y libpython3-dev  # --with-python
   sudo apt-get install -y liblz4-dev      # --with-lz4
+
+  # For building PostgreSQL documentation
+  sudo apt-get install -y libxml2-utils xsltproc docbook-xsl
 
   # Install perf tool
   sudo apt-get install -y linux-tools-common
