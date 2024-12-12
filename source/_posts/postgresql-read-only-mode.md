@@ -106,7 +106,7 @@ ERROR:  cannot execute CREATE TABLE in a read-only transaction
 
 [`default_transaction_read_only`]: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY
 
-<dir class="just-for-fun">
+<div class="just-for-fun">
 笑林广记 - 长卵叹气
 
 一官到任，出票要唤兄弟三人。一胖子、一长子、一矮子备用。异姓者不许进见。
