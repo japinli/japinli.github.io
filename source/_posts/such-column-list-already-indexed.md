@@ -157,6 +157,79 @@ GROUP BY
 
 此查询会列出表名、冗余索引数量、索引名称及涉及的列，帮助 DBA 识别并清理冗余索引。
 
+下面的查询是根据 [PostgreSQL 社区提供的版本](https://wiki.postgresql.org/wiki/Index_Maintenance#Duplicate_indexes)进行修改的：
+
+``` sql
+WITH dup_idx AS (
+  SELECT
+    indrelid AS duprelid,
+    array_agg(indexrelid::regclass) AS dupindnames,
+    count(1) AS dupnum,
+    array[indrelid::text,
+          indclass::text,
+          indkey::text,
+          coalesce(indexprs::text, ''),
+          coalesce(indpred::text, '')] AS dupkey
+  FROM
+    pg_index
+  GROUP BY
+    duprelid, dupkey
+  HAVING
+    count(1) > 1
+)
+SELECT
+  a.attrelid::regclass AS table_name,
+  d.dupnum AS index_number,
+  d.dupindnames AS index_names,
+  array_agg(a.attname ORDER BY idx.ord) AS index_columns
+FROM
+  dup_idx d JOIN pg_attribute a ON a.attrelid = d.duprelid
+  CROSS JOIN LATERAL
+    unnest(string_to_array(d.dupkey[3], ' ')::int[]) WITH ordinality AS idx(attnum, ord)
+WHERE
+  a.attnum = idx.attnum
+GROUP BY
+  a.attrelid, d.dupnum, d.dupindnames
+;
+```
+
+第一个查询只是单纯的从索引所包含的属性列来考虑的，并没有考虑到诸如 `INCLUDE`，表达式索引等情况。例如：
+
+``` sql
+CREATE INDEX ON employee(id) INCLUDE (dept_id);
+CREATE INDEX ON employee(id, dept_id);
+```
+
+上述两个索引在第一个查询中会被视为重复索引，单实际上他们并不是完全重复的；第二个查询则可以区分此类索引。
+
+如果您只想知道有哪些索引是重复的，您可以使用下面的语句：
+
+``` sql
+SELECT
+  relname AS table_name,
+  pg_size_pretty(sum(pg_relation_size(indname))::bigint) as size,
+  array_agg(indname) AS index_names,
+  count(1) AS dupnum
+FROM
+  (
+    SELECT
+      indrelid::regclass AS relname,
+      indexrelid::regclass AS indname,
+      (indrelid::text || E'\n' ||
+       indclass::text || E'\n' ||
+       indkey::text || E'\n' ||
+       coalesce(indexprs::text, '') || E'\n' ||
+       coalesce(indpred::text, '') || E'\n') AS key
+     FROM
+       pg_index
+  ) sub
+GROUP BY
+  relname, key
+HAVING
+  count(1) > 1
+;
+```
+
 PostgreSQL 中的索引管理具有以下优点：
 
 - **灵活性：**
@@ -196,6 +269,7 @@ Oracle 的“such column list already indexed”特性通过自动检测和复�
 [1] https://docs.oracle.com/en/error-help/db/ora-01408/?r=19c
 [2] https://www.postgresql.org/docs/current/indexes.html
 [3] https://www.postgresql.org/docs/current/catalogs.html
+[4] https://wiki.postgresql.org/wiki/Index_Maintenance#Duplicate_indexes
 
 <div class="just-for-fun">
 笑林广记 - 被打
